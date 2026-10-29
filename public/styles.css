@@ -153,3 +153,55 @@
 #ionProgBar{height:100%;width:0;background:#7fc4ff;transition:width .1s linear}
 #ionOnlyIllustrations .section-note{color:#52718f;font-size:8px;letter-spacing:.06em}
 #ionOnlyIllustrations .ion-note{font-size:9px;color:#7fa8cf;margin:4px 0 0;line-height:1.4}
+
+/* Lightweight inspection mode: independently minimize either overlay, or
+   hide both for a clean 3D view. Restore tabs remain at the screen edges. */
+#leftPanel[hidden],#rightPanel[hidden],
+.panel-edge-tab[hidden]{display:none!important}
+.panel-heading{
+ display:flex;align-items:center;justify-content:space-between;gap:8px;
+ color:#6988a8;font-size:9px;font-weight:600;letter-spacing:.19em;
+ text-transform:uppercase;margin:-6px -5px 9px;
+}
+.panel-minimize{
+ appearance:none;width:27px;height:25px;padding:0;border-radius:6px;
+ border:1px solid rgba(110,154,197,.20);background:rgba(52,81,110,.16);
+ color:#a3bfda;font:500 18px/20px inherit;cursor:pointer;
+ display:grid;place-items:center;flex:none;
+ transition:background-color .15s,border-color .15s,color .15s;
+}
+.panel-minimize:hover,.panel-minimize:focus-visible{
+ background:rgba(61,127,214,.25);border-color:#3d7fd6;color:#ecf6ff;
+}
+.focus-toggle,.panel-edge-tab{
+ appearance:none;border:1px solid rgba(96,140,188,.30);
+ border-radius:7px;background:rgba(11,17,25,.72);color:#95b5d5;
+ font:600 9.5px/1.25 ui-sans-serif,system-ui,sans-serif;
+ letter-spacing:.11em;text-transform:uppercase;cursor:pointer;
+ -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+ box-shadow:0 3px 15px rgba(0,0,0,.25);
+ transition:background-color .15s,border-color .15s,color .15s;
+}
+.focus-toggle:hover,.panel-edge-tab:hover,
+.focus-toggle:focus-visible,.panel-edge-tab:focus-visible{
+ background:rgba(32,59,86,.92);border-color:#5d98cc;color:#e5f2ff;
+ outline-offset:3px;
+}
+#hud .focus-toggle{
+ display:block;margin-top:12px;padding:8px 11px;
+ pointer-events:auto;
+}
+.panel-edge-tab{position:fixed;z-index:5;padding:10px 13px;}
+.panel-edge-tab-left{left:22px;bottom:22px;}
+.panel-edge-tab-right{right:22px;top:22px;}
+body.focus-view #hud h1,body.focus-view #hud p,
+body.focus-view .label3d,body.focus-view #hint{display:none!important}
+body.focus-view #hud .focus-toggle{margin-top:0}
+@media(max-width:760px){
+ #hud .focus-toggle{margin-top:9px;padding:8px 9px;font-size:9px}
+ .panel-heading{margin:-4px -2px 7px}
+ .panel-minimize{width:25px;height:25px}
+ .panel-edge-tab-left{left:8px;bottom:8px}
+ .panel-edge-tab-right{right:8px;top:62px}
+ .panel-edge-tab{padding:10px 10px}
+}

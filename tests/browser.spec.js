@@ -132,3 +132,85 @@ test('ion mill has only cutaway and Run, with a docked wafer and floor-supported
  expect(after.waferLocalPosition).toEqual(before.waferLocalPosition);
  expect(errors).toEqual([]);
 });
+
+test('process and equipment panels collapse independently and can be restored',async({page})=>{
+ const errors=[];page.on('pageerror',error=>errors.push(error.message));
+ await page.goto('/?tool=lpe');
+ await expect(page.locator('#leftPanel')).toBeVisible();
+ await expect(page.locator('#rightPanel')).toBeVisible();
+ await page.locator('#minimizeProcess').click();
+ await expect(page.locator('#leftPanel')).toBeHidden();
+ await expect(page.locator('#rightPanel')).toBeVisible();
+ await expect(page.locator('#restoreProcess')).toBeVisible();
+ expect((await page.evaluate(()=>window.__foundryDiagnostics())).panels).toEqual({
+   process:true,equipment:false
+ });
+ await page.locator('#restoreProcess').click();
+ await expect(page.locator('#leftPanel')).toBeVisible();
+ await page.locator('#minimizeEquipment').click();
+ await expect(page.locator('#rightPanel')).toBeHidden();
+ await expect(page.locator('#restoreEquipment')).toBeVisible();
+ await expect(page.locator('#leftPanel')).toBeVisible();
+ await page.locator('#restoreEquipment').click();
+ await expect(page.locator('#rightPanel')).toBeVisible();
+ await page.locator('#tabIMM').click();
+ await expect(page.locator('#immControls')).toBeVisible();
+ expect(errors).toEqual([]);
+});
+
+test('focus view hides overlays without stopping process or creating another renderer',async({page})=>{
+ const errors=[];page.on('pageerror',error=>errors.push(error.message));
+ await page.goto('/?tool=imm');
+ await page.locator('#immBtn').click();
+ await expect(page.locator('#immBtn')).toContainText('Stop');
+ const before=await page.evaluate(()=>window.__foundryDiagnostics());
+ await page.locator('#focusToggle').click();
+ await expect(page.locator('body')).toHaveClass(/focus-view/);
+ await expect(page.locator('#leftPanel')).toBeHidden();
+ await expect(page.locator('#rightPanel')).toBeHidden();
+ await expect(page.locator('#restoreProcess')).toBeVisible();
+ await expect(page.locator('#restoreEquipment')).toBeVisible();
+ await expect(page.locator('#focusToggle')).toContainText('Show panels');
+ await expect(page.locator('.label3d').first()).toBeHidden();
+ await page.waitForTimeout(450);
+ const during=await page.evaluate(()=>window.__foundryDiagnostics());
+ expect(during.rendererCount).toBe(1);
+ expect(during.view).toBe('imm');
+ expect(during.panels).toEqual({process:true,equipment:true});
+ await page.keyboard.press('h');
+ await expect(page.locator('#rightPanel')).toBeVisible();
+ await expect(page.locator('#leftPanel')).toBeVisible();
+ expect((await page.evaluate(()=>window.__foundryDiagnostics())).panels).toEqual({
+   process:false,equipment:false
+ });
+ await expect(page.locator('#immBtn')).toContainText('Stop');
+ await page.locator('#tabLPE').click();
+ await expect(page.locator('#lpeControls')).toBeVisible();
+ await page.keyboard.press('h');
+ await expect(page.locator('body')).toHaveClass(/focus-view/);
+ await page.keyboard.press('Escape');
+ await expect(page.locator('body')).not.toHaveClass(/focus-view/);
+ await expect(page.locator('#rightPanel')).toBeVisible();
+ await expect(page.locator('canvas')).toHaveCount(1);
+ expect(errors).toEqual([]);
+});
+
+test('narrow mobile layout leaves tiny restore controls for panels',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto('/');
+ await expect(page.locator('#focusToggle')).toBeVisible();
+ await page.locator('#focusToggle').click();
+ await expect(page.locator('#leftPanel')).toBeHidden();
+ await expect(page.locator('#rightPanel')).toBeHidden();
+ await expect(page.locator('#restoreProcess')).toBeVisible();
+ await expect(page.locator('#restoreEquipment')).toBeVisible();
+ await page.locator('#restoreEquipment').click();
+ await expect(page.locator('#rightPanel')).toBeVisible();
+ await expect(page.locator('#leftPanel')).toBeHidden();
+ await expect(page.locator('#tabMBE')).toBeVisible();
+ await page.locator('#tabMBE').click();
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.mbeLoaded),{timeout:30000}).toBe(true);
+ await page.locator('#restoreProcess').click();
+ await expect(page.locator('#mbeRheedSvg')).toBeVisible();
+ await expect(page.locator('canvas')).toHaveCount(1);
+});
