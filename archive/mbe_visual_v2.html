@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MBE — Molecular Beam Epitaxy · UHV</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#06070a;
+    font-family:ui-sans-serif,system-ui,sans-serif;color:#cfe4ff}
+  canvas{display:block}
+  #hud{position:fixed;left:26px;top:22px;pointer-events:none;letter-spacing:.04em}
+  #hud h1{margin:0;font-size:28px;font-weight:700;letter-spacing:.22em;
+    background:linear-gradient(90deg,#eaf4ff,#7fb6ff 60%,#3d7fd6);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  #hud p{margin:6px 0 0;font-size:10.5px;text-transform:uppercase;
+    letter-spacing:.24em;color:#5f7d9e}
+  #leftPanel{position:fixed;left:22px;bottom:22px;width:316px;
+    background:rgba(11,15,21,.82);border:1px solid rgba(88,128,172,.22);
+    border-radius:12px;padding:14px 16px;backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);font-size:11px;user-select:none;
+    box-shadow:0 18px 48px rgba(0,0,0,.55)}
+  .lbl{font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;
+    color:#5f7d9e;margin:0 0 6px}
+  .lbl + .lbl{margin-top:10px}
+  #narrator{background:rgba(30,50,75,.35);border-left:2px solid #3d7fd6;
+    border-radius:4px;padding:9px 11px 8px;margin-bottom:10px;min-height:88px;
+    display:flex;flex-direction:column;justify-content:space-between}
+  #narrStatus{font-size:11px;letter-spacing:.14em;font-weight:700;color:#7fc4ff;transition:color .3s}
+  #narrDetail{font-size:10.5px;color:#a6c4e0;line-height:1.5;margin-top:4px}
+  #narrTime{font-size:9px;color:#5f7d9e;letter-spacing:.14em;margin-top:7px;
+    font-variant-numeric:tabular-nums}
+  #rheedSvg{width:100%;height:60px;display:block;margin-bottom:2px;
+    background:rgba(8,16,26,.6);border-radius:4px}
+  #xsecSvg{width:100%;height:88px;display:block;margin-bottom:2px;
+    background:rgba(8,16,26,.4);border-radius:4px}
+  #progWrap{height:3px;background:rgba(80,120,170,.18);border-radius:2px;
+    overflow:hidden;margin-bottom:8px}
+  #progBar{height:100%;width:0%;background:linear-gradient(90deg,#3d7fd6,#7fc4ff);
+    box-shadow:0 0 8px rgba(93,170,255,.7);transition:width .1s linear}
+  #rightPanel{position:fixed;right:22px;top:22px;width:256px;
+    background:rgba(11,15,21,.78);border:1px solid rgba(88,128,172,.22);
+    border-radius:12px;padding:14px 16px;backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);user-select:none;
+    box-shadow:0 18px 48px rgba(0,0,0,.55)}
+  #rightPanel .lbl{font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;
+    color:#5f7d9e;margin-bottom:8px}
+  #rightPanel .lbl + .lbl{margin-top:12px}
+  #rightPanel input[type=range]{-webkit-appearance:none;appearance:none;
+    width:100%;height:4px;border-radius:3px;outline:none;
+    background:linear-gradient(90deg,#3d7fd6,#1a2735);margin:0 0 12px}
+  #rightPanel input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;
+    appearance:none;width:14px;height:14px;border-radius:50%;
+    background:#dbeaff;border:2px solid #3d7fd6;cursor:pointer;
+    box-shadow:0 0 12px rgba(93,170,255,.85)}
+  .specs{font-size:9.5px;display:flex;flex-direction:column;gap:3px;margin-bottom:4px}
+  .specs div{display:flex;justify-content:space-between;gap:6px}
+  .specs span:first-child{color:#5f7d9e;letter-spacing:.1em}
+  .specs span:last-child{color:#a6c4e0;font-variant-numeric:tabular-nums;text-align:right}
+  .spec-group{font-size:8px;letter-spacing:.24em;text-transform:uppercase;
+    color:#3f5872;margin:6px 0 2px;padding-top:4px;
+    border-top:1px solid rgba(88,128,172,0.15)}
+  .spec-group:first-child{margin-top:0;border-top:none;padding-top:0}
+  .temps{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
+  .trow{display:flex;justify-content:space-between;align-items:center;
+    font-size:10.5px;letter-spacing:.1em;font-variant-numeric:tabular-nums}
+  .trow span:first-child{color:#5f7d9e;letter-spacing:.18em}
+  .trow span:last-child{color:#ffb066}
+  .trow .v-green{color:#7ee6a0 !important}
+  .trow .v-red{color:#ff6a5a !important}
+  .dot{display:inline-block;width:6px;height:6px;border-radius:50%;
+    margin-right:7px;vertical-align:middle;background:var(--c,#ff7a2a);
+    box-shadow:0 0 8px var(--c,#ff7a2a)}
+  #playBtn{width:100%;padding:9px 12px;margin-top:4px;
+    background:linear-gradient(180deg,#2c5686,#1b3a5c);border:1px solid #3d7fd6;
+    border-radius:7px;color:#dbeaff;font-size:10.5px;letter-spacing:.2em;
+    text-transform:uppercase;font-weight:600;cursor:pointer;
+    transition:all .15s ease;font-family:inherit}
+  #playBtn:hover{background:linear-gradient(180deg,#3a6ba8,#244a72);
+    box-shadow:0 0 16px rgba(93,170,255,.35)}
+  #playBtn:active{transform:scale(.98)}
+  #playBtn.running{background:linear-gradient(180deg,#6a3a1a,#4a2610);
+    border-color:#ff7a2a;color:#ffd4a8}
+  #playBtn.done{background:linear-gradient(180deg,#1a5a30,#0f3a1e);
+    border-color:#4dbb7a;color:#a8e8c0}
+  .label3d{position:fixed;top:0;left:0;padding:4px 9px;
+    background:rgba(10,15,22,.9);border:1px solid #3d7fd6;border-radius:5px;
+    font-size:10px;letter-spacing:.15em;color:#7fc4ff;white-space:nowrap;
+    pointer-events:none;will-change:transform,opacity;
+    box-shadow:0 4px 12px rgba(0,0,0,.5);transition:opacity .25s;
+    font-variant-numeric:tabular-nums}
+  #hint{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);
+    font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:#3f5872;pointer-events:none;white-space:nowrap}
+  #hint b{color:#7fa8cf;font-weight:600}
+</style>
+</head>
+<body>
+
+<div id="hud"><h1>MBE</h1><p>Molecular Beam Epitaxy · UHV · RHEED-monitored</p></div>
+
+<div id="leftPanel">
+  <div class="lbl">Live Process</div>
+  <div id="narrator">
+    <div id="narrStatus">IDLE</div>
+    <div id="narrDetail">Press Run to grow the DH laser structure by molecular beam epitaxy.</div>
+    <div id="narrTime">—</div>
+  </div>
+  <div class="lbl">RHEED · (00) specular <span id="rheedVal" style="color:#7ee6a0;font-size:10px">—</span>
+    <span style="color:#3f5872;font-size:8.5px;letter-spacing:0.1em">· 1 oscillation = 1 monolayer</span>
+  </div>
+  <svg id="rheedSvg" viewBox="0 0 300 60" preserveAspectRatio="none">
+    <line x1="0" y1="52" x2="300" y2="52" stroke="#2a3a4a" stroke-width=".5"/>
+    <line x1="0" y1="8" x2="300" y2="8" stroke="#2a3a4a" stroke-width=".3" stroke-dasharray="2 2"/>
+    <line x1="0" y1="30" x2="300" y2="30" stroke="#2a3a4a" stroke-width=".3" stroke-dasharray="2 2"/>
+    <text x="4" y="12" font-size="6" fill="#5f7d9e">100</text>
+    <text x="4" y="54" font-size="6" fill="#5f7d9e">0</text>
+    <path id="rheedPath" d="" stroke="#7ee6a0" stroke-width="1.2" fill="none"/>
+  </svg>
+  <div class="lbl">Wafer Cross-Section <span style="color:#3f5872;font-size:9px">(live)</span></div>
+  <svg id="xsecSvg" viewBox="0 0 300 88" preserveAspectRatio="none">
+    <g id="xsecContent"></g>
+  </svg>
+  <div class="lbl">Progress</div>
+  <div id="progWrap"><div id="progBar"></div></div>
+</div>
+
+<div id="rightPanel">
+  <div class="lbl">Process Conditions</div>
+  <div class="specs">
+    <div class="spec-group">Vacuum</div>
+    <div><span>Base pressure</span><span>5×10⁻¹¹ Torr</span></div>
+    <div><span>Growth pressure</span><span>~2×10⁻¹⁰ Torr</span></div>
+    <div><span>Load lock</span><span>5×10⁻⁷ Torr</span></div>
+    <div><span>Pumps</span><span>Ion + Ti-sub + cryo</span></div>
+    <div><span>Cryopanel</span><span>LN₂ · 77 K</span></div>
+    <div class="spec-group">Growth</div>
+    <div><span>Substrate</span><span>GaAs (100) · 2"</span></div>
+    <div><span>Growth temp</span><span>580 °C</span></div>
+    <div><span>Growth rate</span><span>1.0 ML/s ≈ 1 µm/hr</span></div>
+    <div><span>As:Ga BEP</span><span>~15:1 overpressure</span></div>
+    <div><span>Wafer rotation</span><span>20 rpm</span></div>
+    <div class="spec-group">Diagnostics</div>
+    <div><span>RHEED</span><span>15 keV · grazing 4°</span></div>
+    <div><span>Cells</span><span>Ga · Al · As K-cells</span></div>
+    <div><span>Flux monitor</span><span>BFM ion gauge</span></div>
+  </div>
+  <div class="lbl">Chamber Cutaway</div>
+  <input type="range" id="cut" min="0" max="100" value="58" />
+  <div class="lbl">Live Readouts</div>
+  <div class="temps">
+    <div class="trow"><span><i class="dot" style="--c:#7fc4ff"></i>Chamber</span><span class="v-green" id="v1">—</span></div>
+    <div class="trow"><span><i class="dot" style="--c:#5f9fd6"></i>Load lock</span><span class="v-green" id="v7b">—</span></div>
+    <div class="trow"><span><i class="dot" style="--c:#ff5a20"></i>Substrate T</span><span class="v-red" id="v2">—</span></div>
+    <div class="trow"><span><i class="dot" style="--c:#ffb066"></i>Ga cell</span><span id="v3">—</span></div>
+    <div class="trow"><span><i class="dot" style="--c:#d8d8d8"></i>Al cell</span><span id="v4">—</span></div>
+    <div class="trow"><span><i class="dot" style="--c:#c8a0b0"></i>As cell</span><span id="v5">—</span></div>
+    <div class="trow"><span><i class="dot" style="--c:#7ee6a0"></i>Growth rate</span><span class="v-green" id="v6">—</span></div>
+    <div class="trow"><span><i class="dot" style="--c:#7ee6a0"></i>MLs grown</span><span id="v7">—</span></div>
+  </div>
+  <button id="playBtn">▶ Run MBE Cycle</button>
+</div>
+
+<div id="hint"><b>drag</b> orbit &nbsp;·&nbsp; <b>scroll</b> zoom &nbsp;·&nbsp; <b>right-drag</b> pan</div>
+
+<script type="importmap">
+{ "imports": {
+  "three":"https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls }   from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.12;
+renderer.localClippingEnabled = true;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x06070a);
+scene.fog = new THREE.Fog(0x06070a, 30, 85);
+
+/* Camera below wafer so the growth face (bottom of stack) is visible */
+const camera = new THREE.PerspectiveCamera(38, innerWidth/innerHeight, 0.1, 280);
+camera.position.set(6.5, 3.8, 10.0);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 4.4, 0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.minDistance = 4;
+controls.maxDistance = 42;
+/* Permit camera to orbit ~9° below horizontal so the growth face
+ * on the underside of the wafer is actually visible. */
+controls.maxPolarAngle = Math.PI * 0.55;
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+const clipPlane = new THREE.Plane(new THREE.Vector3(0,0,-1), 0);
+const CLIP = { clippingPlanes:[clipPlane], clipShadows:true };
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.22));
+scene.add(new THREE.HemisphereLight(0x9dc4ff, 0x0a0d12, 0.5));
+const key = new THREE.DirectionalLight(0xfff2e0, 2.1);
+key.position.set(9,16,13); key.castShadow = true;
+key.shadow.mapSize.set(2048,2048);
+const sc = key.shadow.camera;
+sc.left=-15; sc.right=15; sc.top=15; sc.bottom=-15; sc.near=1; sc.far=60;
+key.shadow.bias=-0.0005; key.shadow.normalBias=0.025;
+scene.add(key);
+const fill = new THREE.DirectionalLight(0x5b8fd6, 0.85);
+fill.position.set(-12,5,-10); scene.add(fill);
+const rim = new THREE.PointLight(0x4da3ff, 42, 32, 2);
+rim.position.set(-12,8,-10); scene.add(rim);
+const heaterLight = new THREE.PointLight(0xff4a10, 0, 3.5, 2);
+heaterLight.position.set(0, 4.55, 0);
+scene.add(heaterLight);
+
+const MAT = {
+  chamber:  new THREE.MeshStandardMaterial({ color:0xb0bcc8, metalness:.92, roughness:.30, envMapIntensity:1.5, side:THREE.DoubleSide, ...CLIP }),
+  cone:     new THREE.MeshStandardMaterial({ color:0xa8b4c0, metalness:.92, roughness:.32, envMapIntensity:1.4, side:THREE.DoubleSide, ...CLIP }),
+  cryo:     new THREE.MeshStandardMaterial({ color:0x1a2530, metalness:.75, roughness:.55, side:THREE.DoubleSide, ...CLIP }),
+  flange:   new THREE.MeshStandardMaterial({ color:0xa0a8b2, metalness:.92, roughness:.32, envMapIntensity:1.5, ...CLIP }),
+  steel:    new THREE.MeshStandardMaterial({ color:0xc3ccd5, metalness:1.0, roughness:.24, envMapIntensity:1.5 }),
+  steel2:   new THREE.MeshStandardMaterial({ color:0x939da8, metalness:1.0, roughness:.38, envMapIntensity:1.3 }),
+  steel3:   new THREE.MeshStandardMaterial({ color:0x5b636d, metalness:1.0, roughness:.52, envMapIntensity:1.1 }),
+  dark:     new THREE.MeshStandardMaterial({ color:0x14161a, metalness:.55, roughness:.62 }),
+  copper:   new THREE.MeshStandardMaterial({ color:0xb87333, metalness:1.0, roughness:.30 }),
+  glass:    new THREE.MeshPhysicalMaterial({ color:0xdff4ff, metalness:0, roughness:.03,
+               transparent:true, opacity:.15, depthWrite:false, envMapIntensity:2.5, side:THREE.DoubleSide }),
+  waBase:   new THREE.MeshStandardMaterial({ color:0x3a4a5a, metalness:.55, roughness:.35, emissive:0x000000, emissiveIntensity:0 }),
+  moly:     new THREE.MeshStandardMaterial({ color:0x2a2018, metalness:.7, roughness:.5, emissive:0xff3a10, emissiveIntensity:0 }),
+  pbn:      new THREE.MeshStandardMaterial({ color:0x1a1a1a, metalness:.15, roughness:.85, ...CLIP }),
+  taCoil:   new THREE.MeshStandardMaterial({ color:0x2a1a08, metalness:.7, roughness:.4, emissive:0xff5a20, emissiveIntensity:0, ...CLIP }),
+  waterJack: new THREE.MeshStandardMaterial({ color:0x8a949e, metalness:.9, roughness:.35, ...CLIP }),
+  shutter:  new THREE.MeshStandardMaterial({ color:0x9aa7b4, metalness:.9, roughness:.35 }),
+  rheedGun: new THREE.MeshStandardMaterial({ color:0x707880, metalness:.9, roughness:.42, ...CLIP }),
+  rheedScr: new THREE.MeshStandardMaterial({ color:0x0a2a20, emissive:0x2bff96, emissiveIntensity:0, roughness:.5 }),
+  gauge:    new THREE.MeshStandardMaterial({ color:0x0a1a28, emissive:0x4dc8ff, emissiveIntensity:0, roughness:.4 }),
+  ionPump:  new THREE.MeshStandardMaterial({ color:0x606870, metalness:.85, roughness:.45, ...CLIP }),
+  rga:      new THREE.MeshStandardMaterial({ color:0x505860, metalness:.85, roughness:.5, ...CLIP }),
+  bfmBody:  new THREE.MeshStandardMaterial({ color:0x808890, metalness:.9, roughness:.4, ...CLIP }),
+  bfmFace:  new THREE.MeshStandardMaterial({ color:0x0a1a28, emissive:0x4dc8ff, emissiveIntensity:0, roughness:.4 }),
+  beamR:    new THREE.MeshBasicMaterial({ color:0x8fffc8, transparent:true, opacity:0, depthWrite:false }),
+  beamI:    new THREE.MeshBasicMaterial({ color:0x88ddff, transparent:true, opacity:0, depthWrite:false }),
+  ledG:     new THREE.MeshStandardMaterial({ color:0x001a05, emissive:0x36ff78, emissiveIntensity:3.5 }),
+};
+
+const cyl = (rt,rb,h,m,s=32,o=false) => new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,s,1,o),m);
+const box = (w,h,d,m) => new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);
+
+function ring(rIn,rOut,len,m,s=32){
+  const sh = new THREE.Shape();
+  sh.absarc(0,0,rOut,0,Math.PI*2,false);
+  const hole = new THREE.Path();
+  hole.absarc(0,0,rIn,0,Math.PI*2,true);
+  sh.holes.push(hole);
+  const g = new THREE.ExtrudeGeometry(sh,{depth:len,bevelEnabled:false,curveSegments:s});
+  g.translate(0,0,-len/2); g.rotateY(Math.PI/2);
+  return new THREE.Mesh(g,m);
+}
+
+function helix(radius, height, turns, tubeR, mat) {
+  const pts = [];
+  const N = Math.round(turns * 20);
+  for (let i = 0; i <= N; i++) {
+    const t = i / N;
+    const a = t * turns * Math.PI * 2;
+    pts.push(new THREE.Vector3(Math.cos(a)*radius, t*height, Math.sin(a)*radius));
+  }
+  const c = new THREE.CatmullRomCurve3(pts);
+  return new THREE.Mesh(new THREE.TubeGeometry(c, N*2, tubeR, 5, false), mat);
+}
+
+function boltRing(radius, count, m){
+  const g = new THREE.Group();
+  const geo = new THREE.CylinderGeometry(0.022,0.022,0.05,6);
+  for (let i = 0; i < count; i++) {
+    const a = (i/count)*Math.PI*2;
+    const b = new THREE.Mesh(geo, m);
+    b.position.set(Math.cos(a)*radius, 0, Math.sin(a)*radius);
+    g.add(b);
+  }
+  return g;
+}
+
+function tubeAlong(pts, r, m, seg=20, rad=6){
+  const c = new THREE.CatmullRomCurve3(pts.map(p => new THREE.Vector3(...p)));
+  return new THREE.Mesh(new THREE.TubeGeometry(c, seg, r, rad, false), m);
+}
+
+const floor = new THREE.Mesh(new THREE.CircleGeometry(50,48),
+  new THREE.MeshStandardMaterial({ color:0x0b0e13, roughness:.6, metalness:.55 }));
+floor.rotation.x = -Math.PI/2; floor.receiveShadow = true; scene.add(floor);
+const grid = new THREE.GridHelper(80, 40, 0x1d3348, 0x111a23);
+grid.position.y = 0.003; grid.material.transparent = true; grid.material.opacity = 0.45; scene.add(grid);
+
+const CH_R = 1.5, CH_BOT = 2.0, CH_MID = 5.3, CH_TOP = 5.9, SUB_Y = 4.7;
+
+/* FRAME — legs extended to reach the chamber support collar at y=1.92,
+ * with four horizontal arms connecting the leg tops to the collar edge.
+ * Without this the chamber appears to float above a frame that stops
+ * at y=1.5. */
+[[-2.0,-1.9],[-2.0,1.9],[2.0,-1.9],[2.0,1.9]].forEach(([x,z]) => {
+  const leg = box(0.14, 1.92, 0.14, MAT.steel3);
+  leg.position.set(x, 0.96, z); leg.castShadow = true; scene.add(leg);
+  const foot = cyl(0.19, 0.22, 0.06, MAT.dark, 12);
+  foot.position.set(x, 0.03, z); scene.add(foot);
+});
+for (const z of [-1.9, 1.9]) {
+  const rail = box(4.14, 0.10, 0.10, MAT.steel3);
+  rail.position.set(0, 1.45, z); scene.add(rail);
+}
+for (const x of [-2.0, 2.0]) {
+  const rail = box(0.10, 0.10, 3.8, MAT.steel3);
+  rail.position.set(x, 1.45, 0); scene.add(rail);
+}
+
+const supportCollar = ring(1.55, 1.72, 0.09, MAT.steel2, 40);
+supportCollar.rotation.z = Math.PI / 2;
+supportCollar.position.y = 1.92;
+supportCollar.castShadow = true;
+supportCollar.receiveShadow = true;
+scene.add(supportCollar);
+
+[[-2.0,-1.9],[-2.0,1.9],[2.0,-1.9],[2.0,1.9]].forEach(([x,z]) => {
+  const r = Math.sqrt(x*x + z*z);
+  const start = new THREE.Vector3(x * 1.72/r, 1.92, z * 1.72/r);
+  const end = new THREE.Vector3(x, 1.92, z);
+  const dir = end.clone().sub(start);
+  const len = dir.length();
+  const arm = box(len, 0.09, 0.09, MAT.steel3);
+  arm.position.copy(start).add(end).multiplyScalar(0.5);
+  arm.quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), dir.normalize());
+  arm.castShadow = true;
+  scene.add(arm);
+});
+
+const body = ring(CH_R - 0.08, CH_R, CH_MID - CH_BOT, MAT.chamber, 40);
+body.rotation.z = Math.PI/2;
+body.position.y = (CH_BOT + CH_MID) / 2;
+body.castShadow = true; body.receiveShadow = true; scene.add(body);
+
+const cone = cyl(0.75, CH_R, CH_TOP - CH_MID, MAT.cone, 40, true);
+cone.position.y = (CH_MID + CH_TOP) / 2;
+cone.castShadow = true; cone.receiveShadow = true; scene.add(cone);
+
+const cryo = ring(CH_R - 0.22, CH_R - 0.10, CH_MID - CH_BOT - 0.30, MAT.cryo, 32);
+cryo.rotation.z = Math.PI/2;
+cryo.position.y = (CH_BOT + CH_MID) / 2;
+cryo.castShadow = true; cryo.receiveShadow = true; scene.add(cryo);
+
+const botF = cyl(CH_R + 0.15, CH_R + 0.15, 0.10, MAT.flange, 40);
+botF.position.y = CH_BOT; botF.castShadow = true; botF.receiveShadow = true; scene.add(botF);
+const botB = boltRing(CH_R + 0.06, 28, MAT.steel3); botB.position.y = CH_BOT - 0.07; scene.add(botB);
+
+const topF = cyl(0.85, 0.85, 0.12, MAT.flange, 32);
+topF.position.y = CH_TOP + 0.02; topF.castShadow = true; topF.receiveShadow = true; scene.add(topF);
+const topB = boltRing(0.72, 20, MAT.steel3); topB.position.y = CH_TOP + 0.09; scene.add(topB);
+
+for (let i = 0; i < 8; i++) {
+  if (i === 2 || i === 6) continue;
+  const a = (i / 8) * Math.PI * 2 + Math.PI/8;
+  const port = cyl(0.14, 0.14, 0.22, MAT.flange, 12);
+  port.rotation.z = Math.PI/2;
+  port.rotation.y = -a;
+  port.position.set(Math.cos(a)*(CH_R+0.14), CH_MID-0.6, Math.sin(a)*(CH_R+0.14));
+  port.castShadow = true; scene.add(port);
+}
+
+for (let i = 0; i < 8; i++) {
+  const t = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.055, 6, 16), MAT.steel3);
+  t.rotation.x = Math.PI/2;
+  t.position.y = CH_TOP + 0.20 + i * 0.08;
+  t.castShadow = true; scene.add(t);
+}
+const motorBase = cyl(0.30, 0.30, 0.12, MAT.flange, 20);
+motorBase.position.y = CH_TOP + 0.90; motorBase.castShadow = true; scene.add(motorBase);
+const motor = cyl(0.34, 0.34, 0.40, MAT.dark, 20);
+motor.position.y = CH_TOP + 1.15; motor.castShadow = true; scene.add(motor);
+const motorCap = cyl(0.26, 0.34, 0.10, MAT.steel2, 20);
+motorCap.position.y = CH_TOP + 1.42; motorCap.castShadow = true; scene.add(motorCap);
+
+const shaftIn = cyl(0.09, 0.09, CH_TOP - SUB_Y - 0.15, MAT.steel2, 12);
+shaftIn.position.y = (CH_TOP + SUB_Y) / 2 + 0.03;
+shaftIn.castShadow = true; scene.add(shaftIn);
+
+const holder = cyl(0.55, 0.55, 0.10, MAT.steel2, 24);
+holder.position.y = SUB_Y + 0.06; holder.castShadow = true; holder.receiveShadow = true; scene.add(holder);
+
+const heater = cyl(0.50, 0.50, 0.06, MAT.moly, 24);
+heater.position.y = SUB_Y + 0.13; scene.add(heater);
+
+const waferGroup = new THREE.Group();
+waferGroup.position.y = SUB_Y;
+scene.add(waferGroup);
+
+/* Wafer bottom face at waferGroup y = -0.01, matching baseY for first layer */
+const wafer = box(0.55, 0.02, 0.55, MAT.waBase);
+wafer.position.y = 0;
+wafer.castShadow = true; wafer.receiveShadow = true;
+waferGroup.add(wafer);
+
+const LAYER_INFO = [
+  { name:'GaAs buffer',  color:0xdde5ee, thick:1.0 },
+  { name:'Al₀.₃Ga₀.₇As', color:0xc8b8a8, thick:0.5 },
+  { name:'GaAs active',  color:0xe8f0f8, thick:0.1 },
+  { name:'Al₀.₃Ga₀.₇As', color:0xc8b8a8, thick:0.5 },
+];
+const LAYER_VIS_SCALE = 0.12;
+const growthLayers = [];
+let cumH = 0;
+LAYER_INFO.forEach((info, i) => {
+  const h = 0.020 + info.thick * LAYER_VIS_SCALE;
+  const m = new THREE.MeshStandardMaterial({ color: info.color, metalness:.7, roughness:.28, emissive: info.color, emissiveIntensity:.15 });
+  const mesh = box(0.52, 1, 0.52, m);
+  mesh.scale.y = 0.001;
+  mesh.position.y = -0.01 - cumH;
+  mesh.visible = false;
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  waferGroup.add(mesh);
+  growthLayers.push({ mesh, height: h, baseY: -0.01 - cumH, info });
+  cumH += h;
+});
+let currentActiveLayer = null;
+
+const CELL_DATA = [
+  { name:'Ga', angle: 0,              beamColor: 0xffcc88 },
+  { name:'Al', angle: Math.PI*2/3,    beamColor: 0xddeeff },
+  { name:'As', angle: Math.PI*4/3,    beamColor: 0xddaaff },
+];
+const cells = [];
+const cellBeams = [];
+const SUB_TARGET = new THREE.Vector3(0, SUB_Y - 0.02, 0);
+
+CELL_DATA.forEach(cd => {
+  const baseX = Math.sin(cd.angle) * 0.65;
+  const baseZ = Math.cos(cd.angle) * 0.65;
+  const basePos = new THREE.Vector3(baseX, CH_BOT + 0.05, baseZ);
+  const tipPos = new THREE.Vector3(baseX * 0.35, CH_BOT + 1.0, baseZ * 0.35);
+
+  const dir = tipPos.clone().sub(basePos);
+  const len = dir.length();
+
+  const g = new THREE.Group();
+  g.position.copy(basePos);
+  g.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir.clone().normalize());
+  scene.add(g);
+
+  const jacket = cyl(0.13, 0.13, len * 0.85, MAT.waterJack, 16);
+  jacket.position.y = len * 0.42;
+  jacket.castShadow = true; jacket.receiveShadow = true;
+  g.add(jacket);
+
+  const wf1 = cyl(0.025, 0.025, 0.10, MAT.copper, 8);
+  wf1.rotation.z = Math.PI/2; wf1.position.set(0.16, len * 0.25, 0); g.add(wf1);
+  const wf2 = cyl(0.025, 0.025, 0.10, MAT.copper, 8);
+  wf2.rotation.z = Math.PI/2; wf2.position.set(0.16, len * 0.55, 0); g.add(wf2);
+
+  const crucible = cyl(0.085, 0.085, len * 0.95, MAT.pbn, 14);
+  crucible.position.y = len * 0.47;
+  g.add(crucible);
+
+  const coilMat = MAT.taCoil.clone();
+  coilMat.clippingPlanes = [clipPlane];
+  const heaterCoil = helix(0.10, len * 0.65, 6, 0.012, coilMat);
+  heaterCoil.position.y = len * 0.15;
+  g.add(heaterCoil);
+
+  const tip = cyl(0.045, 0.085, 0.10, MAT.steel2, 14);
+  tip.position.y = len * 0.95;
+  g.add(tip);
+
+  /* ===== SHUTTER ASSEMBLY =====
+   * Real K-cell shutters: circular blade on a rotating shaft that runs
+   * parallel to the cell axis, through a rotary feedthrough in the source
+   * flange. The shaft + feedthrough make the mechanism legible — without
+   * them the blade appears to float above the cell. */
+  const SHUTTER_OFFSET = 0.22;
+  const shaftBottomY = 0.10;
+  const shaftTopY = len * 0.98;
+
+  // Vertical rotary shaft, parallel to the cell axis, offset to one side
+  const shutterShaft = cyl(0.016, 0.016, shaftTopY - shaftBottomY, MAT.steel3, 8);
+  shutterShaft.position.set(SHUTTER_OFFSET, (shaftBottomY + shaftTopY) / 2, 0);
+  shutterShaft.castShadow = true;
+  g.add(shutterShaft);
+
+  // Rotary feedthrough collar where the shaft enters the source flange
+  const feedthrough = cyl(0.045, 0.045, 0.06, MAT.copper, 10);
+  feedthrough.position.set(SHUTTER_OFFSET, shaftBottomY, 0);
+  feedthrough.castShadow = true;
+  g.add(feedthrough);
+
+  // Hinge group — rotates around Y at the shaft top
+  const hinge = new THREE.Group();
+  hinge.position.set(SHUTTER_OFFSET, shaftTopY, 0);
+  g.add(hinge);
+
+  // Mounting bracket — short arm from shaft to blade center
+  const bracket = box(SHUTTER_OFFSET + 0.02, 0.018, 0.05, MAT.steel2);
+  bracket.position.set(-SHUTTER_OFFSET / 2, 0, 0);
+  bracket.castShadow = true;
+  hinge.add(bracket);
+
+  // Circular shutter blade, slightly larger than the cell aperture
+  const blade = cyl(0.15, 0.15, 0.012, MAT.shutter, 20);
+  blade.position.set(-SHUTTER_OFFSET, 0, 0);
+  blade.castShadow = true;
+  blade.receiveShadow = true;
+  hinge.add(blade);
+
+  // Green status LED on the blade (visible when closed, swings aside when open)
+  const dot = new THREE.Mesh(new THREE.SphereGeometry(0.015, 6, 4), MAT.ledG.clone());
+  dot.position.set(-SHUTTER_OFFSET, 0.01, 0);
+  hinge.add(dot);
+
+  cells.push({
+    name: cd.name, group: g, hinge, coil: heaterCoil, dot,
+    kKey: cd.name.toLowerCase(), beamColor: cd.beamColor
+  });
+
+  const tipWorld = basePos.clone().add(dir.clone().normalize().multiplyScalar(len * 0.98));
+  const beamVec = SUB_TARGET.clone().sub(tipWorld);
+  const beamLen = beamVec.length();
+  const beamGeo = new THREE.CylinderGeometry(0.075, 0.025, beamLen, 8, 1, true);
+  const beamMat = new THREE.MeshBasicMaterial({
+    color: cd.beamColor, transparent: true, opacity: 0,
+    depthWrite: false, blending: THREE.AdditiveBlending
+  });
+  const beam = new THREE.Mesh(beamGeo, beamMat);
+  beam.position.copy(tipWorld).add(SUB_TARGET).multiplyScalar(0.5);
+  beam.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), beamVec.clone().normalize());
+  scene.add(beam);
+  cellBeams.push(beam);
+});
+
+const RHEED_GUN = new THREE.Vector3(1.6, SUB_Y - 0.15, 0);
+const RHEED_SCR = new THREE.Vector3(-1.6, SUB_Y - 0.15, 0);
+
+const gun = cyl(0.16, 0.22, 0.55, MAT.rheedGun, 16);
+gun.rotation.z = Math.PI/2; gun.position.copy(RHEED_GUN);
+gun.castShadow = true; gun.receiveShadow = true; scene.add(gun);
+
+const gunTip = cyl(0.05, 0.10, 0.10, MAT.steel2, 12);
+gunTip.rotation.z = Math.PI/2;
+gunTip.position.set(RHEED_GUN.x - 0.32, RHEED_GUN.y, RHEED_GUN.z);
+scene.add(gunTip);
+
+const screenFrame = box(0.55, 0.45, 0.05, MAT.steel3);
+screenFrame.position.copy(RHEED_SCR);
+screenFrame.rotation.y = Math.PI/2;
+screenFrame.castShadow = true; screenFrame.receiveShadow = true; scene.add(screenFrame);
+
+const screenFace = box(0.48, 0.38, 0.008, MAT.rheedScr);
+screenFace.position.set(RHEED_SCR.x + 0.03, RHEED_SCR.y, RHEED_SCR.z);
+screenFace.rotation.y = Math.PI/2;
+scene.add(screenFace);
+
+const beamInMat = MAT.beamI.clone();
+const beamIn = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 1.6, 6, 1, true), beamInMat);
+{
+  const a = new THREE.Vector3(RHEED_GUN.x - 0.32, RHEED_GUN.y, 0);
+  const b = new THREE.Vector3(0, SUB_Y - 0.02, 0);
+  beamIn.position.copy(a).add(b).multiplyScalar(0.5);
+  beamIn.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), b.clone().sub(a).normalize());
+  scene.add(beamIn);
+}
+
+const beamOutMat = MAT.beamR.clone();
+const beamOut = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, 1.6, 6, 1, true), beamOutMat);
+{
+  const a = new THREE.Vector3(0, SUB_Y - 0.02, 0);
+  const b = new THREE.Vector3(RHEED_SCR.x + 0.03, RHEED_SCR.y, 0);
+  beamOut.position.copy(a).add(b).multiplyScalar(0.5);
+  beamOut.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), b.clone().sub(a).normalize());
+  scene.add(beamOut);
+}
+
+const bfmPivot = new THREE.Group();
+bfmPivot.position.set(0.75, SUB_Y - 0.45, 0);
+scene.add(bfmPivot);
+const bfmBody = cyl(0.14, 0.14, 0.18, MAT.bfmBody, 14);
+bfmBody.position.x = 0.4;
+bfmPivot.add(bfmBody);
+const bfmFace = cyl(0.11, 0.11, 0.015, MAT.bfmFace, 14);
+bfmFace.position.set(0.4, 0.10, 0);
+bfmPivot.add(bfmFace);
+
+const ionPumpBody = cyl(0.42, 0.42, 0.65, MAT.ionPump, 20);
+ionPumpBody.rotation.z = Math.PI/2;
+ionPumpBody.position.set(-(CH_R + 0.55), CH_MID - 1.2, 0);
+ionPumpBody.castShadow = true; ionPumpBody.receiveShadow = true; scene.add(ionPumpBody);
+for (let i = 0; i < 5; i++) {
+  const fin = new THREE.Mesh(new THREE.TorusGeometry(0.44, 0.022, 5, 18), MAT.steel3);
+  fin.rotation.y = Math.PI/2;
+  fin.position.set(-(CH_R + 0.32) - i * 0.12, CH_MID - 1.2, 0);
+  scene.add(fin);
+}
+scene.add(tubeAlong([ [-(CH_R + 0.02), CH_MID-1.2, 0], [-(CH_R + 0.25), CH_MID-1.2, 0] ], 0.10, MAT.steel2, 12));
+
+/* RGA — radial probe protruding from the back flange */
+const rgaBody = cyl(0.10, 0.10, 0.55, MAT.rga, 12);
+rgaBody.rotation.x = Math.PI/2;
+rgaBody.position.set(0, CH_MID - 1.0, -(CH_R + 0.30));
+scene.add(rgaBody);
+
+const vpBody = cyl(0.36, 0.36, 0.32, MAT.steel2, 20);
+vpBody.rotation.x = Math.PI/2;
+vpBody.position.set(0, CH_MID - 1.0, CH_R + 0.16);
+vpBody.castShadow = true; scene.add(vpBody);
+const vpGlass = cyl(0.28, 0.28, 0.02, MAT.glass, 20);
+vpGlass.rotation.x = Math.PI/2;
+vpGlass.position.set(0, CH_MID - 1.0, CH_R + 0.33);
+scene.add(vpGlass);
+
+const lock = cyl(0.38, 0.38, 0.65, MAT.steel2, 16);
+lock.rotation.x = Math.PI/2;
+lock.position.set(0, CH_MID - 1.0, -(CH_R + 0.42));
+lock.castShadow = true; lock.receiveShadow = true; scene.add(lock);
+const lockEnd = cyl(0.46, 0.46, 0.08, MAT.flange, 16);
+lockEnd.rotation.x = Math.PI/2;
+lockEnd.position.set(0, CH_MID - 1.0, -(CH_R + 0.78));
+lockEnd.castShadow = true; scene.add(lockEnd);
+
+const turbo = cyl(0.30, 0.30, 0.55, MAT.steel2, 16);
+turbo.position.set(-0.9, CH_BOT - 0.35, 0);
+turbo.castShadow = true; turbo.receiveShadow = true; scene.add(turbo);
+
+const gauge = cyl(0.10, 0.10, 0.28, MAT.steel2, 10);
+gauge.rotation.z = Math.PI/2;
+gauge.position.set(-(CH_R + 0.20), CH_MID - 0.55, 0);
+scene.add(gauge);
+const gaugeTip = cyl(0.08, 0.08, 0.03, MAT.gauge, 10);
+gaugeTip.rotation.z = Math.PI/2;
+gaugeTip.position.set(-(CH_R + 0.36), CH_MID - 0.55, 0);
+scene.add(gaugeTip);
+
+const mbeLabel = document.createElement('div');
+mbeLabel.className = 'label3d';
+mbeLabel.textContent = 'MBE · UHV CHAMBER';
+mbeLabel.style.color = '#7fc4ff';
+mbeLabel.style.borderColor = '#7fc4ff';
+document.body.appendChild(mbeLabel);
+
+const _pv = new THREE.Vector3();
+function placeLabel(el, x, y, z) {
+  _pv.set(x, y, z).project(camera);
+  const sx = (_pv.x * 0.5 + 0.5) * innerWidth;
+  const sy = (-_pv.y * 0.5 + 0.5) * innerHeight;
+  el.style.transform = `translate(-50%,-100%) translate(${sx}px,${sy}px)`;
+  el.style.opacity = (_pv.z < 1) ? '1' : '0';
+}
+
+const cutSlider = document.getElementById('cut');
+function applyCut() { clipPlane.constant = 1.55 - (cutSlider.value/100) * 2.9; }
+cutSlider.addEventListener('input', applyCut);
+applyCut();
+
+const S = {
+  t:0, on:false, done:false, idx:-1,
+  press:5e-11, pLock:760, subT:25, rate:0,
+  gaOpen:0, alOpen:0, asOpen:0,
+  gaT:200, alT:200, asT:200,
+  mlTotal:0, rheedI:0,
+  rheedHistory:[], bfmSwing:0,
+};
+
+const nStat = document.getElementById('narrStatus');
+const nDet = document.getElementById('narrDetail');
+const nTime = document.getElementById('narrTime');
+const progBar = document.getElementById('progBar');
+const playBtn = document.getElementById('playBtn');
+const rheedPath = document.getElementById('rheedPath');
+const rheedVal = document.getElementById('rheedVal');
+const xsecContent = document.getElementById('xsecContent');
+
+function setRheedReadout(v) { rheedVal.textContent = v > 0 ? v.toFixed(0) + '%' : '—'; }
+
+/* Growth rate conversion: 1 ML of GaAs(001) is 0.2827 nm thick,
+ * so 1 ML/s = 0.2827 nm/s × 3600 s/hr = 1.0177 µm/hr. */
+function setLiveReadouts() {
+  document.getElementById('v1').textContent = S.press > 1e-3
+    ? (S.press * 1000).toFixed(1) + ' mTorr'
+    : S.press.toExponential(1) + ' Torr';
+  document.getElementById('v7b').textContent = S.pLock > 1e-3
+    ? (S.pLock * 1000).toFixed(1) + ' mTorr'
+    : S.pLock.toExponential(1) + ' Torr';
+  document.getElementById('v2').textContent = Math.round(S.subT) + ' °C';
+  document.getElementById('v3').textContent = Math.round(S.gaT) + ' °C · ' + (S.gaOpen > 0.5 ? 'OPEN' : 'shut');
+  document.getElementById('v4').textContent = Math.round(S.alT) + ' °C · ' + (S.alOpen > 0.5 ? 'OPEN' : 'shut');
+  document.getElementById('v5').textContent = Math.round(S.asT) + ' °C · ' + (S.asOpen > 0.5 ? 'OPEN' : 'shut');
+  document.getElementById('v6').textContent = S.rate > 0
+    ? (S.rate * 1.0177).toFixed(1) + ' µm/hr (' + S.rate.toFixed(2) + ' ML/s)'
+    : '—';
+  document.getElementById('v7').textContent = S.mlTotal > 0
+    ? Math.round(S.mlTotal).toLocaleString() + ' ML'
+    : '—';
+}
+
+function setIdle() {
+  if (S.done) {
+    nStat.textContent = 'GROWTH COMPLETE';
+    nStat.style.color = '#7ee6a0';
+    nDet.textContent = 'DH structure grown. RHEED oscillations persisted through buffer and cladding; amplitude damped as surface roughness accumulated. Cool to <100 °C before unloading.';
+    nTime.textContent = 'Cycle complete';
+  } else {
+    nStat.textContent = 'IDLE';
+    nStat.style.color = '#5f7d9e';
+    nDet.textContent = 'Press Run to grow the DH laser structure by molecular beam epitaxy.';
+    nTime.textContent = '—';
+  }
+}
+
+const CYCLE = [
+  { dur:2.5, real:10, narr:'LOAD LOCK · vent N₂', color:'#7fc4ff', pLock:760, subT:25,
+    detail:'Wafer loaded into load lock; only the load lock vents. Growth chamber stays at base pressure.' },
+  { dur:2.5, real:20, narr:'LOCK PUMPING · turbo', color:'#7fc4ff', pLock:5e-7, pEnd:5e-11, subT:25,
+    detail:'Load lock roughed then turbo-pumped to ~5×10⁻⁷ Torr. Growth chamber remains at 5×10⁻¹¹ Torr (UHV).' },
+  { dur:2.0, real:2, narr:'TRANSFER · to growth chamber', color:'#7fc4ff', pEnd:5e-10, subT:25,
+    detail:'Magnetic transfer arm moves wafer onto the growth manipulator. Chamber briefly rises to ~5×10⁻¹⁰, then recovers.' },
+  { dur:3.0, real:30, narr:'DEGAS · 200 °C', color:'#ffaa66', pEnd:5e-11, subT:200,
+    gaT:980, alT:1150, asT:320,
+    detail:'Outgassing at 200 °C substrate. Effusion cells ramping to operating temperature in parallel — their Ta coils begin to glow orange.' },
+  { dur:3.0, real:10, narr:'RAMP · 200 → 580 °C', color:'#ffaa66', pEnd:5e-11, subT:580,
+    detail:'Substrate ramps to 580 °C. Cells already at temperature, awaiting shutter commands.' },
+  { dur:2.0, real:5, narr:'As OVERPRESSURE', color:'#7ee6a0', pEnd:5e-11, subT:580,
+    asO:1, gaT:980, alT:1150, asT:320,
+    detail:'As shutter opens first. As overpressure (~15:1 As:Ga BEP) prevents Ga droplet formation on the surface.' },
+  { dur:10.0, real:60, narr:'GaAs BUFFER · 1.0 µm', color:'#7ee6a0', pEnd:5e-11, subT:580,
+    asO:1, gaO:1, gaT:980, alT:1150, asT:320,
+    growth:{ layer:0, rate:1.0 },
+    detail:'Ga + As shutters open. Rate ≈ 1 ML/s = 1 µm/hr. RHEED specular intensity oscillates once per monolayer.' },
+  { dur:1.0, real:1, narr:'TRANSITION · Al opens', color:'#7ee6a0', pEnd:5e-11, subT:580,
+    asO:1, gaO:1, alO:1, gaT:980, alT:1150, asT:320,
+    detail:'Al shutter opens while Ga and As remain. Alloy composition set by Al:Ga flux ratio.' },
+  { dur:5.0, real:30, narr:'AlGaAs LOWER CLAD · 0.5 µm', color:'#7ee6a0', pEnd:5e-11, subT:580,
+    asO:1, gaO:1, alO:1, gaT:980, alT:1150, asT:320,
+    growth:{ layer:1, rate:1.0 },
+    detail:'AlGaAs continues Al + Ga + As. RHEED oscillations persist, amplitude damps as alloy scattering accumulates.' },
+  { dur:1.0, real:1, narr:'TRANSITION · Al closes', color:'#7ee6a0', pEnd:5e-11, subT:580,
+    asO:1, gaO:1, gaT:980, alT:1150, asT:320,
+    detail:'Al shutter closes; Ga and As remain. Return to pure GaAs for the active layer.' },
+  { dur:3.0, real:6, narr:'GaAs ACTIVE · 0.1 µm', color:'#7ee6a0', pEnd:5e-11, subT:580,
+    asO:1, gaO:1, gaT:980, alT:1150, asT:320,
+    growth:{ layer:2, rate:1.0 },
+    detail:'Thin GaAs active layer. Short exposure — 6 min for 0.1 µm at 1 ML/s.' },
+  { dur:1.0, real:1, narr:'TRANSITION · Al opens', color:'#7ee6a0', pEnd:5e-11, subT:580,
+    asO:1, gaO:1, alO:1, gaT:980, alT:1150, asT:320,
+    detail:'Al back on for the upper cladding.' },
+  { dur:5.0, real:30, narr:'AlGaAs UPPER CLAD · 0.5 µm', color:'#7ee6a0', pEnd:5e-11, subT:580,
+    asO:1, gaO:1, alO:1, gaT:980, alT:1150, asT:320,
+    growth:{ layer:3, rate:1.0 },
+    detail:'Upper cladding completes. RHEED amplitude now visibly damped. Total epilayer ≈ 2.1 µm.' },
+  { dur:1.5, real:1, narr:'ALL SHUTTERS CLOSE', color:'#7fc4ff', pEnd:5e-11, subT:580,
+    gaT:980, alT:1150, asT:320,
+    detail:'All shutters close. Growth terminates. RHEED returns to a static flat pattern.' },
+  { dur:3.0, real:60, narr:'COOL DOWN · 580 → 100 °C', color:'#5f7d9e', pEnd:5e-11, subT:100,
+    gaT:200, alT:200, asT:200,
+    detail:'Ramp down at ~8 °C/min under UHV. Cells cooled. Slow cooling prevents thermally induced defects.' },
+];
+
+const TOTAL = CYCLE.reduce((s, p) => s + p.dur, 0);
+const TOTAL_REAL = CYCLE.reduce((s, p) => s + (p.real || 0), 0);
+
+function lerpLog(a, b, t) {
+  if (a <= 0 || b <= 0) return a + (b - a) * t;
+  const la = Math.log10(a), lb = Math.log10(b);
+  return Math.pow(10, la + (lb - la) * t);
+}
+
+const RHEED_MAX = 220;
+for (let i = 0; i < RHEED_MAX; i++) S.rheedHistory.push(0);
+
+function updateRHEEDVisual() {
+  let d = '';
+  const w = 300, h = 60;
+  for (let i = 0; i < S.rheedHistory.length; i++) {
+    const x = (i / (RHEED_MAX - 1)) * w;
+    const y = h - (S.rheedHistory[i] / 100) * (h - 8) - 4;
+    d += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1) + ' ';
+  }
+  rheedPath.setAttribute('d', d);
+}
+
+function pushRHEED(intensity) {
+  S.rheedHistory.push(intensity);
+  if (S.rheedHistory.length > RHEED_MAX) S.rheedHistory.shift();
+  S.rheedI = intensity;
+  setRheedReadout(intensity);
+  updateRHEEDVisual();
+}
+
+function updateXsec() {
+  const y0 = 76, ppu = 24;
+  let html = '';
+  html += `<rect x="10" y="${y0}" width="280" height="10" fill="#3a5a7a"/>`;
+  html += `<text x="14" y="${y0+7}" font-size="7" fill="#a0c0e0">GaAs substrate 350 µm</text>`;
+
+  let cumY = y0;
+  LAYER_INFO.forEach((info, i) => {
+    const layer = growthLayers[i];
+    if (!layer || !layer.mesh.visible) return;
+
+    const currentThick = info.thick * layer.mesh.scale.y;
+    const pxH = Math.max(0.5, currentThick * ppu);
+    const py = cumY - pxH;
+    const fill = '#' + info.color.toString(16).padStart(6, '0');
+    const isGrowing = currentActiveLayer === layer && S.rate > 0;
+
+    const stroke = isGrowing ? '#7ee6a0' : '#0a1020';
+    const strokeW = isGrowing ? '0.8' : '0.3';
+    html += `<rect x="10" y="${py.toFixed(1)}" width="280" height="${pxH.toFixed(1)}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeW}"/>`;
+
+    if (pxH > 6) {
+      const name = info.name.split(' ')[0];
+      const thick = currentThick.toFixed(2);
+      const textFill = isGrowing ? '#0a3a1e' : '#1a2030';
+      html += `<text x="14" y="${(py + pxH/2 + 2.5).toFixed(1)}" font-size="6" fill="${textFill}" font-weight="${isGrowing ? '700' : '400'}">${name} ${thick}µm</text>`;
+    }
+    cumY -= pxH;
+  });
+
+  if (S.rate > 0 && cumY < y0 - 2) {
+    html += `<text x="220" y="${(cumY - 3).toFixed(1)}" font-size="7" fill="#7ee6a0">▲ growing</text>`;
+  }
+
+  if (cumY < y0 - 2) {
+    const totalUm = LAYER_INFO.reduce((s, info, i) => {
+      const l = growthLayers[i];
+      return s + (l && l.mesh.visible ? info.thick * l.mesh.scale.y : 0);
+    }, 0);
+    html += `<text x="220" y="${(y0 + 7).toFixed(1)}" font-size="6" fill="#6b8db0">${totalUm.toFixed(2)} µm</text>`;
+  }
+
+  xsecContent.innerHTML = html;
+}
+
+let rheedPhase = 0;
+
+playBtn.addEventListener('click', () => {
+  if (S.on) {
+    S.on = false;
+    S.rate = 0;
+    growthLayers.forEach(l => { if (l) l.mesh.material.emissiveIntensity = 0.15; });
+    currentActiveLayer = null;
+    playBtn.textContent = '▶ Run MBE Cycle';
+    playBtn.classList.remove('running');
+    return;
+  }
+  S.t = 0; S.idx = -1; S.on = true; S.done = false;
+  S.press = 5e-11; S.pLock = 760; S.subT = 25; S.rate = 0; S.mlTotal = 0;
+  S.gaOpen = S.alOpen = S.asOpen = 0;
+  S.gaT = S.alT = S.asT = 200;
+  S.rheedHistory = []; for (let i = 0; i < RHEED_MAX; i++) S.rheedHistory.push(0);
+  updateRHEEDVisual();
+  setRheedReadout(0);
+  growthLayers.forEach(l => {
+    l.mesh.visible = false;
+    l.mesh.scale.y = 0.001;
+    l.mesh.material.emissiveIntensity = 0.15;
+  });
+  currentActiveLayer = null;
+  rheedPhase = 0;
+  updateXsec();
+  playBtn.textContent = '■ Stop Cycle';
+  playBtn.classList.add('running');
+  playBtn.classList.remove('done');
+});
+
+setIdle();
+setLiveReadouts();
+updateRHEEDVisual();
+updateXsec();
+
+const clock = new THREE.Clock();
+
+function gate(target, prev, local) {
+  const t = Math.min(1, local * 5);
+  const sm = t * t * (3 - 2 * t);
+  return prev + (target - prev) * sm;
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.1);
+  const t = clock.getElapsedTime();
+
+  if (S.on) {
+    S.t += dt;
+    if (S.t >= TOTAL) {
+      S.t = TOTAL; S.on = false; S.done = true;
+      playBtn.textContent = '✓ Growth Complete';
+      playBtn.classList.remove('running');
+      playBtn.classList.add('done');
+      setIdle();
+    }
+
+    let acc = 0, idx = -1, local = 0;
+    for (let i = 0; i < CYCLE.length; i++) {
+      if (S.t < acc + CYCLE[i].dur || i === CYCLE.length - 1) {
+        idx = i; local = Math.min(1, (S.t - acc) / CYCLE[i].dur); break;
+      }
+      acc += CYCLE[i].dur;
+    }
+
+    if (idx !== S.idx) {
+      S.idx = idx;
+      const ph = CYCLE[idx];
+      nStat.textContent = ph.narr;
+      nStat.style.color = ph.color;
+      nDet.textContent = ph.detail;
+      if (ph.growth) {
+        const layer = growthLayers[ph.growth.layer];
+        if (layer) {
+          layer.mesh.visible = true;
+          currentActiveLayer = layer;
+          growthLayers.forEach((l, i) => {
+            if (l && i !== ph.growth.layer) l.mesh.material.emissiveIntensity = 0.15;
+          });
+        }
+      } else if (currentActiveLayer) {
+        currentActiveLayer.mesh.material.emissiveIntensity = 0.15;
+        currentActiveLayer = null;
+      }
+    }
+
+    const ph = CYCLE[idx];
+    const prev = idx > 0 ? CYCLE[idx - 1] : { pEnd: 5e-11 };
+
+    if (ph.pLock) S.pLock = lerpLog(760, ph.pLock, local);
+    else if (ph.pEnd) S.press = lerpLog(prev.pEnd || 5e-11, ph.pEnd, local);
+
+    if (ph.subT !== undefined) {
+      const prevT = prev.subT !== undefined ? prev.subT : 25;
+      S.subT = prevT + (ph.subT - prevT) * local;
+    }
+
+    S.gaOpen = gate(ph.gaO !== undefined ? ph.gaO : (prev.gaO || 0), prev.gaO || 0, local);
+    S.alOpen = gate(ph.alO !== undefined ? ph.alO : (prev.alO || 0), prev.alO || 0, local);
+    S.asOpen = gate(ph.asO !== undefined ? ph.asO : (prev.asO || 0), prev.asO || 0, local);
+
+    if (ph.gaT !== undefined) S.gaT = (prev.gaT !== undefined ? prev.gaT : 200) + (ph.gaT - (prev.gaT || 200)) * local;
+    if (ph.alT !== undefined) S.alT = (prev.alT !== undefined ? prev.alT : 200) + (ph.alT - (prev.alT || 200)) * local;
+    if (ph.asT !== undefined) S.asT = (prev.asT !== undefined ? prev.asT : 200) + (ph.asT - (prev.asT || 200)) * local;
+
+    S.rate = ph.growth ? ph.growth.rate : 0;
+
+    if (ph.growth && currentActiveLayer) {
+      const layer = growthLayers[ph.growth.layer];
+      layer.mesh.scale.y = Math.max(0.001, layer.height * local);
+      layer.mesh.position.y = layer.baseY - (layer.height * local) / 2;
+      layer.mesh.material.emissiveIntensity = 0.22 + 0.10 * Math.sin(t * 4);
+    }
+
+    if (ph.growth) {
+      S.mlTotal += ph.growth.rate * (ph.real * 60 / ph.dur) * dt;
+      rheedPhase += dt;
+      if (rheedPhase >= 1) rheedPhase -= 1;
+      const decay = 1 - 0.35 * local;
+      const intensity = 50 + 42 * Math.cos(2 * Math.PI * rheedPhase) * decay;
+      pushRHEED(intensity);
+    } else if ((S.on && S.idx >= 3) || S.done) {
+      pushRHEED(50 + Math.sin(t * 1.5) * 1.5);
+    }
+
+    progBar.style.width = (S.t / TOTAL * 100).toFixed(1) + '%';
+    nTime.textContent = `${Math.round(S.t)}s / ${Math.round(TOTAL)}s demo · ~${Math.round(TOTAL_REAL)} min real`;
+    setLiveReadouts();
+    updateXsec();
+  }
+
+  cells.forEach(cell => {
+    const temp = cell.kKey === 'ga' ? S.gaT : cell.kKey === 'al' ? S.alT : S.asT;
+    const hotness = Math.max(0, Math.min(1, (temp - 200) / 1000));
+    const flicker = hotness > 0.3 ? Math.sin(t * 4 + cell.kKey.charCodeAt(0)) * 0.06 : 0;
+    cell.coil.material.emissiveIntensity = hotness * 2.4 + flicker;
+  });
+
+  cells.forEach((cell, i) => {
+    const open = i === 0 ? S.gaOpen : i === 1 ? S.alOpen : S.asOpen;
+    cell.hinge.rotation.y = open * Math.PI * 0.55;
+    cell.dot.material.emissiveIntensity = open > 0.5 ? 3.5 : 0.2;
+  });
+
+  cellBeams[0].material.opacity = S.gaOpen * 0.42;
+  cellBeams[1].material.opacity = S.alOpen * 0.42;
+  cellBeams[2].material.opacity = S.asOpen * 0.28;
+
+  const subGlow = Math.max(0, Math.min(1, (S.subT - 300) / 500));
+  MAT.waBase.emissiveIntensity = subGlow * 1.8;
+  MAT.waBase.emissive.setHex(0xff3010);
+  MAT.moly.emissiveIntensity = subGlow * 3.0;
+  heaterLight.intensity = subGlow * 5;
+
+  if (S.on && S.idx >= 3) {
+    waferGroup.rotation.y += 0.8 * dt;
+    holder.rotation.y = waferGroup.rotation.y;
+  }
+
+  const rheedActive = (S.on && S.idx >= 3) || S.done;
+  beamIn.material.opacity += ((rheedActive ? 0.55 : 0) - beamIn.material.opacity) * Math.min(1, dt * 3);
+  beamOut.material.opacity += ((rheedActive ? 0.35 + (S.rheedI/100)*0.5 : 0) - beamOut.material.opacity) * Math.min(1, dt * 3);
+  MAT.rheedScr.emissiveIntensity = rheedActive ? 0.4 + (S.rheedI / 100) * 2.0 : 0;
+
+  MAT.gauge.emissiveIntensity = S.press < 1e-4 ? 1.5 + Math.sin(t * 4) * 0.3 : 0;
+
+  MAT.bfmFace.emissiveIntensity = S.rate > 0 ? 1.2 + Math.sin(t * 3) * 0.2 : 0;
+  const bfmTarget = S.rate > 0 ? 1 : 0;
+  S.bfmSwing += (bfmTarget - S.bfmSwing) * Math.min(1, dt * 2);
+  bfmPivot.rotation.y = -S.bfmSwing * Math.PI * 0.35;
+
+  placeLabel(mbeLabel, 0, CH_TOP + 1.9, 0);
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+animate();
+</script>
+</body>
+</html>
