@@ -352,13 +352,13 @@ const beamOut = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, 1.6, 6, 
 }
 
 const bfmPivot = new THREE.Group();
-bfmPivot.position.set(0.75, SUB_Y - 0.45, 0);
+bfmPivot.position.set(0.70, SUB_Y - 0.45, 0);
 scene.add(bfmPivot);
 const bfmBody = cyl(0.14, 0.14, 0.18, MAT.bfmBody, 14);
-bfmBody.position.x = 0.4;
+bfmBody.position.x = 0.70;
 bfmPivot.add(bfmBody);
 const bfmFace = cyl(0.11, 0.11, 0.015, MAT.bfmFace, 14);
-bfmFace.position.set(0.4, 0.10, 0);
+bfmFace.position.set(0.70, 0.10, 0);
 bfmPivot.add(bfmFace);
 
 const ionPumpBody = cyl(0.42, 0.42, 0.65, MAT.ionPump, 20);
