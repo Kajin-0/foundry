@@ -292,6 +292,10 @@ CELL_DATA.forEach(cd => {
   beam.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), beamVec.clone().normalize());
   MBE.add(beam);
   cellBeams.push(beam);
+  // Three K-cells each have a rigid crucible/jacket/shaft assembly.
+  // Merge only their static direct children; the hinged shutter and glowing
+  // heater coil remain separate so the process animation is unchanged.
+  mergeStaticDrawCalls(g,{exclude:new Set([heaterCoil])});
 });
 
 const RHEED_GUN = new THREE.Vector3(1.6, SUB_Y - 0.15, 0);
