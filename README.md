@@ -14,6 +14,22 @@ npm run build
 
 Deploy `dist/` to a static host or embed its production assets in a website.
 
+## Hosted GitHub Pages site
+
+GitHub Pages uses **Settings → Pages → Source: GitHub Actions**. The workflow at
+`.github/workflows/deploy-pages.yml` builds the Vite multi-page application,
+checks syntax and process-model tests, uploads only the generated `dist/`
+directory and publishes automatically after each push to `main`.
+It can also be launched manually from **Actions → Deploy Foundry to GitHub Pages → Run workflow**.
+
+- LPE / ion-mill: https://kajin-0.github.io/foundry/
+- MBE: https://kajin-0.github.io/foundry/mbe.html
+
+`vite.config.js` specifies relative asset paths (`base: './'`) so both pages
+work under the repository's `/foundry/` URL prefix. There is no server
+component. The deploy job requests the minimum GitHub Pages publishing token
+permissions (`contents: read`, `pages: write`, `id-token: write`).
+
 ## Labs
 
 - [LPE + ion mill](./index.html) — furnace growth and Ar⁺ etch.
