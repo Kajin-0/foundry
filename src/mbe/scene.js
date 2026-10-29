@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {LAYER_INFO} from './process.js';
+import {mergeStaticDrawCalls} from '../scene/merge-static.js';
 
 // A station inside Foundry's shared room: no second WebGL renderer or camera.
 export function buildMbe({scene, clipPlane}) {
@@ -91,14 +92,34 @@ function tubeAlong(pts, r, m, seg=20, rad=6){
 const CH_R = 1.5, CH_BOT = 2.0, CH_MID = 5.3, CH_TOP = 5.9, SUB_Y = 4.7;
 
 [[-2.0,-1.9],[-2.0,1.9],[2.0,-1.9],[2.0,1.9]].forEach(([x,z]) => {
-  const leg = box(0.14, 1.5, 0.14, MAT.steel3);
-  leg.position.set(x, 0.75, z); leg.castShadow = true; MBE.add(leg);
+  const leg = box(0.14, 1.92, 0.14, MAT.steel3);
+  leg.position.set(x, 0.96, z); leg.castShadow = true; MBE.add(leg);
   const foot = cyl(0.19, 0.22, 0.06, MAT.dark, 12);
   foot.position.set(x, 0.03, z); MBE.add(foot);
 });
 for (const z of [-1.9, 1.9]) {
   const rail = box(4.14, 0.10, 0.10, MAT.steel3);
   rail.position.set(0, 1.45, z); MBE.add(rail);
+}
+
+// V2 support frame: horizontal ties, a circular support collar and radial
+// brackets physically connect the feet and the UHV chamber rather than
+// leaving the vessel apparently unsupported.
+for (const x of [-2.0,2.0]){
+ const rail=box(.10,.10,3.8,MAT.steel3);
+ rail.position.set(x,1.45,0);MBE.add(rail);
+}
+const supportCollar=ring(1.55,1.72,.09,MAT.steel2,40);
+supportCollar.rotation.z=Math.PI/2;
+supportCollar.position.y=1.92;
+MBE.add(supportCollar);
+for(const [x,z] of [[-2,-1.9],[-2,1.9],[2,-1.9],[2,1.9]]){
+ const length=Math.hypot(x,z),start=new THREE.Vector3(x*1.72/length,1.92,z*1.72/length);
+ const end=new THREE.Vector3(x,1.92,z),delta=end.clone().sub(start);
+ const arm=box(delta.length(),.09,.09,MAT.steel3);
+ arm.position.copy(start).add(end).multiplyScalar(.5);
+ arm.quaternion.setFromUnitVectors(new THREE.Vector3(1,0,0),delta.normalize());
+ MBE.add(arm);
 }
 
 const body = ring(CH_R - 0.08, CH_R, CH_MID - CH_BOT, MAT.chamber, 40);
@@ -174,11 +195,11 @@ LAYER_INFO.forEach((info, i) => {
   const m = new THREE.MeshStandardMaterial({ color: info.color, metalness:.7, roughness:.28, emissive: info.color, emissiveIntensity:.15 });
   const mesh = cyl(0.26, 0.26, 1, m, 40);
   mesh.scale.y = 0.001;
-  mesh.position.y = -0.01 - cumH;
+  mesh.position.y = -0.02 - cumH;
   mesh.visible = false;
   mesh.castShadow = true; mesh.receiveShadow = true;
   waferGroup.add(mesh);
-  growthLayers.push({ mesh, height: h, baseY: -0.01 - cumH, info });
+  growthLayers.push({ mesh, height: h, baseY: -0.02 - cumH, info });
   cumH += h;
 });
 
@@ -230,17 +251,27 @@ CELL_DATA.forEach(cd => {
   tip.position.y = len * 0.95;
   g.add(tip);
 
-  const hinge = new THREE.Group();
-  hinge.position.set(0.22, len * 0.98, 0);
+  // V2 shutter assembly: visible rotary shaft, vacuum feedthrough, radial
+  // actuator arm and circular blade, each on the original animated hinge.
+  const shutterOffset=.22, shaftBottom=.10, shaftTop=len*.98;
+  const shutterShaft=cyl(.016,.016,shaftTop-shaftBottom,MAT.steel3,8);
+  shutterShaft.position.set(shutterOffset,(shaftBottom+shaftTop)/2,0);
+  g.add(shutterShaft);
+  const feedthrough=cyl(.045,.045,.06,MAT.copper,10);
+  feedthrough.position.set(shutterOffset,shaftBottom,0);
+  g.add(feedthrough);
+
+  const hinge=new THREE.Group();
+  hinge.position.set(shutterOffset,shaftTop,0);
   g.add(hinge);
-
-  const plate = box(0.44, 0.015, 0.30, MAT.shutter);
-  plate.position.set(-0.22, 0, 0);
-  plate.castShadow = true; plate.receiveShadow = true;
-  hinge.add(plate);
-
-  const dot = new THREE.Mesh(new THREE.SphereGeometry(0.015, 6, 4), MAT.ledG.clone());
-  dot.position.set(-0.22, 0, 0.16);
+  const bracket=box(shutterOffset+.02,.018,.05,MAT.steel2);
+  bracket.position.set(-shutterOffset/2,0,0);
+  hinge.add(bracket);
+  const blade=cyl(.15,.15,.012,MAT.shutter,20);
+  blade.position.set(-shutterOffset,0,0);
+  hinge.add(blade);
+  const dot=new THREE.Mesh(new THREE.SphereGeometry(.015,6,4),MAT.ledG.clone());
+  dot.position.set(-shutterOffset,.01,0);
   hinge.add(dot);
 
   cells.push({
@@ -328,7 +359,7 @@ for (let i = 0; i < 5; i++) {
 MBE.add(tubeAlong([ [-(CH_R + 0.02), CH_MID-1.2, 0], [-(CH_R + 0.25), CH_MID-1.2, 0] ], 0.10, MAT.steel2, 12));
 
 const rgaBody = cyl(0.10, 0.10, 0.55, MAT.rga, 12);
-rgaBody.rotation.z = Math.PI/2;
+rgaBody.rotation.x = Math.PI/2;
 rgaBody.position.set(0, CH_MID - 1.0, -(CH_R + 0.30));
 MBE.add(rgaBody);
 
@@ -368,10 +399,16 @@ MBE.add(gaugeTip);
 MBE.traverse(object => {
  if(object.isMesh){object.castShadow=false;object.receiveShadow=false;}
 });
+// Combine only rigid meshes with exactly identical material and vertex
+// signatures; preserve every source vertex, normal, UV, clipping plane, and
+// the independently animated wafer/beam/effusion shutter objects.
+const renderOptimization=mergeStaticDrawCalls(MBE,{
+  exclude:new Set([body,cone,holder,heater,beamIn,beamOut])
+});
 body.castShadow=true;
 cone.castShadow=true;
 holder.castShadow=true;
-return {MBE,clipPlane,MAT,CH_TOP,
+return {MBE,clipPlane,MAT,CH_TOP,renderOptimization,
   cells,cellBeams,growthLayers,waferGroup,holder,heaterLight,
   beamIn,beamOut,bfmPivot,RHEED_MAX:220};
 }
