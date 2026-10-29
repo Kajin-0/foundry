@@ -4,6 +4,7 @@ import {createGeometryHelpers} from './scene/helpers.js';
 import {buildLpe} from './scene/lpe.js';
 import {buildIonMill} from './scene/ion-mill.js';
 import {buildRoom,BAYS} from './scene/room.js';
+import {mergeStaticDrawCalls} from './scene/merge-static.js';
 import {createThermalProfile} from './ui/thermal-profile.js';
 import {createCrossSection} from './ui/cross-section.js';
 import {BINS,PARK_X,UNLOAD_X,WELL_OFFSETS,CONTACT_THR,ZONES,BASE_TOP,SUB_TOP,MELT_H,SLIDER_BOT} from './config/geometry.js';
@@ -65,6 +66,25 @@ for(const group of [machine,IMM]){
  });
 }
 vpGlow.castShadow=false;
+
+// Reduce rigid part submissions, not polygon counts. These are direct-child
+// static meshes only; exclude every mesh/group whose transform is animated
+// by the LPE or ion-mill timelines.
+const lpeRenderOptimization=mergeStaticDrawCalls(machine,{
+ exclude:new Set([
+  ...zoneCoils,...zoneLights,...growthLayers.map(l=>l?.mesh).filter(Boolean),
+  growthLayersGroup,contactRing,meltBridge,...melts.map(m=>m.mesh),
+  sliderGroup,subRing,substrate,growthLight,sliderGlow,...bubbles,
+  ...pidScreens.flatMap(s=>Object.values(s)),otcLed,inletWheel
+ ])
+});
+const immRenderOptimization=mergeStaticDrawCalls(IMM,{
+ exclude:new Set([
+  ...etchL.flatMap(l=>l?.meshes||[]),wafer,resist,tiltG,beamCone,
+  plasma,plasmaCore,...sputters.map(s=>s.mesh),chamberLight,
+  leafL,leafR,stg,vpGlow
+ ])
+});
 
 /* ============ CUTAWAY ============ */
 const cutSlider = document.getElementById('cut');
@@ -711,6 +731,7 @@ window.__foundryDiagnostics=()=>({
  view:currentTab,rendererCount:document.querySelectorAll('canvas').length,
  mbeLoaded:!!mbeController,
  mbeRenderOptimization:mbeController?.renderOptimization??null,
+ lpeRenderOptimization,immRenderOptimization,
  detailed:{lpe:machine.visible,imm:IMM.visible,mbe:mbeController?.MBE.visible??false},
  proxies:Object.fromEntries(Object.entries(room.proxies).map(([k,p])=>[k,p.visible])),
  drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,
