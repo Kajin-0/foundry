@@ -207,7 +207,8 @@ const waferGroup = new THREE.Group();
 waferGroup.position.y = SUB_Y;
 scene.add(waferGroup);
 
-const wafer = box(0.55, 0.02, 0.55, MAT.waBase);
+// The UI specifies a 2-inch wafer, so represent the substrate and film as circular discs.
+const wafer = cyl(0.275, 0.275, 0.02, MAT.waBase, 40);
 wafer.position.y = -0.01;
 wafer.castShadow = true; wafer.receiveShadow = true;
 waferGroup.add(wafer);
@@ -218,7 +219,7 @@ let cumH = 0;
 LAYER_INFO.forEach((info, i) => {
   const h = 0.020 + info.thick * LAYER_VIS_SCALE;
   const m = new THREE.MeshStandardMaterial({ color: info.color, metalness:.7, roughness:.28, emissive: info.color, emissiveIntensity:.15 });
-  const mesh = box(0.52, 1, 0.52, m);
+  const mesh = cyl(0.26, 0.26, 1, m, 40);
   mesh.scale.y = 0.001;
   mesh.position.y = -0.01 - cumH;
   mesh.visible = false;
