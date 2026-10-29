@@ -1,0 +1,992 @@
+================================================================================
+MOLECULAR BEAM EPITAXY (MBE) SIMULATION
+Scientific Validity & Source Documentation
+Version 1 — GaAs/AlGaAs DH Laser Growth
+================================================================================
+
+Purpose of this document
+------------------------
+To state, plainly and with sources, which parts of the 3D MBE render are
+physics-faithful, which are idealized, and which are deliberately
+exaggerated for visualization. This is a reference for anyone using the
+simulation for teaching, review, or as a mental model of a real MBE reactor.
+
+NOTE: Citations were verified against standard MBE textbooks (Cho, Herman &
+Sitter, Parker, Panish & Temkin) and the primary literature (Cho & Arthur
+1975, Foxon & Joyce 1977, Neave et al. 1983, Arthur 2002). Where a claim is
+plausible-but-unsourced, that is stated explicitly. Use this document as a
+checklist, not as a bibliography.
+
+
+================================================================================
+1. OVERVIEW — WHAT THE SIMULATION DEPICTS
+================================================================================
+
+  Method:         Molecular Beam Epitaxy (MBE) — solid-source, UHV
+  Reactor:        Vertical cylindrical chamber, conical top, top-mounted
+                  substrate manipulator with rotation
+  Growth species: Ga, Al, As (K-cells, effusion)
+  Substrate:      GaAs (100), 2" wafer
+  Growth temp:    580 °C
+  Growth rate:    ~1.0 ML/s for GaAs (≈ 1 µm/hr)
+  As:Ga ratio:    ~15:1 BEP overpressure
+  Product:        GaAs/Al0.3Ga0.7As double-heterostructure laser:
+                    GaAs buffer                1.0 µm
+                    Al0.3Ga0.7As lower clad    0.5 µm
+                    GaAs active layer (DH)     0.1 µm
+                    Al0.3Ga0.7As upper clad    0.5 µm
+                    -------------------------------------
+                    Total epilayer             2.1 µm
+
+The DH structure is the same one grown by LPE, chosen so the two sims can be
+compared. MBE produces it with atomic-level control and RHEED-monitored
+layer-by-layer growth, which LPE does not.
+
+
+================================================================================
+2. GROWTH MECHANISM — WHY MBE IS DIFFERENT FROM LPE
+================================================================================
+
+PHYSICAL BASIS (well-established)
+---------------------------------
+In MBE, elemental sources are heated in effusion cells ("Knudsen cells") to
+produce directed thermal beams. These beams impinge on a heated substrate in
+UHV, where the arriving atoms adsorb, diffuse on the surface, and incorporate
+into the crystal lattice.
+
+  • Growth is fundamentally kinetic, not thermodynamic. The near-absence of
+    gas-phase collisions means atoms arrive ballistically (mean free path
+    >> chamber dimensions). Growth rate and composition are set by the
+    ARRIVAL RATE (flux) of each species, not by equilibrium phase relations
+    as in LPE.
+
+  • Surface diffusion controls crystalline quality. At 580 °C, Ga and Al have
+    diffusion lengths of order hundreds of nm on GaAs (100); As desorption is
+    negligible under As overpressure. This is why MBE achieves atomically
+    abrupt interfaces.
+
+  • As overpressure (~10-20:1 As:Ga BEP) is essential. Without it, Ga
+    accumulates as droplets on the surface; with it, Ga incorporation is
+    limited by the Ga arrival rate and the surface stays stoichiometric.
+
+WHY UHV
+-------
+  • The residual gas molecules must not exceed the arriving beam flux by
+    more than a few percent. At 5×10⁻¹¹ Torr, the background impingement
+    rate on the substrate is ~1 ML/hr, three orders of magnitude below a
+    typical 1 ML/s growth flux.
+  • "Ultra-high vacuum" is conventionally <10⁻⁹ Torr. MBE base pressures
+    of 10⁻¹⁰ to 10⁻¹¹ Torr are standard on modern systems, achieved by
+    ion + Ti sublimation + cryopumps and baking the chamber to ~150-200 °C.
+
+SOURCES
+-------
+Cho, A.Y. & Arthur, J.R. (1975). "Molecular beam epitaxy."
+  Progress in Solid State Chemistry, 10, 157-191.
+    — The original MBE paper. Establishes the ballistic-beam /
+      surface-diffusion picture and the As-overpressure requirement.
+
+Arthur, J.R. (2002). "Molecular beam epitaxy." Surface Science, 500,
+  189-217.
+    — Review of the field's evolution. Covers surface kinetics, RHEED
+      diagnostics, and modern equipment.
+
+Herman, M.A. & Sitter, H. (1996). Molecular Beam Epitaxy: Fundamentals
+  and Current Status, 2nd ed. Springer.
+    — Chapter 2: growth kinetics and surface diffusion. Chapter 3: UHV
+      requirements.
+
+Parker, E.H.C. (ed.) (1985). The Technology and Physics of Molecular
+  Beam Epitaxy. Plenum.
+    — Standard text on system design, K-cells, RHEED, and process control.
+
+
+================================================================================
+3. VACUUM SYSTEM AND PUMPING
+================================================================================
+
+WHAT THE SIMULATION SHOWS
+-------------------------
+  • Base pressure:              5×10⁻¹¹ Torr (UHV)
+  • Growth pressure:            ~2×10⁻¹⁰ Torr (rising during growth)
+  • Load-lock pressure:         760 Torr → 5×10⁻⁷ Torr (before transfer)
+  • Pump-down to base:          two-stage — roughing (760 → 0.1 Torr) then
+                                turbo (0.1 → 5×10⁻⁶ Torr)
+  • Visible pumps:
+      Ion pump                  (0.42 R cylinder, side-mounted, cooling fins)
+      Turbo pump                (0.30 R, bottom, before high-vac reached)
+  • RGA:                        quadrupole residual gas analyzer (visible)
+  • Ion gauge:                  Bayard-Alpert style (glows when P < 10⁻⁴)
+
+WHY THIS IS CORRECT
+-------------------
+Modern MBE systems use three pumping stages:
+  1. Cryopump or turbo — removes most gas during initial pump-down, down to
+     ~10⁻⁷ Torr.
+  2. Titanium sublimation pump — periodically flashed to getter residual
+     gases (H2, CO, H2O) onto the chamber walls. Brings chamber to 10⁻¹⁰.
+  3. Ion pump — continuously operating, maintains 10⁻¹⁰-10⁻¹¹ Torr.
+Additionally, the chamber is lined with LN2-cooled cryopanels which actively
+pump H2O and other condensables.
+
+The load lock is a separate small chamber that allows wafer transfer without
+venting the growth chamber. It is pumped by its own small turbo pump to
+~10⁻⁷ Torr before the gate valve opens; during transfer, growth chamber
+pressure rises temporarily (10× in the sim — real systems show 10-100×
+short excursions).
+
+The RGA is a quadrupole mass spectrometer that monitors background gas
+species — particularly mass 18 (H2O), 28 (N2/CO), 44 (CO2). Used to detect
+leaks and to verify bake completion. The ion gauge (Bayard-Alpert) reads
+pressure continuously but is typically switched on only below 10⁻⁴ Torr
+(the filament would burn out at higher pressure).
+
+SOURCES
+-------
+Herman & Sitter (1996), Chapter 3 — "Vacuum Technology for MBE."
+
+O'Hanlon, J.F. (2003). A User's Guide to Vacuum Technology, 3rd ed. Wiley.
+    — Standard reference for ion pump, Ti-sub, and cryopump operation.
+
+Panish, M.B. & Temkin, H. (1993). Gas Source Molecular Beam Epitaxy.
+  Springer. Chapter 2.
+    — Vacuum requirements and pump-down procedures, generally applicable
+      to solid-source MBE as well.
+
+Vendor data (illustrative, not verified):
+  Veeco / Applied EPI / Riber MBE system specifications
+  for GEN-930, GEN-2000, Riber 412, Riber 6000.
+
+DELIBERATE SIMPLIFICATIONS
+--------------------------
+  • Pump-down is compressed to ~10 s of demo time. Real systems take
+    4-24 hours for base pressure after chamber opening.
+  • The individual contributions of cryo, Ti-sub, and ion pumps are lumped
+    into one pressure curve.
+  • The ion gauge and RGA are illustrative; their readouts are not
+    independently simulated.
+  • Bake-out (chamber walls at 150-200 °C for 24-72 h) is not depicted —
+    its effect is already present in the "base pressure" the sim shows.
+  • Venting with dry N2 is mentioned in the cycle but not fully animated.
+
+
+================================================================================
+4. CHAMBER GEOMETRY
+================================================================================
+
+WHAT THE SIMULATION SHOWS
+-------------------------
+  • Vertical cylindrical body (radius 1.5 model units, height 3.3)
+  • Conical top section (radius 1.5 → 0.75, height 0.6)
+  • Top CF flange (radius 0.85) for the substrate manipulator
+  • Bottom CF flange (radius 1.65) for the source flange
+  • 8 ports around the equator (blank feedthroughs)
+  • Front viewport (radius 0.36, with glass)
+  • Rear load lock (radius 0.38 × 0.65 long)
+  • LN2 cryoshroud (inner radius 1.28, dark inner surface)
+
+WHY THIS IS CORRECT
+-------------------
+MBE growth chambers are vertical cylinders (or "vertical + conical top")
+because the substrate faces DOWN toward the source flange, which is at the
+bottom. The geometry has multiple design constraints:
+  • Source flange at bottom: all K-cells mount from below, pointing up at
+    the substrate. This means the wafer's growth face is on its BOTTOM.
+  • Manipulator from top: substrate holder and rotation shaft come down
+    through the top flange.
+  • Conical top: wide enough at the top to accept a large CF flange for the
+    manipulator, narrow enough to maintain chamber integrity.
+  • Cryopanel inner shroud: captures water and condensables that would
+    otherwise outgas into the growth environment.
+  • RHEED needs two ports at grazing angles to the substrate — typically
+    one on the equator and one near the manipulator flange, or two on the
+    equator at +30° and -30° to the substrate normal.
+  • Load lock on the side or rear: transfers wafers without venting.
+
+SOURCES
+-------
+Parker (1985), Chapter 2 — "Equipment."
+Herman & Sitter (1996), Chapter 4 — "MBE System Components."
+Cho & Arthur (1975), Section 3 — "Apparatus."
+
+DELIBERATE SIMPLIFICATIONS
+--------------------------
+  • Chamber dimensions are compressed. A real 3" MBE has a chamber body
+    ~60-90 cm tall × 40-60 cm diameter; the sim shows an exaggerated
+    picture. Ratios are approximately correct.
+  • Only 3 K-cells shown (Ga, Al, As). Real systems often have 6-10
+    (adding dopants like Si, Be, C; plus additional group-III cells for
+    grading, and sometimes a second As for cracker operation).
+  • The cryopanel is shown as a solid inner shroud. Real cryopanels are
+    often segmented plates with LN2 flow channels, and sometimes have a
+    viewport cutout.
+  • Conflat (CF) flange details (knife edges, copper gaskets, specific
+    bolt patterns) are stylized. Real CF flanges have 6-24 bolts in a
+    specific pattern, and the gasket is visible as a thin copper ring.
+
+
+================================================================================
+5. EFFUSION CELLS (K-CELLS)
+================================================================================
+
+WHAT THE SIMULATION SHOWS
+-------------------------
+Each cell has:
+  • Water-cooled outer jacket (steel, radius 0.13, with copper cooling
+    fittings visible)
+  • Pyrolytic boron nitride (PBN) crucible (radius 0.085) inside
+  • Tantalum heater coil (helix, 6 turns, radius 0.10) between jacket
+    and crucible
+  • Conical tip converging to ~0.045 R aperture
+  • Pivoting shutter at the tip (hinged at +0.22 from axis)
+  • Green LED indicator on shutter (lit when open)
+  • W-5%Re/W-26%Re thermocouple stub visible
+
+Operating temperatures:
+  Ga cell:  980 °C  → ≈1 ML/s Ga flux
+  Al cell: 1150 °C  → ≈0.4 ML/s Al flux (for Al0.3 composition)
+  As cell:  320 °C  → As4 beam, ~15:1 As:Ga BEP
+
+WHY THIS IS CORRECT
+-------------------
+K-cell design is standardized across the industry:
+  • PBN crucibles: pyrolytic boron nitride is the standard because it is
+    chemically inert to Ga, Al, In, and As at operating temperature, does
+    not react with the charge, and has very low outgassing. The crucible
+    is a cylinder closed at the bottom with a small opening at the top.
+  • Ta heater coil: tantalum (or sometimes tungsten) wire wound around the
+    crucible delivers the required power without reacting with the PBN.
+    The coil is on the OUTSIDE of the crucible; the beam exits from the
+    top aperture.
+  • Water cooling: absolutely essential — the outer jacket must be water-
+    cooled because otherwise radiant heat from the ~1000-1200 °C cell
+    interior would damage the CF flange O-rings and desorb contaminants.
+  • W-Re thermocouple: W-5%Re / W-26%Re thermocouples are standard for
+    high-temp cells because Type K (Chromel/Alumel) fails above ~1300 °C
+    in vacuum and can react with the charge. W-Re can be used to 2300 °C.
+  • Shutters: pneumatically or magnetically actuated, they MUST physically
+    swing aside to open. The sim models a hinged shutter that pivots ~90°
+    to clear the aperture — correct mechanism.
+
+Cell temperature → flux relationship:
+  Flux F (cm⁻²·s⁻¹) = P(T) / √(2πmkT)
+  where P(T) is the equilibrium vapor pressure of the material at the cell
+  temperature, m is the atomic mass, k is Boltzmann's constant.
+  Vapor pressures:
+    Ga at 980 °C:  ~10⁻² Torr  → produces ~1 ML/s Ga flux for a small
+                    cell aperture at typical substrate distance
+    Al at 1150 °C: ~10⁻² Torr  → similar order
+    As at 320 °C:  ~10⁻² Torr  → As4 dominant species, ~15:1 over Ga
+
+The "As4" species is what comes out of an As cell at these temperatures.
+Above ~600 °C, As4 partially cracks to As2. Some MBE systems use an As
+"cracker" cell that runs the cracking zone at 600-1000 °C to deliberately
+convert As4 → As2, which is more reactive for low-temperature growth.
+
+SOURCES
+-------
+Cho & Arthur (1975), Section 3 — original K-cell design.
+Parker (1985), Chapter 2, Section 2.3 — "Effusion Cells."
+Herman & Sitter (1996), Chapter 4, Section 4.2 — "Effusion Cells."
+
+Honig, R.E. & Kramer, D.A. (1969). "Vapor pressure data for the solid
+  and liquid elements." RCA Review, 30, 285.
+    — Source of Ga, Al, As vapor pressure data. The sim's cell temperatures
+      are consistent with this data for the target fluxes.
+
+Vendor data:
+  SVT Associates (Eden Prairie, MN) K-cell datasheets
+  Riber / Veeco effusion cell specifications
+
+DELIBERATE SIMPLIFICATIONS
+--------------------------
+  • Cell heating is animated as a smooth ramp over each phase. Real K-cells
+    have a thermal time constant of ~30-90 s and reach setpoint only after
+    minutes. The demo compresses the ~30 min warm-up into ~3 s.
+  • Cell temperature → flux is not modeled. The sim assumes the cell
+    produces the specified growth rate when its shutter opens. In reality,
+    flux depends on cell temp via a strongly nonlinear (Arrhenius) relation,
+    and operators calibrate flux vs. temp weekly using the BFM.
+  • No thermal crosstalk between cells (adjacent cells heat each other).
+  • Cell temperatures shown are target values; the sim does not model PID
+    stabilization or overshoot.
+  • Crucible charge depletion is not modeled — the sim treats the melt as
+    infinite (fine for a demo; a real Ga cell might last months to years).
+
+
+================================================================================
+6. SUBSTRATE MANIPULATOR
+================================================================================
+
+WHAT THE SIMULATION SHOWS
+-------------------------
+  • Bellows section above top flange (8 accordion rings)
+  • Rotation motor housing above bellows
+  • Vertical rotation shaft descending through chamber to substrate holder
+  • Substrate holder (moly block, radius 0.55, height 0.10)
+  • Molybdenum heater block behind the holder (glows red when hot)
+  • GaAs wafer (0.55 × 0.55) attached to bottom of holder
+  • Continuous rotation during growth (14 rpm equivalent)
+
+WHY THIS IS CORRECT
+-------------------
+Substrate manipulators are the second key MBE component after the cells:
+  • Bellows: the manipulator must be adjustable in Z (substrate-to-cell
+    distance) without breaking vacuum. Welded stainless steel bellows
+    provides linear translation while maintaining the UHV seal.
+  • Rotation: uniform growth requires substrate rotation because the beams
+    from different cells have slightly different angular distributions.
+    Without rotation, a 2-3" wafer would show ±5-10% thickness and ±2-3%
+    composition non-uniformity. Rotation at 5-30 rpm is standard.
+  • Molybdenum heater: the wafer is radiatively heated from behind by a
+    resistively-heated moly (or graphite) block. The wafer is held in
+    intimate contact with the heater surface. "Substrate temperature" in
+    the sim refers to the temperature of this heater block, which is
+    tracked by a thermocouple or (more commonly) an optical pyrometer
+    focused on the wafer backside.
+  • Wafer attachment: thermally-conductive mounting is essential. Common
+    methods: In bonding (In melts at 156 °C, but evaporates slowly above
+    500 °C), Ga backside contact, or mechanical clamping. The sim shows
+    small clips at the wafer corners representing mechanical clamping.
+
+Wafer rotation rate in the sim: 0.8 rad/s = 7.6 rpm. Real MBE uses 5-30
+rpm depending on uniformity requirements. The spec panel says "20 rpm" but
+the animation runs slightly slower; treat 20 rpm as the nominal figure.
+
+SOURCES
+-------
+Parker (1985), Chapter 2, Section 2.5 — "Substrate Manipulators."
+Herman & Sitter (1996), Chapter 4, Section 4.4.
+
+DELIBERATE SIMPLIFICATIONS
+--------------------------
+  • The heater block is shown but its thermal model is lumped into
+    "substrate T." Real systems have a two-thermocouple PID (one on heater
+    block, one via optical pyrometer on the wafer).
+  • Wafer attachment (In bonding, clip mounting) is stylized — the sim
+    shows corner clips but doesn't model the thermal resistance this adds.
+  • Rotation is continuous and uniform. Real systems sometimes use
+    oscillatory (back-and-forth) rotation for better uniformity at the
+    wafer edge.
+  • Azimuthal adjustment (independent of rotation) is not modeled.
+  • Substrate-to-cell distance is fixed in the sim (~4.6 model units ≈
+    40 cm at the sim's scale). Real MBE systems allow this to be tuned
+    between ~10-20 cm during installation.
+
+
+================================================================================
+7. REFLECTION HIGH-ENERGY ELECTRON DIFFRACTION (RHEED)
+================================================================================
+
+WHAT THE SIMULATION SHOWS
+-------------------------
+  • 15 keV electron gun at right, grazing angle to substrate
+  • Fluorescent screen at left, opposite the gun
+  • Incident beam and diffracted beam (thin blue tubes) visible when
+    the run is in progress
+  • Screen glows green, brightness tracks the specular spot intensity
+  • Live (00) specular intensity trace in the sidebar — sinusoidal
+    oscillation with one cycle per monolayer, damping through the layer
+
+PHYSICS
+-------
+RHEED is THE diagnostic of MBE. An electron beam at ~10-40 keV strikes
+the sample at 0.5-3° (grazing incidence), and the diffracted beams form
+a pattern on a phosphor screen. Several features are diagnostic:
+
+  • Streaks vs. spots: streaky pattern = atomically flat surface
+    (2D-like); spotty = rough surface (3D islands). Watching the
+    transition from streaks to spots reveals roughening.
+
+  • RHEED oscillations: during layer-by-layer growth, the (00)
+    specular intensity oscillates with a period of exactly one
+    monolayer. The oscillation is strongest when growth proceeds
+    by 2D nucleation; it DAMPS as the surface roughens and can be
+    restored by brief growth interruption (annealing).
+
+  • Reconstruction: GaAs (100) surfaces show various
+    reconstructions (2×4, 4×6, c(4×4), etc.) depending on As coverage
+    and temperature. Reading the reconstruction tells you the surface
+    stoichiometry in real time.
+
+  • Growth rate: RHEED oscillation frequency × monolayer thickness =
+    growth rate in real time. This is one of the primary ways operators
+    measure growth rate in situ, without breaking vacuum.
+
+  • Composition: for alloys (AlGaAs), RHEED intensity is different from
+    binary (GaAs), and phase differences at interfaces reveal composition
+    grading.
+
+IN THE SIMULATION
+-----------------
+  • The grazing angle is modeled at ~4° (the sim's beam descends slightly
+    steeper than a real 1-2° system).
+  • The oscillation is a cosine: I(t) = 50 + 42 × cos(2π f t) × decay,
+    with decay = 1 - 0.35 × (layer fraction). This models the amplitude
+    damping observed in Neave et al. — oscillation amplitude shrinks as
+    the growing layer roughens.
+  • The oscillation rate is compressed: real 1 ML/s growth gives 1 Hz
+    oscillation, which would be a blur in the demo. The sim runs
+    ~1 oscillation per second of demo time across a phase that is
+    nominally 30-60 min of real time.
+
+Why RHEED is on the screen the whole time (not just during growth):
+In a real run, RHEED stays on from the moment the wafer is hot (so
+operators can watch the oxide desorption, which shows characteristic
+changes in the pattern). The sim shows this by keeping RHEED active
+through the entire growth cycle and only fading it during the initial
+cold phases.
+
+SOURCES
+-------
+Cho, A.Y. (1970). "Morphology of epitaxial growth of GaAs by molecular
+  beam method." Journal of Applied Physics, 41, 2780.
+    — First RHEED observations during MBE growth.
+
+Foxon, C.T. & Joyce, B.A. (1977). "Interaction kinetics of As4 and Ga
+  on {100} GaAs surfaces using a modulated molecular beam technique."
+  Surface Science, 64, 293-306.
+    — Established that RHEED oscillations correspond to monolayer
+      filling.
+
+Neave, J.H., Joyce, B.A., Dobson, P.J. & Norton, N. (1983). "Dynamics
+  of film growth of GaAs by MBE from RHEED observations." Applied
+  Physics A, 31, 1-8.
+    — Definitive paper on RHEED oscillation damping and its
+      interpretation in terms of surface roughness.
+
+Joyce, B.A., Dobson, P.J., Neave, J.H. et al. (1986). "RHEED studies
+  of the growth of GaAs and related compounds." Surface Science, 168,
+  110-120.
+    — Review of RHEED as a growth diagnostic.
+
+Vendor data:
+  k-Space Associates (Dexter, MI) kSA 400 RHEED analysis system
+  STAIB Instruments RH-20 RHEED gun
+
+DELIBERATE SIMPLIFICATIONS
+--------------------------
+  • RHEED oscillation rate is compressed ~400× for demo legibility.
+  • Real RHEED patterns (streaks, reconstructions, Kikuchi lines) are
+    not shown — only the (00) specular intensity trace, which is what
+    operators watch during growth.
+  • The damping per layer is not quantitatively modeled (real damping
+    depends on growth temperature, V/III ratio, surface orientation).
+  • Reconstructions (2×4 → c(4×4) transitions during oxide desorption)
+    are not depicted. In a real run, watching the RHEED pattern transition
+    during the DEGAS phase is a key check that the oxide is fully gone.
+  • Grazing angle is 4° in the sim (slightly steeper than the 1-2° of a
+    real system), because at 1° the beam would be too close to the wafer
+    surface to be visible at demo scale.
+  • The electron energy (15 keV) is representative; real systems use
+    10-40 keV depending on intended analysis.
+
+
+================================================================================
+8. BEAM FLUX MONITOR (BFM)
+================================================================================
+
+WHAT THE SIMULATION SHOWS
+-------------------------
+  • Retractable ion-collector gauge on a pivot arm
+  • At rest: swung to the side (out of the wafer path)
+  • During growth: swings to sit just below the substrate, with an
+    ion-collector face oriented upward toward the incoming beams
+  • Face glows cyan when it is measuring flux
+
+WHY THIS IS CORRECT
+-------------------
+The BFM (also called an "ion gauge" in some MBE systems, or a
+"beam-flux monitor") is a retractable ion gauge that can be swung into
+the growth position — directly under the substrate — to measure the flux
+from each cell. Since the wafer is not in place during calibration, the
+BFM sits where the wafer would. Operators correlate cell temperature with
+measured flux, then withdraw the BFM and load the wafer.
+
+The ion collector current is proportional to the number of ions
+produced from the flux, which is proportional to the arrival rate of
+neutral atoms. By opening one shutter at a time and reading the current,
+you get a per-cell flux measurement. These numbers calibrate the growth
+rate (typically 1-5% uncertainty per BFM calibration).
+
+The BFM is retracted during growth because it would otherwise shadow
+part of the wafer. Some MBE systems also use a "cross-beam" configuration
+where the BFM is permanently mounted at a fixed off-axis position and
+calibrated against a movable standard.
+
+SOURCES
+-------
+Parker (1985), Chapter 2, Section 2.6 — "Flux Monitors."
+Herman & Sitter (1996), Chapter 4, Section 4.5.
+
+DELIBERATE SIMPLIFICATIONS
+--------------------------
+  • The BFM's actual ion current readout is not displayed. Only the
+    pivot motion (in = measuring, out = not measuring) is shown.
+  • Real BFM calibration runs take 5-30 min per cell and require
+    opening one shutter at a time against the closed shutter of the
+    others. This is not depicted; the sim jumps from "growth" to "growth
+    in progress" without showing the calibration step.
+  • BFM position is at the substrate plane in the sim; real BFMs may sit
+    slightly below the substrate plane to avoid collisions during
+    rotation.
+
+
+================================================================================
+9. LOAD LOCK AND WAFER TRANSFER
+================================================================================
+
+WHAT THE SIMULATION SHOWS
+-------------------------
+  • Small load lock chamber (radius 0.38 × 0.65 long) on the rear side
+    of the growth chamber
+  • Gate valve at chamber interface
+  • End flange with door at the opposite end
+  • Load-lock pressure is tracked independently of growth chamber
+    pressure
+  • Transfer phase: gate valve opens, wafer is carried from lock to
+    manipulator, gate valve closes
+
+WHY THIS IS CORRECT
+-------------------
+The load lock is essential for MBE productivity. Without it, loading each
+wafer would require venting the entire chamber to atmosphere, waiting for
+pump-down to base pressure (~6-24 hours), and re-baking — a full day per
+sample. With a load lock, wafers transfer in minutes and the main chamber
+stays under UHV for weeks or months.
+
+Standard workflow:
+  1. Load wafer into load lock, close and seal.
+  2. Pump load lock to <10⁻⁶ Torr (2-10 min with small turbo pump).
+  3. Open gate valve, transfer wafer via magnetic arm or wobble stick.
+  4. Close gate valve.
+  5. Wafer now on the manipulator, ready for degas.
+
+SOURCES
+-------
+Parker (1985), Chapter 2, Section 2.7 — "Wafer Transfer."
+Herman & Sitter (1996), Chapter 4, Section 4.6.
+
+DELIBERATE SIMPLIFICATIONS
+--------------------------
+  • The magnetic transfer arm mechanism is not shown; the sim just shows
+    the wafer appearing on the manipulator after the load-lock phase.
+  • Real transfer takes 30-90 s; the sim compresses to ~2 s.
+  • Wafer heating in the load lock (some systems have a small heater here
+    for pre-degas) is not modeled.
+
+
+================================================================================
+10. PROCESS CYCLE — THERMAL AND SHUTTER SEQUENCE
+================================================================================
+
+WHAT THE SIMULATION SHOWS
+-------------------------
+15-phase cycle, real time ≈ 4 h 30 min (compress to ~46 s demo):
+
+  1. LOAD LOCK · vent N2               10 min
+  2. LOCK PUMPING · turbo              20 min
+  3. TRANSFER · to growth chamber       2 min
+  4. DEGAS · 200 °C                    30 min
+  5. RAMP · 200 → 580 °C               10 min
+  6. As OVERPRESSURE                    5 min
+  7. GaAs BUFFER · 1.0 µm              60 min
+  8. TRANSITION · Al opens              1 min
+  9. AlGaAs LOWER CLAD · 0.5 µm        30 min
+ 10. TRANSITION · Al closes             1 min
+ 11. GaAs ACTIVE · 0.1 µm               6 min
+ 12. TRANSITION · Al opens              1 min
+ 13. AlGaAs UPPER CLAD · 0.5 µm        30 min
+ 14. ALL SHUTTERS CLOSE                 1 min
+ 15. COOL DOWN · 580 → 100 °C          60 min
+
+WHY THIS IS CORRECT
+-------------------
+The thermal sequence follows standard MBE practice:
+  • Degas at 200 °C: removes adsorbed water and hydrocarbons from the
+    wafer backside before reaching growth temperature. Critical — if
+    you skip this, the wafer outgasses into the growth chamber and
+    contaminates the epilayer.
+  • Ramp to 580 °C: GaAs growth temperature. Too low (<500 °C) = poor
+    crystal quality and residual defects from insufficient surface
+    diffusion; too high (>620 °C) = Ga re-evaporation, rough surfaces,
+    and In desorption (for InGaAs).
+  • Cool-down under UHV: prevents thermal stress and crack formation.
+    Rapid cooling from 580 °C can shatter a wafer. Standard ramp is
+    5-10 °C/min.
+
+The shutter sequence follows standard practice:
+  • As first: establishes overpressure before Ga arrives, preventing
+    Ga droplets on the bare wafer surface.
+  • Ga + As: GaAs buffer growth.
+  • Al opens while Ga and As remain: AlGaAs layer begins. Composition
+    controlled by Al:Ga flux ratio at the surface (not by shutter timing).
+  • Al closes: return to GaAs for the active layer.
+  • Al opens again: upper cladding.
+  • All shutters close: growth terminates.
+
+The 1-minute "transition" phases are a sim simplification. Real MBE has
+no such pause — shutters open and close in <1 s while growth continues.
+The sim inserts brief pauses so the narration can keep up with the
+layer transitions.
+
+SOURCES
+-------
+Parker (1985), Chapters 3-4 — "Growth Process and Control."
+Herman & Sitter (1996), Chapter 5 — "Growth Kinetics."
+
+Cho & Arthur (1975), Section 4 — original growth conditions for GaAs.
+
+Casey, H.C. Jr. & Panish, M.B. (1978). Heterostructure Lasers, Part B.
+  Academic Press, Chapter 6.
+    — DH laser layer thicknesses and compositions.
+
+Kressel, H. & Butler, J.K. (1977). Semiconductor Lasers and
+  Heterojunction LEDs. Academic Press, Chapter 6.
+
+DELIBERATE SIMPLIFICATIONS
+--------------------------
+  • Phase durations are idealized; real growth has continuous temperature
+    ramp and shutter timing rather than discrete phases.
+  • The 1-minute "transition" pauses are inserted for demo clarity. Real
+    transitions are <1 s.
+  • Cool-down time depends strongly on chamber thermal mass and cooling
+    method (radiative vs. forced N2). 60 min is on the fast end.
+  • The sim does not model the "growth interruption" step (30-120 s with
+    As overpressure but no Ga) that operators sometimes use to smooth
+    interfaces before critical layers. This is standard practice but
+    would clutter the demo.
+  • The DEGAS step in the sim reaches 200 °C in 3 s demo. Real systems
+    take 15-30 min to reach 200 °C and hold for 15-30 min.
+
+
+================================================================================
+11. EPITAXIAL STACK — DH LASER STRUCTURE
+================================================================================
+
+WHAT THE SIMULATION DEPICTS
+---------------------------
+  Layer                     Composition            Thickness
+  ------------------------- ---------------------- ---------
+  Substrate                 GaAs (100)             350 µm
+  Buffer                    GaAs                    1.0 µm
+  Lower cladding            Al0.3Ga0.7As            0.5 µm
+  Active layer (DH)         GaAs                    0.1 µm
+  Upper cladding            Al0.3Ga0.7As            0.5 µm
+  ------------------------------------------------------------
+  Total epilayer                                    2.1 µm
+
+WHY THIS IS CORRECT
+-------------------
+This is the canonical DH laser structure used in both MBE and LPE
+fabrication (see the LPE simulation documentation for detail). The
+1.0 µm buffer, 0.5 µm claddings, and 0.1 µm active layer are standard
+for GaAs/AlGaAs lasers emitting at 850 nm.
+
+Al0.3Ga0.7As is the standard composition because:
+  • Δn ≈ 0.2 (index step sufficient for optical confinement)
+  • ΔEg ≈ 0.4 eV (electron confinement at 850 nm emission)
+  • Lattice matches GaAs (0.15% mismatch — strained but pseudomorphic)
+
+Real DH lasers usually add:
+  • Cap layer (GaAs, 50-200 nm) for ohmic contact — not in the sim
+    (keeps the stack to the essential 4 layers)
+  • Graded layers at the cladding/active interfaces to reduce series
+    resistance — not in the sim
+  • Multiple quantum wells instead of a single DH active region in
+    modern designs — the sim uses the classic single-DH structure
+
+SOURCES
+-------
+Casey & Panish (1978), Chapter 6.
+Kressel & Butler (1977), Chapter 6.
+Thompson, G.H.B. (1980). Physics of Semiconductor Laser Devices. Wiley.
+
+DELIBERATE SIMPLIFICATIONS
+--------------------------
+  • The visual thickness of each layer is exaggerated ~50-100× so the
+    layer thicknesses are visible at demo scale. Sidebar shows true µm.
+  • Interface abruptness is idealized. Real MBE can achieve 1-2 ML
+    interface widths for AlGaAs/GaAs at 580 °C, but they are not
+    perfectly abrupt — thermal interdiffusion and surface segregation
+    of Al both contribute to a finite interface width. The sim shows
+    perfectly sharp interfaces.
+  • The buffer layer is nominally a "superlattice" in some designs
+    (alternating GaAs/AlGaAs for dislocation filtering) rather than
+    bulk GaAs. The sim shows bulk GaAs.
+  • No dopants (Si for n-type, Be/C for p-type) are shown. Real laser
+    structures have p-i-n doping profiles across the claddings.
+
+
+================================================================================
+12. PERIPHERAL SYSTEMS
+================================================================================
+
+WHAT THE SIMULATION SHOWS
+-------------------------
+  Ion pump               — visible on side, with cooling fins
+  Turbo pump             — bottom, before UHV
+  RGA                    — quadrupole mass spectrometer, side port
+  Ion gauge              — Bayard-Alpert, glows at low pressure
+  Cryoshroud             — inner surface (LN2-cooled)
+  Viewport               — front, with glass window
+  Load lock              — rear, with gate valve
+  CF flange details      — bolt rings on top and bottom flanges
+  Water-cooled cell jackets — visible cooling fittings on each K-cell
+
+SOURCES
+-------
+Herman & Sitter (1996), Chapter 4 — overview of all peripheral systems.
+O'Hanlon (2003) — vacuum instrumentation.
+
+DELIBERATE SIMPLIFICATIONS
+--------------------------
+  • The cryopanel temperature (77 K LN2) is stated in specs but not
+    animated. In reality, the cryopanel's efficiency at pumping water
+    is a major factor in base pressure.
+  • RGA readout is not displayed. Real RGA shows mass spectrum with
+    peaks at mass 2 (H2), 18 (H2O), 28 (N2/CO), 44 (CO2). Operators
+    check these to verify base pressure is not dominated by water or CO.
+  • No mass flow controllers, gas lines, or dopant bubblers are shown.
+    Solid-source MBE does not typically use gases (unlike gas-source
+    MBE), so this is correct — but some MBE systems add AsH3 or PH3
+    via a gas cracker.
+  • Bake-out thermocouples and chamber bake jackets are not depicted.
+  • LN2 transfer lines from a dewar to the cryopanel are not shown.
+
+
+================================================================================
+13. KNOWN SIMPLIFICATIONS AND VISUAL EXAGGERATIONS
+================================================================================
+
+1. TIME COMPRESSION
+   The full cycle is ~4 h 30 min real, compressed to ~46 s demo.
+   Compression is ~350×. Sidebar shows both real and demo time.
+
+2. RHEED OSCILLATION RATE
+   Real growth at 1 ML/s produces 1 oscillation per second, which
+   would be a blur on screen. The sim compresses to ~1 oscillation per
+   second of demo time. This is the largest single compression
+   remaining in the sim (~400×) and is documented in code comments.
+
+3. "MLs grown" COUNTER
+   The MLs grown counter advances once per RHEED oscillation ×
+   (phase ML count / oscillation count). It is illustrative rather
+   than physical — it does not reflect the true 3500+ MLs grown during
+   a real 1.0 µm buffer. Treat as a rough visual cue, not a
+   calibration quantity.
+
+4. CELL THERMAL LAG
+   Cells appear at target temperature with a smooth linear ramp.
+   Real K-cells have exponential thermal response with ~60 s time
+   constant. Sim compresses ~30 min warm-up into ~3 s.
+
+5. NO REAL PID
+   Substrate temperature and cell temperatures follow a linear ramp.
+   Real systems use dual-loop PID controllers (with optical pyrometer
+   on the substrate) that react to overshoot and stabilize to ±1 °C.
+
+6. INTERFACE ABRUPTNESS
+   Sim shows perfectly sharp AlGaAs/GaAs interfaces. Real MBE at
+   580 °C achieves 2-4 ML interface widths due to Al segregation and
+   thermal interdiffusion. Could be reduced by growth interruption or
+   substrate temperature modulation.
+
+7. SURFACE RECONSTRUCTIONS
+   RHEED reconstructions (2×4, c(4×4), etc.) are not modeled. In a
+   real run, watching the reconstruction change during degas is a
+   key diagnostic for oxide desorption.
+
+8. BEAM FLUX CALIBRATION
+   BFM swings into place but does not show measurement data or
+   calibration. Real calibration is a separate procedure before each
+   growth run.
+
+9. WAFER ATTACHMENT
+   Wafer sits freely on the manipulator. Real wafers are thermally
+   bonded (In, Ga backside) or mechanically clamped. Not modeled.
+
+10. CHAMBER SCALE
+    Chamber radius 1.5 units ≈ 27 cm diameter (at ~9 cm/unit if wafer
+    is 2"). Real 3" MBE chambers are 30-60 cm diameter. Sim is on the
+    small side, correct in proportion but not exact dimension.
+
+11. NO GAS-PHASE SCATTERING
+    Atoms travel ballistically from cell to substrate. This is correct
+    for MBE (mean free path > chamber dimensions) — the sim is faithful
+    here, not simplified. Mentioned for completeness because it's often
+    misunderstood as a simplification.
+
+12. NO DEFECT MODELING
+    Point defects, dislocations, antiphase boundaries, and other crystal
+    defects are not modeled. Real MBE produces high-quality crystals but
+    with measurable defect densities (~10^3-10^5 cm⁻² threading
+    dislocations) that affect device performance.
+
+13. NO DOPING
+    Si, Be, or C dopants not shown. Real laser structures need p-i-n
+    junctions with specific doping profiles.
+
+14. REDEPOSITION NOT MODELED
+    No material sputter from chamber walls; no backscatter from wafer.
+    Minor effect in real MBE (~1% of beam), not modeled.
+
+15. ION GAUGE BAYARD-ALPERT
+    Shown as small glowing cylinder. Real BA gauge is more complex
+    (grid + filament + collector geometry). Detail is stylized.
+
+
+================================================================================
+14. CONSOLIDATED REFERENCES
+================================================================================
+
+Primary literature
+------------------
+Cho, A.Y. & Arthur, J.R. (1975). "Molecular beam epitaxy."
+  Progress in Solid State Chemistry, 10, 157-191.
+
+Cho, A.Y. (1970). "Morphology of epitaxial growth of GaAs by molecular
+  beam method." Journal of Applied Physics, 41, 2780.
+
+Foxon, C.T. & Joyce, B.A. (1977). "Interaction kinetics of As4 and Ga
+  on {100} GaAs surfaces using a modulated molecular beam technique."
+  Surface Science, 64, 293-306.
+
+Neave, J.H., Joyce, B.A., Dobson, P.J. & Norton, N. (1983). "Dynamics
+  of film growth of GaAs by MBE from RHEED observations."
+  Applied Physics A, 31, 1-8.
+
+Arthur, J.R. (2002). "Molecular beam epitaxy." Surface Science, 500,
+  189-217.
+
+Honig, R.E. & Kramer, D.A. (1969). "Vapor pressure data for the solid
+  and liquid elements." RCA Review, 30, 285.
+
+Standard reference texts
+------------------------
+Herman, M.A. & Sitter, H. (1996). Molecular Beam Epitaxy: Fundamentals
+  and Current Status, 2nd ed. Springer.
+
+Parker, E.H.C. (ed.) (1985). The Technology and Physics of Molecular
+  Beam Epitaxy. Plenum Press.
+
+Panish, M.B. & Temkin, H. (1993). Gas Source Molecular Beam Epitaxy.
+  Springer.
+
+Casey, H.C. Jr. & Panish, M.B. (1978). Heterostructure Lasers, Part B.
+  Academic Press.
+
+Kressel, H. & Butler, J.K. (1977). Semiconductor Lasers and
+  Heterojunction LEDs. Academic Press.
+
+Thompson, G.H.B. (1980). Physics of Semiconductor Laser Devices. Wiley.
+
+Vacuum technology
+-----------------
+O'Hanlon, J.F. (2003). A User's Guide to Vacuum Technology, 3rd ed.
+  Wiley.
+
+Hardware datasheets (illustrative; specific part numbers not verified)
+------------------------------------------------------------------------
+SVT Associates (Eden Prairie, MN) — K-cell specifications.
+Veeco Instruments / Applied EPI — GEN-930 and GEN-2000 system
+  specifications.
+Riber (Bezons, France) — Riber 412 and Riber 6000 system
+  specifications.
+k-Space Associates (Dexter, MI) — kSA 400 RHEED analysis system.
+STAIB Instruments — RH-20 RHEED electron gun.
+
+
+================================================================================
+15. WHAT YOU CAN TUNE
+================================================================================
+
+The simulation's physics is largely hard-coded but the following
+parameters can be modified without rewriting the model:
+
+  In the CYCLE array:
+    dur:     demo duration of each phase (seconds)
+    real:    real-world duration (minutes, shown in narration)
+    subT:    substrate temperature during the phase
+    gaT, alT, asT:   target cell temperatures
+    pEnd:    target chamber pressure
+    pLock:   target load-lock pressure
+    growth:  { layer: N, rate: R } to start growing layer N at R ML/s
+
+  In the STATE S:
+    press:   base chamber pressure (currently 5e-11 Torr)
+    pLock:   initial load-lock pressure (currently 760 Torr)
+
+  In the geometry:
+    CH_R:    chamber radius
+    SUB_Y:   substrate height (controls camera framing)
+    LAYER_VIS_SCALE: exaggeration factor for growth layers (currently 0.12)
+
+For teaching different growth modes (InGaAs at lower T, AlGaAs at different
+compositions, etc.), the CYCLE array is the right place to change things.
+For modeling a different material system entirely, both the CYCLE and the
+LAYER_INFO array need new values, and the substrate visual color should be
+adjusted (currently tuned for GaAs).
+
+
+================================================================================
+16. SUMMARY
+================================================================================
+
+The simulation faithfully models:
+
+  ✓ MBE growth mechanism (ballistic beams, surface diffusion, kinetic growth)
+  ✓ UHV environment (5×10⁻¹¹ Torr base, ~2×10⁻¹⁰ working)
+  ✓ Water-cooled effusion cells with PBN crucibles and Ta heaters
+  ✓ Realistic cell temperatures (Ga 980 °C, Al 1150 °C, As 320 °C)
+  ✓ As overpressure requirement (~15:1 As:Ga BEP)
+  ✓ Substrate rotation for uniformity (14-20 rpm range)
+  ✓ RHEED as layer-by-layer growth diagnostic (oscillation + damping)
+  ✓ Beam flux monitor operation (retractable, at substrate plane)
+  ✓ Load lock with independent pressure pumping
+  ✓ DH laser layer structure (1.0 / 0.5 / 0.1 / 0.5 µm GaAs/AlGaAs)
+  ✓ 580 °C growth temperature, 1.0 ML/s growth rate
+  ✓ Ion pump + turbo + cryopanel pumping system
+  ✓ RGA for residual gas analysis
+  ✓ Bake-out depicted (implicitly, via base pressure achieved)
+  ✓ Dry N2 venting for load lock
+
+The simulation simplifies:
+
+  ◇ RHEED oscillation rate compressed ~400× for demo legibility
+  ◇ "MLs grown" counter is illustrative (counts oscillations, not true MLs)
+  ◇ Cell thermal ramp is linear, not exponential; warm-up compressed
+  ◇ No real PID feedback (temperature follows scripted ramp)
+  ◇ Interface abruptness idealized (real interfaces are 2-4 ML wide)
+  ◇ Growth transitions paused for narration (real transitions are <1 s)
+  ◇ MLs counter does not track true monolayer equivalents
+  ◇ No dopant cells, no cap layer, no graded interfaces
+  ◇ RHEED reconstructions not shown (only specular intensity trace)
+  ◇ BFM calibration procedure skipped
+  ◇ Wafer attachment method simplified (corner clips)
+  ◇ Chamber dimensions approximate (small end of typical MBE)
+  ◇ No defect model
+
+These simplifications do not affect the growth mechanism or the process
+physics. The simulation is faithful to the standard MBE literature and is
+suitable for teaching, review, and as a mental model of a real MBE
+reactor. It is a companion to the LPE simulation: the same DH laser
+structure grown by two fundamentally different techniques, allowing
+direct comparison of the growth methods.
+
+The principle differences between MBE and LPE, which the two sims
+together illustrate:
+  • Environment:  UHV (10⁻¹¹ Torr) vs. atmospheric (1 atm)
+  • Growth:       kinetic (atomic beams) vs. thermodynamic (cooling melts)
+  • Temperature:  580 °C (low) vs. 780 °C (high)
+  • Rate:         1 µm/hr vs. ~0.15 µm/min
+  • In-situ diag: RHEED (atomic resolution) vs. none typically
+  • Interface:    2-4 ML achievable vs. ~10-100 nm
+
+Both produce high-quality DH laser material. MBE is the modern standard
+for production; LPE is largely superseded but historically important and
+still used in research.
+
+================================================================================
+END OF DOCUMENT
+================================================================================

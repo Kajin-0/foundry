@@ -14,6 +14,11 @@ npm run build
 
 Deploy `dist/` to a static host or embed its production assets in a website.
 
+## Labs
+
+- [LPE + ion mill](./index.html) — furnace growth and Ar⁺ etch.
+- [MBE](./mbe.html) — GaAs/AlGaAs UHV molecular-beam epitaxy, flux calibration, oxide desorption, RHEED and layer growth. See [MBE model notes](docs/MBE_MODEL.md).
+
 ## Project structure
 
 - `src/main.js`: state machines, controls, orchestration, render loop
