@@ -21,6 +21,7 @@ export function buildCMP({scene,batchStatic=true}){
   wafer:new THREE.MeshStandardMaterial({color:0x64798c,metalness:.76,roughness:.24}),
   ring:new THREE.MeshStandardMaterial({color:0x9b754a,metalness:.70,roughness:.43}),
   slurry:new THREE.MeshBasicMaterial({color:0x81c9ed,transparent:true,opacity:.65,depthWrite:false}),
+  waste:new THREE.MeshStandardMaterial({color:0x55788e,metalness:.08,roughness:.28,transparent:true,opacity:.65}),
   highlight:new THREE.MeshBasicMaterial({color:0x8cceeb,transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide})
  };
  // A small, stable dimple texture reads as CMP polyurethane, without extra
@@ -60,6 +61,17 @@ export function buildCMP({scene,batchStatic=true}){
  cub(.02,.40,.75,mat.leg,-.79,.69,-.20);
  const tray=cyl(2.85,2.85,.16,mat.tray,0,1.20,0,group,36);
  const rim=tor(2.84,.10,mat.leg,0,1.34,0,group,32);
+ // Slurry recovery also needs a real path: drain from catch tray down to
+ // an under-bench waste bottle, rather than liquid disappearing mid-air.
+ cyl(.27,.27,.27,mat.waste,2.35,.135,.40,group,16,'cmp-waste-bottle');
+ cyl(.18,.18,.06,mat.steel,2.35,.29,.40,group,12);
+ const wasteWaypoints=[
+  [2.82,1.32,.40],[3.04,1.49,.40],[3.38,1.40,.40],
+  [3.41,.40,.40],[3.16,.25,.40],[2.52,.27,.40]
+ ].map(p=>new THREE.Vector3(...p));
+ const wastePath=new THREE.CatmullRomCurve3(wasteWaypoints);
+ const wasteTube=new THREE.Mesh(new THREE.TubeGeometry(wastePath,28,.045,6,false),mat.dark);
+ wasteTube.name='CMP drain recovery hose';group.add(wasteTube);
  // Platen has a real rotating spindle, and a single rigid pad surface.
  cyl(.34,.34,.27,mat.steel,0,1.41,0);
  const platenGroup=new THREE.Group();platenGroup.position.y=CMP_GEOM.platenY;platenGroup.name='CMP platen';
@@ -100,6 +112,18 @@ export function buildCMP({scene,batchStatic=true}){
  conditioner.name='CMP pad conditioner';group.add(conditioner);
  cyl(.07,.07,.85,mat.steel,0,.41,0,conditioner,12);
  const disk=cyl(.24,.24,.09,mat.leg,0,-.07,0,conditioner,18);
+ // Diamond grit uses one GPU draw call for 24 contact particles.
+ const grit=new THREE.InstancedMesh(new THREE.SphereGeometry(.011,5,4),mat.steel,24);
+ grit.name='CMP conditioner diamond grit · instanced';
+ const gritDummy=new THREE.Object3D();
+ for(let i=0;i<24;i++){
+  const phi=i*2.399963229728653;
+  const r=.06+Math.sqrt((i+.5)/24)*.15;
+  gritDummy.position.set(Math.cos(phi)*r,-.12,Math.sin(phi)*r);
+  gritDummy.updateMatrix();grit.setMatrixAt(i,gritDummy.matrix);
+ }
+ grit.instanceMatrix.needsUpdate=true;
+ conditioner.add(grit);
  // Fixed tubular guide overlaps the telescoping conditioner spindle.
  cyl(.085,.085,.42,mat.dark,-.80,2.67,.80,group,12);
  // Efficient slurry: a single instanced pool (not dozens of clone materials).
