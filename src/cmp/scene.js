@@ -100,6 +100,8 @@ export function buildCMP({scene,batchStatic=true}){
  conditioner.name='CMP pad conditioner';group.add(conditioner);
  cyl(.07,.07,.85,mat.steel,0,.41,0,conditioner,12);
  const disk=cyl(.24,.24,.09,mat.leg,0,-.07,0,conditioner,18);
+ // Fixed tubular guide overlaps the telescoping conditioner spindle.
+ cyl(.085,.085,.42,mat.dark,-.80,2.67,.80,group,12);
  // Efficient slurry: a single instanced pool (not dozens of clone materials).
  const particleMesh=new THREE.InstancedMesh(new THREE.SphereGeometry(.028,6,4),mat.slurry,30);
  particleMesh.name='CMP slurry droplets · instanced';
@@ -125,6 +127,8 @@ export function buildCMP({scene,batchStatic=true}){
    link.scale.y=length;
    link.position.y=(shaftTop+bridgeBottom)*.5;
    conditioner.rotation.y+=state.conditioning?dt*6:0;
+   const targetCondY=state.conditioning?1.80:2.02;
+   conditioner.position.y+=(targetCondY-conditioner.position.y)*Math.min(1,dt*5);
    const polish=state.phase.key==='polish'||state.phase.key==='overpolish';
    padHighlight.material.opacity=polish?.22:0;
    const count=state.slurryMlMin>25?18:0;
