@@ -14,6 +14,8 @@ function freshState(){
   layerUm:LAYER_INFO.map(()=>0),activeLayer:-1};
 }
 const S=freshState(), UI=createMBEUI(S);
+// The substrate is still in the load lock until the transfer phase.
+waferGroup.visible=false;
 const play=document.getElementById('playBtn');
 const cut=document.getElementById('cut');
 function applyCut(){clipPlane.constant=1.55-Number(cut.value)/100*2.9;}
@@ -32,7 +34,7 @@ function stopCycle(){
 play.addEventListener('click',()=>{
  if(S.on){stopCycle();return;}
  Object.assign(S,freshState());
- S.on=true;resetVisuals();
+ S.on=true;waferGroup.visible=false;resetVisuals();
  play.textContent='■ Stop Cycle';play.classList.remove('done');play.classList.add('running');
  UI.updateReadouts();
 });
@@ -46,6 +48,8 @@ function updateProcess(dt,wallTime){
  const {idx,phase:p,local}=phaseAt(S.t), prev=idx>0?CYCLE[idx-1]:{gaO:0,alO:0,asO:0,subT:25};
  if(idx!==S.idx){S.idx=idx;UI.setPhase(p);}
  S.subT=prev.subT+(p.subT-prev.subT)*local;
+ // Transfer is compressed; reveal the wafer only after the BFM retracts and transfer begins.
+ waferGroup.visible=idx>5||(idx===5&&local>0.55);
  for(const k of ['gaT','alT','asT']){
    const start=previousSetpoint(idx,k), end=p[k]===undefined?start:p[k];
    S[k]=start+(end-start)*local;
@@ -108,7 +112,7 @@ function updateVisuals(dt,t){
  const calibration=S.on&&CYCLE[S.idx]?.calibrate;
  const bfmTarget=calibration?1:0;
  S.bfmSwing+=(bfmTarget-S.bfmSwing)*Math.min(1,dt*2);
- bfmPivot.rotation.y=-S.bfmSwing*Math.PI*.35;
+ bfmPivot.rotation.y=-S.bfmSwing*Math.PI;
  MAT.bfmFace.emissiveIntensity=calibration?1.2:0;
  labelPoint.set(0,CH_TOP+1.9,0).project(camera);
  const sx=(labelPoint.x*.5+.5)*innerWidth,sy=(-labelPoint.y*.5+.5)*innerHeight;
