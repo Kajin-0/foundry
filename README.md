@@ -1,4 +1,4 @@
-# Foundry — Interactive Photodetector Process Lab
+# Foundry — Interactive Semiconductor Process Lab
 
 A **single shared 3D semiconductor fabrication laboratory** containing LPE, Ar⁺ ion milling, MBE, and CMP equipment. All stations share one Three.js scene, camera, WebGL renderer and navigation controls. The physics are illustrative, with tested layer/rate calculations where applicable.
 
