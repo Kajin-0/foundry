@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {ZONES,SHELL_OUT,TUBE_R,TUBE_X,TUBE_LEN} from '../config/geometry.js';
 import {mergeStaticDrawCalls} from './merge-static.js';
+import {calculateRoomLayout,LAB_GRID_PITCH} from './room-layout.js';
 
 /**
  * Distant, low-poly silhouettes of the *same* instruments shown in detailed
@@ -56,18 +57,32 @@ export function buildRoom(scene,{batchProxies=true}={}){
   return mesh;
  };
 
- // One room-wide backdrop, floor and bay outlines, not duplicated rooms.
- const back=box(room,'room-rear-wall',88,11,.18,dark,24.5,5.5,-9.8);
- back.material=new THREE.MeshStandardMaterial({
-   color:0x101a26,roughness:.85,metalness:.15,
-   transparent:true,opacity:.72,depthWrite:false,side:THREE.DoubleSide
- });
- for(const x of [-10,9,23,40,57])
+ // Shared ground/grid scale with the outer equipment footprints. These
+ // are only TWO draw submissions regardless of how many bays are added:
+ // the plane has two triangles; the grid is one batched line object.
+ const layout=calculateRoomLayout(BAYS);
+ const floor=new THREE.Mesh(new THREE.PlaneGeometry(layout.floorSize,layout.floorSize),
+  new THREE.MeshStandardMaterial({color:0x0b0e13,roughness:.6,metalness:.55}));
+ floor.name='room-ground-plane';
+ floor.rotation.x=-Math.PI/2;floor.position.x=layout.centerX;
+ floor.receiveShadow=true;
+ room.add(floor);
+ const grid=new THREE.GridHelper(layout.gridSize,layout.gridDivisions,0x1d3348,0x111a23);
+ grid.name='room-continuous-grid';
+ grid.position.set(layout.centerX,.003,0);
+ grid.material.transparent=true;grid.material.opacity=.4;
+ room.add(grid);
+
+ // Single fog-dissolved rear wall. Width, center and the framing rails are
+ // derived from the real bays; the fourth station no longer overhangs it.
+ box(room,'room-rear-wall',layout.wallWidth,11,.18,dark,
+  (layout.wallMinX+layout.wallMaxX)/2,5.5,-9.8);
+ for(let x=layout.wallMinX+12;x<layout.wallMaxX-3;x+=15)
   box(room,'room-wall-support',.15,10.5,.22,steel,x,5.25,-9.4);
 
  const proxies={},proxyStats={};
  for(const [key,bay] of Object.entries(BAYS)){
-  const w=key==='lpe'?13:8;
+  const w=bay.width??(key==='lpe'?13:8);
   const slab=box(room,key+'-bay-floor',w,.07,8,dark,bay.x,.035,0);
   const edges=new THREE.LineSegments(new THREE.EdgesGeometry(slab.geometry),
    new THREE.LineBasicMaterial({color:0x315675,transparent:true,opacity:.8}));
@@ -258,7 +273,7 @@ export function buildRoom(scene,{batchProxies=true}={}){
  }
 
  return {
-  room,proxies,proxyStats,
+  room,proxies,proxyStats,layout,
   setFocus(active){
    for(const [key,p] of Object.entries(proxies))p.visible=key!==active;
   }
