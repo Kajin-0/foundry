@@ -225,6 +225,7 @@ test('CMP is a lazily loaded fourth machine inside the same renderer',async({pag
  await page.locator('#tabCMP').click();
  await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.cmpLoaded),{timeout:30000}).toBe(true);
  await expect(page.locator('#cmpControls')).toBeVisible();
+ await expect(page.locator('#cmpControls input')).toHaveCount(0);
  await expect(page.locator('#cmpLeft')).toBeVisible();
  await expect(page.locator('#cmpXsecSvg')).toBeVisible();
  await expect(page.locator('#cmpV1')).toHaveText('0 rpm');

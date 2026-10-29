@@ -37,7 +37,7 @@ not manufacturer-specific fabrication CAD.
 - CMP at world x=46 with matching low-poly Room overview silhouette
 - Detailed CMP module loaded only upon selection
 - Static external structures merged losslessly by material/vertex signature
-- A single instanced slurry pool replaces individually drawn droplets
+- A single instanced slurry pool replaces individually drawn droplets; the diamond conditioner grit is instanced as well
 - DOM and SVG updates ~10 Hz; no user-adjustable recipe knobs
 - Existing minimize panels and Focus view work with CMP
 
