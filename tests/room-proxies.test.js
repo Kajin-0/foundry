@@ -15,20 +15,21 @@ const totalTriangles=group=>{
  group.traverse(o=>{if(o.isMesh)tris+=(o.geometry.index?.count??o.geometry.attributes.position.count)/3;});
  return tris;
 };
-test('the 3 proxies occupy their real shared-room bays',()=>{
+test('the 4 proxies occupy their real shared-room bays',()=>{
  const model=makeRoom();
- assert.deepEqual(Object.keys(model.proxies),['lpe','imm','mbe']);
+ assert.deepEqual(Object.keys(model.proxies),['lpe','imm','mbe','cmp']);
  for(const [key,{x}] of Object.entries(BAYS)){
   assert.equal(model.proxies[key].position.x,x);
   const box=new THREE.Box3().setFromObject(model.proxies[key]);
   assert.ok(box.min.y>=-1e-5,key+' sits below floor');
   assert.ok(box.max.y>4,key+' is too small for detailed outer shape');
  }
- assert.equal(model.room.children.filter(c=>c.name.endsWith('bay-floor')).length,3);
+ assert.equal(model.room.children.filter(c=>c.name.endsWith('bay-floor')).length,4);
  model.setFocus('lpe');
  assert.equal(model.proxies.lpe.visible,false);
  assert.equal(model.proxies.imm.visible,true);
  assert.equal(model.proxies.mbe.visible,true);
+ assert.equal(model.proxies.cmp.visible,true);
 });
 test('LPE matches four detailed furnace zones, tube length and four grounded frame posts',()=>{
  const {proxies}=makeRoom();
@@ -97,4 +98,17 @@ test('proxy batching reduces draw calls without removing geometry or changing en
   assert.ok(a.max.distanceTo(b.max)<1e-5,key+' altered envelope max');
   assert.ok(batched.proxyStats[key].savedDrawCalls>0,key+' not batchable');
  }
+});
+
+test('CMP proxy has grounded bench, offset polishing head and anchored overhead carrier support',()=>{
+ const {proxies}=makeRoom(false),p=proxies.cmp;
+ assert.equal(byName(p,'cmp-table-leg').length,4);
+ assert.equal(byName(p,'cmp-overhead-post').length,2);
+ assert.equal(byName(p,'cmp-head-support').length,1);
+ assert.equal(byName(p,'cmp-platen-and-pad').length,1);
+ assert.equal(byName(p,'cmp-offset-carrier').length,1);
+ assert.equal(byName(p,'cmp-table-top')[0].geometry.parameters.width,6.5);
+ for(const leg of byName(p,'cmp-table-leg'))
+  assert.ok(Math.abs(leg.position.y-leg.geometry.parameters.height/2)<1e-9);
+ assert.equal(p.userData.silhouette.overheadAnchored,true);
 });
