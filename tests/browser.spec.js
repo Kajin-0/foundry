@@ -288,3 +288,36 @@ test('CMP retains geometry while batching rigid parts into fewer WebGL draw call
  expect(batched.cmpRenderOptimization.verifiedTriangleIndices).toBeGreaterThan(0);
  expect(batched.rendererCount).toBe(1);
 });
+
+test('expanded room grid stays beyond the equipment bays, portrait overview fits and station quality returns',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.setViewportSize({width:1440,height:900});
+ await page.goto('/');
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics?.()?.ground?.shared)).toBe(true);
+ const wide=await page.evaluate(()=>window.__foundryDiagnostics());
+ expect(wide.ground.floorSize).toBeGreaterThan(400);
+ expect(wide.ground.gridDivisions).toBe(wide.ground.gridSize/2);
+ expect(wide.roomBounds.maxX).toBe(50);
+ expect(wide.roomBounds.centerX+wide.ground.gridSize/2).toBeGreaterThan(
+   wide.roomBounds.maxX+100
+ );
+ expect(wide.viewGeometry.fov).toBe(40);
+ expect(wide.viewGeometry.fogFar).toBe(110);
+ expect(wide.rendererCount).toBe(1);
+ await page.setViewportSize({width:390,height:844});
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics().viewGeometry.fov),{timeout:15000}).toBe(72);
+ const portrait=await page.evaluate(()=>window.__foundryDiagnostics());
+ expect(portrait.viewGeometry.maxDistance).toBeGreaterThan(85);
+ expect(portrait.viewGeometry.fogFar).toBeGreaterThan(110);
+ expect(portrait.pixelRatio).toBeLessThanOrEqual(1);
+ expect(portrait.ground).toEqual(wide.ground);
+ await page.locator('#tabCMP').click();
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.cmpLoaded),{timeout:30000}).toBe(true);
+ const cmp=await page.evaluate(()=>window.__foundryDiagnostics());
+ expect(cmp.viewGeometry.fov).toBe(40);
+ expect(cmp.viewGeometry.fogFar).toBe(110);
+ expect(cmp.rendererCount).toBe(1);
+ await page.locator('#tabOverview').click();
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics().viewGeometry.fov)).toBe(72);
+ expect(errors).toEqual([]);
+});
