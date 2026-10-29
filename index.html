@@ -23,6 +23,7 @@
     <div id="narrDetail">One virtual lab with three independent tools: LPE and MBE grow GaAs/AlGaAs layers; ion milling patterns a ridge using Ar⁺.</div>
     <div id="narrTime">—</div>
   </div>
+  <div id="lpeOnlyIllustrations">
   <div class="label">Thermal Profile (LPE)</div>
   <svg id="tempProfile" viewBox="0 0 256 42" preserveAspectRatio="none">
     <defs>
@@ -38,6 +39,14 @@
   <div class="label">Epitaxial Stack <span style="color:#3f5872;letter-spacing:0.1em;font-size:9px">(thickness not to scale)</span></div>
   <div id="stack">
     <div class="layer sub"><span class="mat">GaAs (100) substrate</span><span class="thick">350 µm</span></div>
+  </div>
+  </div>
+  <div id="ionOnlyIllustrations" hidden>
+    <div class="label">Wafer Cross-Section <span class="section-note">(schematic profile)</span></div>
+    <svg id="xsec" viewBox="0 0 256 92" aria-label="Live etched ridge profile" style="width:100%;height:auto;display:block;background:rgba(10,18,28,.5);border-radius:5px"></svg>
+    <div class="label" style="margin-top:10px">Progress</div>
+    <div id="ionProgWrap"><div id="ionProgBar"></div></div>
+    <p class="ion-note">Preloaded GaAs/AlGaAs chip · resist-protected ridge</p>
   </div>
   </div>
   <div id="mbeLeft" hidden>
@@ -106,30 +115,23 @@
   </div>
 
   <div id="immControls" style="display:none">
-    <div class="label">Ion Beam Etch · Process</div>
+    <div class="label">Preset Ion Milling Recipe</div>
     <div class="specs">
-      <div><span>Ion species</span><span>Ar⁺</span></div>
-      <div><span>Beam energy</span><span>500 eV</span></div>
-      <div><span>Beam current</span><span>0.5 mA/cm²</span></div>
-      <div><span>Base / working P</span><span>&lt;5×10⁻⁶ / 2×10⁻⁴ Torr</span></div>
-      <div><span>Source</span><span>Kaufman 3-grid + neutraliser</span></div>
-      <div><span>Stage</span><span>Water-cooled · tilt · 14 rpm</span></div>
+      <div><span>Material</span><span>GaAs / AlGaAs · masked ridge</span></div>
+      <div><span>Ion beam</span><span>Ar⁺ · 500 eV</span></div>
+      <div><span>Current density</span><span>0.5 mA/cm²</span></div>
+      <div><span>Working pressure</span><span>2×10⁻⁴ Torr</span></div>
+      <div><span>Stage</span><span>30° tilt · 14 rpm · cooled</span></div>
+      <div><span>Target depth</span><span>0.40 µm</span></div>
     </div>
-    <div class="label">Stage Tilt <span id="tiltVal" style="color:#a6c4e0">30°</span></div>
-    <input type="range" id="tiltIMM" min="0" max="60" value="30" />
-    <div class="label">Etch Depth <span id="depthVal" style="color:#a6c4e0">0.40 µm</span></div>
-    <input type="range" id="depthIMM" min="20" max="70" value="40" />
     <div class="label">Chamber Cutaway</div>
-    <input type="range" id="cutIMM" min="0" max="100" value="55" />
-    <div class="label">Wafer Cross-Section <span style="color:#3f5872;font-size:9px">(true µm scale)</span></div>
-    <svg id="xsec" viewBox="0 0 256 92" style="width:100%;height:auto;display:block;background:rgba(10,18,28,.5);border-radius:5px"></svg>
+    <input type="range" id="cutIMM" min="0" max="100" value="55" aria-label="Ion-mill chamber cutaway" />
     <div class="label">Live Readouts</div>
     <div class="temps">
       <div class="trow"><span><i class="dot" style="--c:#7fc4ff"></i>Chamber</span><span class="v-green" id="v1">—</span></div>
-      <div class="trow"><span><i class="dot" style="--c:#5f9fd6"></i>Load-lock</span><span class="v-green" id="v7">—</span></div>
       <div class="trow"><span><i class="dot" style="--c:#7ee6a0"></i>Beam</span><span class="v-green" id="v2">—</span></div>
       <div class="trow"><span><i class="dot" style="--c:#ff8a2a"></i>Stage</span><span id="v3">—</span></div>
-      <div class="trow"><span><i class="dot" style="--c:#ffd060"></i>Etch</span><span class="v-green" id="v4">—</span></div>
+      <div class="trow"><span><i class="dot" style="--c:#ffd060"></i>Etched</span><span class="v-green" id="v4">—</span></div>
       <div class="trow"><span><i class="dot" style="--c:#c08aff"></i>Above active</span><span id="v5">—</span></div>
       <div class="trow"><span><i class="dot" style="--c:#d04830"></i>Resist left</span><span id="v6">—</span></div>
     </div>

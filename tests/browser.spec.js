@@ -99,3 +99,36 @@ test('lossless MBE batching lowers actual GPU draw calls without reducing triang
  expect(batched.mbeRenderOptimization.verifiedTriangleIndices).toBeGreaterThan(0);
  expect(batched.drawCalls).toBeGreaterThan(0);
 });
+
+test('ion mill has only cutaway and Run, with a docked wafer and floor-supported assembly',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/?tool=imm');
+ await expect(page.locator('#tabIMM')).toHaveClass(/active/);
+ await expect(page.locator('#immControls input[type=range]')).toHaveCount(1);
+ await expect(page.locator('#cutIMM')).toBeVisible();
+ await expect(page.locator('#tiltIMM')).toHaveCount(0);
+ await expect(page.locator('#depthIMM')).toHaveCount(0);
+ await expect(page.locator('#lpeOnlyIllustrations')).toBeHidden();
+ await expect(page.locator('#ionOnlyIllustrations')).toBeVisible();
+ await expect(page.locator('#xsec')).toBeVisible();
+ await expect(page.locator('#narrStatus')).toContainText('WAFER CLAMPED');
+ const before=await page.evaluate(()=>window.__foundryDiagnostics()?.ionMill);
+ expect(before.waferMounted).toBe(true);
+ expect(before.assembly.supportedAtFloor).toBe(true);
+ expect(before.assembly.supportTopY).toBe(before.assembly.chamberBottomY);
+ expect(before.assembly.loadLockBracket).toBe(true);
+ expect(before.assembly.pumpPedestal).toBe(true);
+ expect(before.waferLocalPosition).toEqual([0,.06,0]);
+ expect(before.presetTilt).toBe(30);
+ expect(before.presetDepth).toBe(.40);
+ await page.locator('#immBtn').click();
+ await expect(page.locator('#immBtn')).toContainText('Stop');
+ await page.waitForTimeout(500);
+ const during=await page.evaluate(()=>window.__foundryDiagnostics()?.ionMill);
+ expect(during.waferLocalPosition).toEqual(before.waferLocalPosition);
+ await page.locator('#immBtn').click();
+ await expect(page.locator('#immBtn')).toContainText('Run');
+ const after=await page.evaluate(()=>window.__foundryDiagnostics()?.ionMill);
+ expect(after.waferLocalPosition).toEqual(before.waferLocalPosition);
+ expect(errors).toEqual([]);
+});

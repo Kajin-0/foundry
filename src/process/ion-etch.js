@@ -9,28 +9,34 @@ function ibeRate(tiltDeg) {                       /* nm/min, GaAs/AlGaAs */
 const millMin = () => IBE.depth * 1000 / ibeRate(IBE.tilt);
 
 const P_BASE = 5e-6, P_WORK = 2e-4;
+const P_PREP = 5e-5; // Representative post-transfer vacuum, before final stabilization.
+
+/*
+ * The chip is mechanically clamped on the cooled stage BEFORE the visual
+ * cycle starts. Actual loading, load-lock pumping and robotic transfer take
+ * place offscreen; they are not depicted as unsupported floating motion.
+ * Illustrative preset recipe: no user-adjustable beam/tilt/depth controls.
+ */
 const IMM_CYCLE = [
-  { dur: 3, real: 2, narr: 'LOAD · lock vented with N₂', color: '#7fc4ff', lP: [760, 760], cP: [P_BASE, P_BASE], tB: 0, tS: 25,
-    detail: 'Only the load-lock is vented; the main chamber stays at base pressure. Chip clamped on the carrier, lock closed.' },
-  { dur: 4, real: 8, narr: 'PUMPING · lock roughing → turbo', color: '#7fc4ff', pump: true, cP: [P_BASE, P_BASE], tB: 0, tS: 25,
-    detail: 'Lock roughed to ~0.1 Torr, then turbo to ~5×10⁻⁶ Torr — high vacuum (UHV is below 10⁻⁹ Torr).' },
-  { dur: 3, real: 1, narr: 'TRANSFER · gate valve open', color: '#7fc4ff', xfer: true, lP: [P_BASE, P_BASE], cP: [P_BASE, P_BASE], tB: 0, tS: 25,
-    detail: 'Gate valve opens, the chip is carried onto the water-cooled stage, the gate closes.' },
-  { dur: 2, real: 1, narr: 'Ar FLOW · 5 sccm', color: '#7fc4ff', cP: [P_BASE, P_WORK], tB: 0, tS: 25,
-    detail: 'Argon admitted to the source. Working pressure 2×10⁻⁴ Torr ≈ 3×10⁻⁷ of an atmosphere.' },
-  { dur: 3, real: 5, narr: 'SOURCE ON · shutter CLOSED', color: '#ffaa66', cP: [P_WORK, P_WORK], tB: 0.5, tS: 25, hot: true,
-    detail: 'Cathode filament and neutraliser heat, discharge ignites, beam ramps to 500 eV / 0.5 mA/cm² onto the closed shutter. The neutraliser stops the wafer charging.' },
-  { dur: 2, real: 3, narr: 'STABILISE · tilt set, shutter CLOSED', color: '#ffaa66', cP: [P_WORK, P_WORK], tB: 0.5, tS: 25, hot: true, tilt: true,
-    detail: 'Stage tilts to the set angle and the beam current settles before any ions reach the sample.' },
-  { dur: 10, real: 0, narr: 'MILLING · Ar⁺ 500 eV', color: '#7ee6a0', etch: true, cP: [P_WORK, P_WORK], tB: 0.5, tS: 40, hot: true, open: true, tilt: true,
-    detail: () => `Shutter open. Stage tilted ${IBE.tilt}° and rotating (14 rpm). Rate ≈ ${ibeRate(IBE.tilt).toFixed(0)} nm/min (Y·J/e·n model) → ${IBE.depth.toFixed(2)} µm in ≈ ${millMin().toFixed(1)} min. Resist at ${IBE.sel}:1 selectivity loses ≈ ${(IBE.depth / IBE.sel).toFixed(2)} µm.` },
-  { dur: 2, real: 1, narr: 'SHUTTER CLOSED · beam off', color: '#7fc4ff', cP: [P_WORK, P_BASE], tB: 0, tS: 30, tiltOut: true,
-    detail: 'Shutter closes first, then the beam and Ar flow stop. Tilt returns to zero.' },
-  { dur: 3, real: 4, narr: 'UNLOAD · lock vent', color: '#7fc4ff', lP: [P_BASE, 760], cP: [P_BASE, P_BASE], tB: 0, tS: 25,
-    detail: () => { const r = IBE.UPPER - IBE.depth; const st = r > 0.05 ? `${r.toFixed(2)} µm of cladding left above the active layer — good.` : r > 0 ? `Only ${r.toFixed(2)} µm left above the active layer — risk of ion damage.` : `ETCHED INTO THE ACTIVE LAYER (${(-r).toFixed(2)} µm past the cladding) — device ruined.`; return `${st} The chip stays on the stage here for inspection; a real tool returns it through the lock. Next: resist strip (acetone + O₂ plasma; ion-hardened resist is hard to remove).`; } },
+  {dur:2,real:1,narr:'READY · wafer already clamped',color:'#7fc4ff',cP:[P_PREP,P_PREP],tB:0,tS:25,
+    detail:'The chip has already been transferred through the load lock and clamped to the water-cooled stage. The transfer mechanism is outside this cutaway.'},
+  {dur:3,real:5,narr:'PUMPING · chamber stabilizes',color:'#7fc4ff',cP:[P_PREP,P_BASE],tB:0,tS:25,
+    detail:'The closed chamber stabilizes from 5×10⁻⁵ to 5×10⁻⁶ Torr. The wafer stays mechanically seated on its stage.'},
+  {dur:2,real:1,narr:'ARGON · source gas admitted',color:'#7fc4ff',cP:[P_BASE,P_WORK],tB:0,tS:25,
+    detail:'Argon is admitted. The example working pressure is 2×10⁻⁴ Torr; the ion beam remains blocked by its shutter.'},
+  {dur:3,real:5,narr:'ION SOURCE · shutter closed',color:'#ffaa66',cP:[P_WORK,P_WORK],tB:0.5,tS:25,hot:true,
+    detail:'The Kaufman source and neutralizer start. A nominal 500 eV Ar⁺ beam is stabilized behind the closed shutter.'},
+  {dur:2,real:3,narr:'STAGE TILTS · preset 30°',color:'#ffaa66',cP:[P_WORK,P_WORK],tB:0.5,tS:25,hot:true,tilt:true,
+    detail:'The water-cooled wafer stage tilts to its preset 30° incidence angle while the source shutter remains closed.'},
+  {dur:10,real:0,narr:'MILLING · 500 eV Ar⁺',color:'#7ee6a0',etch:true,cP:[P_WORK,P_WORK],tB:0.5,tS:40,hot:true,open:true,tilt:true,
+    detail:()=>`The shutter opens; Ar⁺ removes exposed GaAs/AlGaAs by sputtering while the masked ridge remains. Rate ≈ ${ibeRate(IBE.tilt).toFixed(0)} nm/min; preset depth ${IBE.depth.toFixed(2)} µm in ≈ ${millMin().toFixed(1)} min. The stage rotates at 14 rpm.`},
+  {dur:2,real:1,narr:'SHUTTER CLOSES · source off',color:'#7fc4ff',cP:[P_WORK,P_BASE],tB:0,tS:30,tiltOut:true,
+    detail:'Shutter closes before the source is switched off. Argon flow stops and the stage returns to level.'},
+  {dur:2,real:2,narr:'COMPLETE · wafer remains mounted',color:'#7ee6a0',cP:[P_BASE,P_BASE],tB:0,tS:25,
+    detail:()=>`Etched ${IBE.depth.toFixed(2)} µm. ${(IBE.UPPER-IBE.depth).toFixed(2)} µm of upper cladding remains above the active layer. The wafer stays clamped for inspection; actual unload occurs through the load lock offscreen.`},
 ];
 const IMM_TOTAL = IMM_CYCLE.reduce((s, p) => s + p.dur, 0);
-const IMM_MILL = IMM_CYCLE.findIndex(p => p.etch), IMM_XFER = IMM_CYCLE.findIndex(p => p.xfer);
+const IMM_MILL = IMM_CYCLE.findIndex(p => p.etch);
 function fmtP(p) { return p > 1 ? `${Math.round(p)} Torr` : p > 1e-3 ? `${(p * 1000).toFixed(1)} mTorr` : `${p.toExponential(1)} Torr`; }
 const imRealMin = (i) => IMM_CYCLE[i].etch ? millMin() : IMM_CYCLE[i].real;
 
@@ -51,4 +57,4 @@ function pumpCurve(t) {
 }
 
 
-export {IBE,ibeRate,millMin,P_BASE,P_WORK,IMM_CYCLE,IMM_TOTAL,IMM_MILL,IMM_XFER,fmtP,imRealMin,lerpLog,pumpCurve};
+export {IBE,ibeRate,millMin,P_BASE,P_WORK,P_PREP,IMM_CYCLE,IMM_TOTAL,IMM_MILL,fmtP,imRealMin,lerpLog,pumpCurve};

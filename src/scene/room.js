@@ -51,7 +51,17 @@ export function buildRoom(scene){
   const body=cyl(1.75,1.75,3.4,steel,18);body.position.y=3.4;p.add(body);
   for(const y of [1.65,5.15]){const fl=cyl(1.85,1.85,.16,pale,18);fl.position.y=y;p.add(fl);}
   const source=cyl(.74,.96,1.1,dark,14);source.position.y=5.85;p.add(source);
-  for(const x of [-1.5,1.5]){const leg=cube(.16,1.65,.18,steel);leg.position.set(x,.83,0);p.add(leg);}
+  // The distance-view placeholder must also look mounted on a real stand.
+  for(const x of [-1.6,1.6])for(const z of [-1.6,1.6]){
+    const leg=cube(.18,1.8,.18,steel);
+    leg.position.set(x,.9,z);p.add(leg);
+  }
+  for(const z of [-1.6,1.6]){
+    const rail=cube(3.38,.13,.14,dark);
+    rail.position.set(0,1.70,z);p.add(rail);
+  }
+  const skid=cube(3.7,.15,3.7,dark);skid.position.y=.075;p.add(skid);
+  const support=cyl(1.80,1.80,.12,pale,16);support.position.y=1.67;p.add(support);
  }
  // MBE: UHV chamber, tapered manipulator flange and low source block.
  {

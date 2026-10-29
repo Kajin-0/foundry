@@ -146,3 +146,10 @@
 }
 #mbeControls .spec-group:first-child{border:0;padding-top:0;margin-top:0}
 #leftPanel,#rightPanel{contain:layout style}
+
+/* Ion mill follows the read-only recipe pattern of LPE and MBE. */
+#lpeOnlyIllustrations[hidden],#ionOnlyIllustrations[hidden]{display:none!important}
+#ionProgWrap{height:3px;background:rgba(80,120,170,.18);border-radius:2px;overflow:hidden;margin-bottom:10px}
+#ionProgBar{height:100%;width:0;background:#7fc4ff;transition:width .1s linear}
+#ionOnlyIllustrations .section-note{color:#52718f;font-size:8px;letter-spacing:.06em}
+#ionOnlyIllustrations .ion-note{font-size:9px;color:#7fa8cf;margin:4px 0 0;line-height:1.4}

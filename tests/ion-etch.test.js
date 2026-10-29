@@ -20,3 +20,15 @@ test('log-interpolation positive endpoints',()=>{
  assert.equal(lerpLog(760,5e-6,0),760);
  assert.ok(Math.abs(lerpLog(760,5e-6,1)-5e-6)<1e-16);
 });
+
+test('fixed ion-mill educational recipe starts with a mounted wafer, never a floating transfer',async()=>{
+ const {IMM_CYCLE,P_BASE,P_PREP,P_WORK}=await import('../src/process/ion-etch.js');
+ assert.equal(IMM_CYCLE[0].narr,'READY · wafer already clamped');
+ assert.equal(IMM_CYCLE[0].cP[0],P_PREP);
+ assert.ok(P_PREP>P_BASE&&P_WORK>P_BASE);
+ assert.ok(IMM_CYCLE.every(p=>!p.xfer&&!p.pump&&!p.lP));
+ assert.equal(IMM_CYCLE.filter(p=>p.etch).length,1);
+ assert.equal(IBE.tilt,30);
+ assert.equal(IBE.depth,.40);
+ assert.equal(IMM_CYCLE.at(-1).tB,0);
+});

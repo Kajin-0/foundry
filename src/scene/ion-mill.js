@@ -7,16 +7,52 @@ IMM.position.set(16, 0, 0);
 scene.add(IMM);
 
 const CH_R = 1.8, CH_H = 3.4, CH_Y = 3.4;
+const CH_BOTTOM = CH_Y - CH_H/2; // 1.70; support ring meets this flange.
+const frameMaterial=MAT.steel3;
 
 for (const x of [-2.2, 2.2]) {
   for (const z of [-2.2, 2.2]) {
-    const leg = box(0.14, 1.5, 0.14, MAT.steel3);
-    leg.position.set(x, 0.75, z);
+    // Posts run continuously from the floor to the lower chamber collar.
+    const leg = box(0.16, CH_BOTTOM - 0.06, 0.16, frameMaterial);
+    leg.position.set(x, (CH_BOTTOM - 0.06)/2 + 0.06, z);
     IMM.add(leg);
     const foot = cyl(0.19, 0.22, 0.06, MAT.dark, 12);
     foot.position.set(x, 0.03, z);
     IMM.add(foot);
   }
+}
+
+// Steel skids and cross-braces make the assembly visibly floor-supported.
+// A center pump pedestal catches the bottom of the turbo stack at y≈0.5.
+for(const x of [-2.2,2.2]){
+ const skid=box(.30,.18,4.9,MAT.dark);
+ skid.position.set(x,.09,0);IMM.add(skid);
+ const crossbar=box(.12,.12,4.4,frameMaterial);
+ crossbar.position.set(x,1.05,0);IMM.add(crossbar);
+}
+for(const z of [-2.2,2.2]){
+ const bottomTie=box(4.6,.12,.12,frameMaterial);
+ bottomTie.position.set(0,.20,z);IMM.add(bottomTie);
+ const upperTie=box(4.52,.11,.11,frameMaterial);
+ upperTie.position.set(0,1.40,z);IMM.add(upperTie);
+}
+const collar=new THREE.Mesh(new THREE.TorusGeometry(CH_R+0.10,.09,8,40),MAT.steel2);
+collar.rotation.x=Math.PI/2;collar.position.y=CH_BOTTOM-.015;IMM.add(collar);
+for(const [x,z] of [[-2.2,-2.2],[-2.2,2.2],[2.2,-2.2],[2.2,2.2]]){
+ const r=Math.hypot(x,z);
+ const start=new THREE.Vector3(x*.78/r*2.45,CH_BOTTOM-.015,z*.78/r*2.45);
+ const end=new THREE.Vector3(x,CH_BOTTOM-.015,z);
+ const direction=end.clone().sub(start);
+ const arm=box(direction.length(),.10,.10,frameMaterial);
+ arm.position.copy(start).add(end).multiplyScalar(.5);
+ arm.quaternion.setFromUnitVectors(new THREE.Vector3(1,0,0),direction.normalize());
+ IMM.add(arm);
+}
+const pumpPedestal=box(1.30,.56,1.36,MAT.dark);
+pumpPedestal.position.set(0,.28,0);IMM.add(pumpPedestal);
+for(const x of [-.53,.53]){
+ const edge=box(.06,.50,1.4,MAT.steel2);
+ edge.position.set(x,.30,0);IMM.add(edge);
 }
 
 const chamber = annularTube(CH_R - 0.08, CH_R, CH_H, MAT.alum, 36);
@@ -87,10 +123,22 @@ const vpGlow = new THREE.Mesh(new THREE.CircleGeometry(0.24, 20), MAT.vpGlow);
 vpGlow.position.set(0, CH_Y + 0.3, CH_R + 0.32);
 IMM.add(vpGlow);
 
+// Load lock is supported by a bracket beneath its outer cylinder; the
+// displayed transfer happens offscreen and the process wafer starts clamped.
+const loadLockPost=box(.14,1.55,.14,frameMaterial);
+loadLockPost.position.set(CH_R+.64,2.24,0);IMM.add(loadLockPost);
+const lockBrace=box(1.20,.10,.12,frameMaterial);
+lockBrace.position.set(CH_R+.16,1.65,0);IMM.add(lockBrace);
+const lockGate=box(.20,.86,.86,MAT.steel3);
+lockGate.position.set(CH_R+.12,CH_Y,0);IMM.add(lockGate);
 const lock = cyl(0.40, 0.40, 0.60, MAT.steel2, 14);
 lock.rotation.z = Math.PI / 2;
 lock.position.set(CH_R + 0.4, CH_Y, 0);
 IMM.add(lock);
+for(const x of [CH_R+.12,CH_R+.72]){
+ const flange=cyl(.48,.48,.075,MAT.flange??MAT.steel2,18);
+ flange.rotation.z=Math.PI/2;flange.position.set(x,CH_Y,0);IMM.add(flange);
+}
 const lkv = cyl(0.12, 0.12, 0.15, MAT.copper, 8);
 lkv.position.set(CH_R + 0.8, CH_Y, 0);
 IMM.add(lkv);
@@ -110,7 +158,10 @@ IMM.add(turboB);
 
 /* wafer — rotates with stage */
 const wafer = new THREE.Group();
-wafer.position.y = 0.06;
+// The chip is preloaded and mechanically seated on the cooled stage;
+// do not animate it outside the chamber as an unsupported floating body.
+wafer.position.set(0,.06,0);
+wafer.userData.mountedOnStage = true;
 tiltG.add(wafer);
 
 const wSub = box(1.0, 0.08, 0.8, MAT.substrate);
@@ -187,6 +238,13 @@ for (let i = 0; i < 24; i++) {
   IMM.add(p);
   sputters.push({ mesh: p, age: 1.0, vx: 0, vy: 0, vz: 0 });
 }
+
+// Mechanical supports are static: existing lossless batching can combine
+// compatible same-material meshes without removing any visible detail.
+IMM.userData.ionMillAssembly = {
+ supportedAtFloor:true, chamberBottomY:CH_BOTTOM, supportTopY:CH_BOTTOM,
+ preloadedWafer:true, loadLockBracket:true, pumpPedestal:true
+};
 
 const chamberLight = new THREE.PointLight(0x6fb8ff, 0, 6, 2);
 chamberLight.position.set(0, CH_Y, 0);

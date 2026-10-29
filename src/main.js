@@ -9,7 +9,7 @@ import {createThermalProfile} from './ui/thermal-profile.js';
 import {createCrossSection} from './ui/cross-section.js';
 import {BINS,PARK_X,UNLOAD_X,WELL_OFFSETS,CONTACT_THR,ZONES,BASE_TOP,SUB_TOP,MELT_H,SLIDER_BOT} from './config/geometry.js';
 import {CYCLE,CYCLE_TOTAL_ANIM,CYCLE_TOTAL_REAL,fmtMin} from './process/lpe-cycle.js';
-import {IBE,ibeRate,millMin,P_BASE,P_WORK,IMM_CYCLE,IMM_TOTAL,IMM_MILL,IMM_XFER,fmtP,imRealMin,lerpLog,pumpCurve} from './process/ion-etch.js';
+import {IBE,ibeRate,millMin,P_BASE,P_WORK,P_PREP,IMM_CYCLE,IMM_TOTAL,IMM_MILL,fmtP,imRealMin,lerpLog} from './process/ion-etch.js';
 
 const {renderer,scene,camera,controls,clipPlane,clipPlaneIMM,MAT,keyLight,rimLPE,rimIMM,lowPower} = createSceneContext();
 const {cyl,box,boltRing,tubeAlong,makeCoil,annularTube} = createGeometryHelpers(MAT);
@@ -111,7 +111,7 @@ let sliderTargetX = PARK_X, prevContactMeltIdx = -1, subRingPulse = 0;
 const S = {
   immT: 0, immOn: false, immDone: false,
   immIdx: -1, immLocal: 0,
-  press: 5e-6, pLock: 760, wafer: 1, tiltNow: 0, beam: 0, stage: 25, etch: 0,
+  press: P_PREP, tiltNow: 0, beam: 0, stage: 25, etch: 0,
 };
 
 /* ============ DOM ============ */
@@ -122,6 +122,7 @@ const progBarEl = document.getElementById('progBar');
 const stackEl = document.getElementById('stack');
 const playBtn = document.getElementById('playBtn');
 const immBtn = document.getElementById('immBtn');
+const ionProgBarEl=document.getElementById('ionProgBar');
 const tabLPE = document.getElementById('tabLPE');
 const tabIMM = document.getElementById('tabIMM');
 const lpeControlsEl = document.getElementById('lpeControls');
@@ -222,6 +223,8 @@ async function ensureMBE(){
 }
 function showProcessPanel(tab){
  leftLPE.hidden=!(tab==='lpe'||tab==='imm');
+ document.getElementById('lpeOnlyIllustrations').hidden=tab!=='lpe';
+ document.getElementById('ionOnlyIllustrations').hidden=tab!=='imm';
  leftMBE.hidden=tab!=='mbe';
  leftOverview.hidden=tab!=='overview';
  lpeControlsEl.style.display=tab==='lpe'?'block':'none';
@@ -258,12 +261,21 @@ function switchTab(tab){
    if(currentPhase){narrStatus.textContent=currentPhase.narr;narrStatus.style.color=currentPhase.color;narrDetail.textContent=currentPhase.detail;}
    else updateIdle();
  }
- if(tab==='imm' && S.immOn && S.immIdx>=0){
-   const phase=IMM_CYCLE[S.immIdx];
-   narrStatus.textContent=phase.narr;narrStatus.style.color=phase.color;
-   narrDetail.textContent=typeof phase.detail==='function'?phase.detail():phase.detail;
- }
- if(tab==='mbe'){
+ if(tab==='imm'){
+    if(S.immOn&&S.immIdx>=0){
+      const phase=IMM_CYCLE[S.immIdx];
+      narrStatus.textContent=phase.narr;narrStatus.style.color=phase.color;
+      narrDetail.textContent=typeof phase.detail==='function'?phase.detail():phase.detail;
+    } else if(S.hold){
+      narrStatus.textContent=S.hold.s;narrStatus.style.color=S.hold.c;
+      narrDetail.textContent=S.hold.d;narrTime.textContent=S.hold.t;
+    } else {
+      narrStatus.textContent='READY · WAFER CLAMPED';narrStatus.style.color='#7fc4ff';
+      narrDetail.textContent='The chip is mounted on the cooled stage. Run the preset Ar⁺ process to see vacuum stabilization, beam generation and masked ridge etching.';
+      narrTime.textContent='Preset 0.40 µm etch · chamber closed';
+    }
+  }
+  if(tab==='mbe'){
    if(!mbeController){
      mbeButton.disabled=true;
      document.getElementById('mbeNarrDetail').textContent='Opening the MBE station in the shared lab…';
@@ -292,27 +304,22 @@ playBtn.addEventListener('click', () => {
   playBtn.classList.remove('done');
 });
 
-const tiltSl = document.getElementById('tiltIMM'), depthSl = document.getElementById('depthIMM');
-tiltSl.addEventListener('input', () => { document.getElementById('tiltVal').textContent = tiltSl.value + '°'; });
-depthSl.addEventListener('input', () => { document.getElementById('depthVal').textContent = (depthSl.value / 100).toFixed(2) + ' µm'; });
-immBtn.addEventListener('click', () => {
-  if (S.immOn) {
-    S.immOn = false; S.beam = 0; S.tiltNow = 0; S.press = P_BASE; S.stage = 25;   /* abort: beam off, shutter closes, tilt home */
-    tiltSl.disabled = depthSl.disabled = false;
-    S.hold = { s: 'ABORTED · beam off', c: '#ff8a5a', d: 'Run stopped. Beam and Ar flow off, shutter closed, tilt returned to zero. The chip may be partly etched.', t: narrTime.textContent };
-    immBtn.textContent = '▶ Run Ion Mill';
-    immBtn.classList.remove('running');
-    return;
-  }
-  S.immT = 0; S.immIdx = -1; S.immDone = false; S.immOn = true;
-  S.etch = 0; S.press = P_BASE; S.pLock = 760; S.wafer = 0; S.tiltNow = 0; S.beam = 0; S.stage = 25;
-  tiltSl.disabled = depthSl.disabled = true; S.hold = null;
-  IBE.tilt = +tiltSl.value; IBE.depth = +depthSl.value / 100;
-  etchL.forEach(l => { if (l) l.meshes.forEach(m => { m.visible = true; m.scale.y = 1; m.position.y = l.baseY + l.h / 2; }); });
-  resist.scale.y = 1; resist.position.y = MASK_TOP + RES_H / 2; shutOpen = 0; XS.update(0, 1);
-  immBtn.textContent = '■ Stop Mill';
-  immBtn.classList.add('running');
-  immBtn.classList.remove('done');
+// Preset educational recipe: the cutaway is the only adjustable slider.
+immBtn.addEventListener('click',()=>{
+ if(S.immOn){
+   S.immOn=false;S.beam=0;S.tiltNow=0;S.press=P_BASE;S.stage=25;
+   S.hold={s:'ABORTED · beam off',c:'#ff8a5a',
+     d:'Beam and Ar flow stopped; shutter closes and stage levels. The chip stays clamped inside the chamber.',
+     t:narrTime.textContent};
+   immBtn.textContent='▶ Run Ion Mill';immBtn.classList.remove('running');
+   return;
+ }
+ S.immT=0;S.immIdx=-1;S.immDone=false;S.immOn=true;
+ S.etch=0;S.press=P_PREP;S.tiltNow=0;S.beam=0;S.stage=25;S.hold=null;
+ ionProgBarEl.style.width='0%';
+ etchL.forEach(l=>{if(l)l.meshes.forEach(m=>{m.visible=true;m.scale.y=1;m.position.y=l.baseY+l.h/2;});});
+ resist.scale.y=1;resist.position.y=MASK_TOP+RES_H/2;shutOpen=0;XS.update(0,1);
+ immBtn.textContent='■ Stop Mill';immBtn.classList.add('running');immBtn.classList.remove('done');
 });
 
 /* ============ INIT ============ */
@@ -526,7 +533,6 @@ function updateIMMState(dt, t) {
     if (S.immT >= IMM_TOTAL) {
       S.immT = IMM_TOTAL;
       S.immOn = false; S.immDone = true;
-      tiltSl.disabled = depthSl.disabled = false;
       S.hold = { s: 'MILL COMPLETE', c: '#7ee6a0', d: narrDetail.textContent, t: narrTime.textContent };
       immBtn.textContent = '✓ Mill Complete';
       immBtn.classList.remove('running');
@@ -556,9 +562,7 @@ function updateIMMState(dt, t) {
     const prevIdx = idx - 1;
     const prev = prevIdx >= 0 ? IMM_CYCLE[prevIdx] : { tP: 760, tB: 0, tS: 25 };
 
-    S.pLock = ph.pump ? pumpCurve(localT) : ph.lP ? lerpLog(ph.lP[0], ph.lP[1], localT) : S.pLock;
     S.press = ph.cP ? lerpLog(ph.cP[0], ph.cP[1], localT) : S.press;
-    S.wafer = idx < IMM_XFER ? 0 : idx === IMM_XFER ? localT : 1;
     S.beam  = (prev.tB || 0) + (ph.tB - (prev.tB || 0)) * localT;
     S.stage = (prev.tS || 25) + (ph.tS - (prev.tS || 25)) * localT;
 
@@ -567,7 +571,7 @@ function updateIMMState(dt, t) {
     S.tiltNow = ph.tilt ? IBE.tilt : ph.tiltOut ? IBE.tilt * (1 - localT) : 0;
 
     if(uiDue){
-      progBarEl.style.width=(S.immT/IMM_TOTAL*100).toFixed(1)+'%';
+      ionProgBarEl.style.width=(S.immT/IMM_TOTAL*100).toFixed(1)+'%';
       narrTime.textContent=`IBE · ${fmtMin(S.elapsedReal)} of ${fmtMin(IMM_CYCLE.reduce((a,p,k)=>a+imRealMin(k),0))} real · demo ${Math.round(S.immT)}s / ${IMM_TOTAL}s`;
     }
   }
@@ -575,7 +579,6 @@ function updateIMMState(dt, t) {
   /* DOM readouts are 10 Hz; process physics/geometry remain frame-accurate. */
   if(uiDue){
   document.getElementById('v1').textContent = fmtP(S.press);
-  document.getElementById('v7').textContent = fmtP(S.pLock);
   document.getElementById('v2').textContent = S.beam.toFixed(2) + ' mA/cm²';
   document.getElementById('v3').textContent = Math.round(S.stage) + ' °C · ' + Math.round(THREE.MathUtils.radToDeg(tiltG.rotation.x)) + '° tilt';
   const dNow = S.etch * IBE.depth, rem = IBE.UPPER - dNow;
@@ -597,8 +600,7 @@ function updateIMMState(dt, t) {
 
   /* rotation averages beam non-uniformity and azimuthal shadowing of the tilted beam */
   tiltG.rotation.x = THREE.MathUtils.lerp(tiltG.rotation.x, (S.tiltNow || 0) * Math.PI / 180, 0.1);
-  { const e = S.wafer, a = Math.min(1, e / 0.7), d = Math.max(0, (e - 0.7) / 0.3);   /* slide in from the lock, then lower onto the stage */
-    wafer.position.set(2.2 * (1 - a), 0.06 + 0.24 * (1 - d), 0); }
+  // Wafer stays clamped to the stage; transfer is outside the demonstration.
   const hotNow = S.immOn && IMM_CYCLE[S.immIdx] && IMM_CYCLE[S.immIdx].hot, openNow = S.immOn && IMM_CYCLE[S.immIdx] && IMM_CYCLE[S.immIdx].open;
   shutOpen += ((openNow ? 1 : 0) - shutOpen) * Math.min(1, dt * 4);
   leafL.rotation.z = shutOpen * 1.5; leafR.rotation.z = -shutOpen * 1.5;
@@ -735,6 +737,8 @@ window.__foundryDiagnostics=()=>({
  mbeLoaded:!!mbeController,
  mbeRenderOptimization:mbeController?.renderOptimization??null,
  lpeRenderOptimization,immRenderOptimization,
+ ionMill:{waferLocalPosition:wafer.position.toArray(),waferMounted:wafer.userData.mountedOnStage,
+   assembly:IMM.userData.ionMillAssembly,presetTilt:IBE.tilt,presetDepth:IBE.depth},
  detailed:{lpe:machine.visible,imm:IMM.visible,mbe:mbeController?.MBE.visible??false},
  proxies:Object.fromEntries(Object.entries(room.proxies).map(([k,p])=>[k,p.visible])),
  drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,
