@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LPE + Ion Mill — Virtual Lab (v11.6)</title>
+<link rel="stylesheet" href="./styles.css" />
+
+</head>
+<body>
+
+<div id="hud">
+  <h1>LPE + ION MILL</h1>
+  <p>Virtual lab · GaAs/AlGaAs DH laser fabrication</p>
+</div>
+
+<div id="leftPanel">
+  <div class="label">Live Process</div>
+  <div id="narrator">
+    <div id="narrStatus">IDLE</div>
+    <div id="narrDetail">Two tools loaded. Each runs independently — LPE grows the DH stack; ion mill etches a ridge through photoresist (Ar⁺ ion-beam etch).</div>
+    <div id="narrTime">—</div>
+  </div>
+  <div class="label">Thermal Profile (LPE)</div>
+  <svg id="tempProfile" viewBox="0 0 256 42" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id="tGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#3d7fd6" stop-opacity="0.35"/>
+        <stop offset="100%" stop-color="#3d7fd6" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <g id="tProfileContent"></g>
+  </svg>
+  <div class="label">Progress</div>
+  <div id="progWrap"><div id="progBar"></div></div>
+  <div class="label">Epitaxial Stack <span style="color:#3f5872;letter-spacing:0.1em;font-size:9px">(thickness not to scale)</span></div>
+  <div id="stack">
+    <div class="layer sub"><span class="mat">GaAs (100) substrate</span><span class="thick">350 µm</span></div>
+  </div>
+</div>
+
+<div id="rightPanel">
+  <div class="tabs">
+    <button class="tab active" id="tabLPE">LPE</button>
+    <button class="tab" id="tabIMM">Ion Mill</button>
+  </div>
+
+  <div id="lpeControls">
+    <div class="label">Process Conditions</div>
+    <div class="specs">
+      <div><span>Atmosphere</span><span>H₂ · 1 atm · 1 slpm</span></div>
+      <div><span>H₂ purity</span><span>Pd-diffused &lt;1 ppb</span></div>
+      <div><span>Substrate</span><span>GaAs (100) exact</span></div>
+      <div><span>Wafer</span><span>5×5 mm · 350 µm</span></div>
+      <div><span>Melt depth</span><span>2 mm</span></div>
+      <div><span>Furnace</span><span>2 main + 2 end zones</span></div>
+    </div>
+    <div class="label">Furnace Cutaway</div>
+    <input type="range" id="cut" min="0" max="100" value="64" />
+    <div class="label">Zone Temperatures</div>
+    <div class="temps">
+      <div class="trow"><span><i class="dot" style="--c:#ff9a4a"></i>Z1 End</span><span id="t1">—</span></div>
+      <div class="trow"><span><i class="dot" style="--c:#ff8a2a"></i>Z2 Main</span><span id="t2">—</span></div>
+      <div class="trow"><span><i class="dot" style="--c:#ff8a2a"></i>Z3 Main</span><span id="t3">—</span></div>
+      <div class="trow"><span><i class="dot" style="--c:#ff9a4a"></i>Z4 End</span><span id="t4">—</span></div>
+    </div>
+    <button id="playBtn">▶ Run Growth Cycle</button>
+  </div>
+
+  <div id="immControls" style="display:none">
+    <div class="label">Ion Beam Etch · Process</div>
+    <div class="specs">
+      <div><span>Ion species</span><span>Ar⁺</span></div>
+      <div><span>Beam energy</span><span>500 eV</span></div>
+      <div><span>Beam current</span><span>0.5 mA/cm²</span></div>
+      <div><span>Base / working P</span><span>&lt;5×10⁻⁶ / 2×10⁻⁴ Torr</span></div>
+      <div><span>Source</span><span>Kaufman 3-grid + neutraliser</span></div>
+      <div><span>Stage</span><span>Water-cooled · tilt · 14 rpm</span></div>
+    </div>
+    <div class="label">Stage Tilt <span id="tiltVal" style="color:#a6c4e0">30°</span></div>
+    <input type="range" id="tiltIMM" min="0" max="60" value="30" />
+    <div class="label">Etch Depth <span id="depthVal" style="color:#a6c4e0">0.40 µm</span></div>
+    <input type="range" id="depthIMM" min="20" max="70" value="40" />
+    <div class="label">Chamber Cutaway</div>
+    <input type="range" id="cutIMM" min="0" max="100" value="55" />
+    <div class="label">Wafer Cross-Section <span style="color:#3f5872;font-size:9px">(true µm scale)</span></div>
+    <svg id="xsec" viewBox="0 0 256 92" style="width:100%;height:auto;display:block;background:rgba(10,18,28,.5);border-radius:5px"></svg>
+    <div class="label">Live Readouts</div>
+    <div class="temps">
+      <div class="trow"><span><i class="dot" style="--c:#7fc4ff"></i>Chamber</span><span class="v-green" id="v1">—</span></div>
+      <div class="trow"><span><i class="dot" style="--c:#5f9fd6"></i>Load-lock</span><span class="v-green" id="v7">—</span></div>
+      <div class="trow"><span><i class="dot" style="--c:#7ee6a0"></i>Beam</span><span class="v-green" id="v2">—</span></div>
+      <div class="trow"><span><i class="dot" style="--c:#ff8a2a"></i>Stage</span><span id="v3">—</span></div>
+      <div class="trow"><span><i class="dot" style="--c:#ffd060"></i>Etch</span><span class="v-green" id="v4">—</span></div>
+      <div class="trow"><span><i class="dot" style="--c:#c08aff"></i>Above active</span><span id="v5">—</span></div>
+      <div class="trow"><span><i class="dot" style="--c:#d04830"></i>Resist left</span><span id="v6">—</span></div>
+    </div>
+    <button id="immBtn">▶ Run Ion Mill</button>
+  </div>
+</div>
+
+<div id="hint"><b>drag</b> orbit &nbsp;·&nbsp; <b>scroll</b> zoom &nbsp;·&nbsp; <b>right-drag</b> pan</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
