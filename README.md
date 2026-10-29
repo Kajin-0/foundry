@@ -28,9 +28,15 @@ Deploy `dist/` to a static host or embed its production assets in a website.
 - `public/styles.css`: styles
 - `archive/lpe_ibe_v11_6.html`: preserved monolithic source for comparison
 
+## Product philosophy
+
+Foundry is an **interactive conceptual semiconductor-fabrication laboratory**. The objective is to help learners visualize equipment internals, process sequences and cause-and-effect relationships. Keep it responsive, easy to understand and fun to experiment with. Use physically plausible values and simple, transparent equations without escalating to costly numerical solvers or exhaustive empirical calibration. Scientific accuracy matters when it changes the concept being taught; pedagogical clarity outweighs marginal numerical precision.
+
+**Feature acceptance:** explain what the user learns, provide realistic parameter ranges and units, maintain a consistent causal response to interactive controls, avoid physically misleading visual effects, and verify browser performance. Avoid adding controls that merely make the UI busy.
+
 ## Scientific integrity
 
-**Educational demonstration, not a predictive or calibrated digital twin.** Furnace temperatures/gradients, growth durations, thicknesses, pump-down, stage heating, etch kinetics and plasma dynamics are illustrative assumptions. Do not use outputs to approve actual fabrication recipes.
+**Educational demonstration, not a predictive or calibrated digital twin.** Furnace temperatures/gradients, growth durations, thicknesses, pump-down, stage heating, etch kinetics and plasma dynamics are illustrative assumptions. The displayed values should communicate qualitative and approximate quantitative relationships, never approval of actual fabrication recipes.
 
 The ion-mill estimate uses `rate = Y(theta) * J / (e * n)`: `J` in A/cm², `n` atomic number density in atoms/cm³, `Y` sputtered atoms per ion; `cm/s × 1e7 × 60` yields nm/min. It neglects redeposition, material-dependent yields, angular scattering, charging, ion damage, detailed topography and calibrated tool conditions. Internal algebraic consistency is tested, not experimental agreement.
 
