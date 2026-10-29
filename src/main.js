@@ -3,16 +3,20 @@ import {createSceneContext} from './scene/context.js';
 import {createGeometryHelpers} from './scene/helpers.js';
 import {buildLpe} from './scene/lpe.js';
 import {buildIonMill} from './scene/ion-mill.js';
+import {buildRoom,BAYS} from './scene/room.js';
 import {createThermalProfile} from './ui/thermal-profile.js';
 import {createCrossSection} from './ui/cross-section.js';
 import {BINS,PARK_X,UNLOAD_X,WELL_OFFSETS,CONTACT_THR,ZONES,BASE_TOP,SUB_TOP,MELT_H,SLIDER_BOT} from './config/geometry.js';
 import {CYCLE,CYCLE_TOTAL_ANIM,CYCLE_TOTAL_REAL,fmtMin} from './process/lpe-cycle.js';
 import {IBE,ibeRate,millMin,P_BASE,P_WORK,IMM_CYCLE,IMM_TOTAL,IMM_MILL,IMM_XFER,fmtP,imRealMin,lerpLog,pumpCurve} from './process/ion-etch.js';
 
-const {renderer,scene,camera,controls,clipPlane,clipPlaneIMM,MAT} = createSceneContext();
+const {renderer,scene,camera,controls,clipPlane,clipPlaneIMM,MAT,keyLight,rimLPE,rimIMM,lowPower} = createSceneContext();
 const {cyl,box,boltRing,tubeAlong,makeCoil,annularTube} = createGeometryHelpers(MAT);
 const {machine,zoneCoils,zoneLights,growthLayers,growthLayersGroup,contactRing,meltBridge,melts,sliderGroup,subRing,substrate,growthLight,sliderGlow,bubbles,pidScreens,otcLed,inletWheel,meltMats,baseMeltEmissive} = buildLpe({scene,MAT,clipPlane,cyl,box,boltRing,tubeAlong,makeCoil,annularTube});
 const {IMM,etchL,wafer,resist,MASK_TOP,RES_H,tiltG,beamCone,plasma,plasmaCore,sputters,chamberLight,neutMat,leafL,leafR,shutterMat,shutterY,BT,BB,stg,RW,FW,vpGlow} = buildIonMill({scene,MAT,cyl,box,annularTube,tubeAlong});
+const room=buildRoom(scene);
+let mbeController=null;
+let mbeLoading=null;
 let currentActiveLayer = null;
 let shutOpen = 0;
 const XS = createCrossSection(IBE);
@@ -33,6 +37,12 @@ immLabel.style.color = '#7fc4ff';
 immLabel.style.borderColor = '#7fc4ff';
 immLabel.style.display = 'none';
 document.body.appendChild(immLabel);
+const mbeLabel=document.createElement('div');
+mbeLabel.className='label3d';
+mbeLabel.textContent='MBE · UHV CHAMBER';
+mbeLabel.style.color='#9dd4ff';
+mbeLabel.style.borderColor='#7fc4ff';
+document.body.appendChild(mbeLabel);
 
 const _v3 = new THREE.Vector3();
 function placeLabel(el, wx, wy, wz) {
@@ -44,21 +54,17 @@ function placeLabel(el, wx, wy, wz) {
 }
 
 /* ============ SHADOWS ============ */
-machine.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-machine.traverse(o => {
-  if (o.isMesh && o.material && (o.material.transparent || o.material.isMeshBasicMaterial)) {
-    o.castShadow = false; o.receiveShadow = false;
-  }
-});
-growthLayersGroup.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
-contactRing.castShadow = false; meltBridge.castShadow = false;
-IMM.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-IMM.traverse(o => {
-  if (o.isMesh && o.material && (o.material.transparent || o.material.isMeshBasicMaterial)) {
-    o.castShadow = false; o.receiveShadow = false;
-  }
-});
-vpGlow.castShadow = false;
+// Only large opaque structural members cast into the shared shadow atlas.
+for(const group of [machine,IMM]){
+ let casters=0;
+ group.traverse(o=>{
+  if(!o.isMesh)return;
+  const opaque=!o.material?.transparent && !o.material?.isMeshBasicMaterial;
+  o.castShadow=opaque && casters++<12;
+  o.receiveShadow=false;
+ });
+}
+vpGlow.castShadow=false;
 
 /* ============ CUTAWAY ============ */
 const cutSlider = document.getElementById('cut');
@@ -151,28 +157,100 @@ function depositLayer(idx) {
   stackEl.appendChild(div);
 }
 
-/* ============ TAB SWITCH ============ */
-let currentTab = 'lpe';
-const camPos = {
-  lpe: { pos: new THREE.Vector3(7.5, 11, 22), tgt: new THREE.Vector3(0, 2.6, 0) },
-  imm: { pos: new THREE.Vector3(23, 10, 12), tgt: new THREE.Vector3(16, 3.2, 0) }
+/* ============ ONE SHARED ROOM · CAMERA / STATION SWITCH ============ */
+let currentTab='overview';
+const camPos={
+ overview:{pos:new THREE.Vector3(14,17,46),tgt:new THREE.Vector3(14,3.25,0)},
+ lpe:{pos:new THREE.Vector3(7.5,11,22),tgt:new THREE.Vector3(0,2.6,0)},
+ imm:{pos:new THREE.Vector3(23,10,12),tgt:new THREE.Vector3(16,3.2,0)},
+ mbe:{pos:new THREE.Vector3(37,9,13),tgt:new THREE.Vector3(30,4.25,0)}
 };
-let camGoal = null;
-
-function switchTab(tab) {
-  currentTab = tab;
-  machine.visible = tab === 'lpe';
-  IMM.visible = tab === 'imm';
-  tabLPE.classList.toggle('active', tab === 'lpe');
-  tabIMM.classList.toggle('active', tab === 'imm');
-  lpeControlsEl.style.display = tab === 'lpe' ? 'block' : 'none';
-  immControlsEl.style.display = tab === 'imm' ? 'block' : 'none';
-  camGoal = camPos[tab];
-  lpeLabel.style.display = tab === 'lpe' ? 'block' : 'none';
-  immLabel.style.display = tab === 'imm' ? 'block' : 'none';
+let camGoal=null;
+const tabEls={
+ overview:document.getElementById('tabOverview'),
+ lpe:document.getElementById('tabLPE'),
+ imm:document.getElementById('tabIMM'),
+ mbe:document.getElementById('tabMBE')
+};
+const leftLPE=document.getElementById('lpeLeft'),leftMBE=document.getElementById('mbeLeft');
+const leftOverview=document.getElementById('overviewLeft');
+const rightMBE=document.getElementById('mbeControls');
+const rightOverview=document.getElementById('overviewControls');
+const mbeButton=document.getElementById('mbePlayBtn');
+async function ensureMBE(){
+ if(mbeController)return mbeController;
+ if(!mbeLoading){
+  mbeLoading=Promise.all([import('./mbe/scene.js'),import('./mbe/controller.js')]).then(([sceneModule,controllerModule])=>{
+   const plane=new THREE.Plane(new THREE.Vector3(0,0,-1),0);
+   const model=sceneModule.buildMbe({scene,clipPlane:plane});
+   mbeController=controllerModule.createMBEController(model);
+   model.MBE.visible=currentTab==='mbe';
+   room.setFocus(currentTab);
+   mbeButton.disabled=false;
+   mbeController.refresh();
+   renderer.shadowMap.needsUpdate=true;
+   return mbeController;
+  }).catch(error=>{
+    mbeLoading=null;
+    mbeButton.disabled=true;
+    document.getElementById('mbeNarrDetail').textContent='Unable to load the MBE model. Reload to retry.';
+    console.error('MBE station failed to load:',error);
+    throw error;
+  });
+ }
+ return mbeLoading;
 }
-tabLPE.addEventListener('click', () => switchTab('lpe'));
-tabIMM.addEventListener('click', () => switchTab('imm'));
+function showProcessPanel(tab){
+ leftLPE.hidden=!(tab==='lpe'||tab==='imm');
+ leftMBE.hidden=tab!=='mbe';
+ leftOverview.hidden=tab!=='overview';
+ lpeControlsEl.style.display=tab==='lpe'?'block':'none';
+ immControlsEl.style.display=tab==='imm'?'block':'none';
+ rightMBE.hidden=tab!=='mbe';
+ rightOverview.hidden=tab!=='overview';
+}
+function switchTab(tab){
+ if(!(tab in camPos))tab='overview';
+ currentTab=tab;
+ machine.visible=tab==='lpe';
+ IMM.visible=tab==='imm';
+ if(mbeController)mbeController.MBE.visible=tab==='mbe';
+ room.setFocus(tab==='mbe'&&!mbeController?'overview':tab);
+ for(const [id,button] of Object.entries(tabEls)){
+   button.classList.toggle('active',id===tab);
+   button.setAttribute('aria-pressed',String(id===tab));
+ }
+ showProcessPanel(tab);
+ camGoal=camPos[tab];
+ // One physically shared key light; its shadow frustum follows the chosen station.
+ const x=tab==='overview'?14:BAYS[tab].x;
+ keyLight.position.set(x+9,18,14);
+ keyLight.target.position.set(x,3,0);
+ keyLight.target.updateMatrixWorld();
+ rimLPE.visible=tab==='lpe';
+ rimIMM.visible=tab==='imm';
+ renderer.shadowMap.needsUpdate=true;
+ lpeLabel.style.display=tab==='overview'||tab==='lpe'?'block':'none';
+ immLabel.style.display=tab==='overview'||tab==='imm'?'block':'none';
+ mbeLabel.style.display=tab==='overview'||tab==='mbe'?'block':'none';
+ if(tab==='lpe'){
+   if(currentPhase){narrStatus.textContent=currentPhase.narr;narrStatus.style.color=currentPhase.color;narrDetail.textContent=currentPhase.detail;}
+   else updateIdle();
+ }
+ if(tab==='imm' && S.immOn && S.immIdx>=0){
+   const phase=IMM_CYCLE[S.immIdx];
+   narrStatus.textContent=phase.narr;narrStatus.style.color=phase.color;
+   narrDetail.textContent=typeof phase.detail==='function'?phase.detail():phase.detail;
+ }
+ if(tab==='mbe'){
+   if(!mbeController){
+     mbeButton.disabled=true;
+     document.getElementById('mbeNarrDetail').textContent='Opening the MBE station in the shared lab…';
+     void ensureMBE();
+   } else mbeController.refresh();
+ }
+}
+for(const [id,button] of Object.entries(tabEls))button.addEventListener('click',()=>switchTab(id));
 
 /* ============ BUTTONS ============ */
 playBtn.addEventListener('click', () => {
@@ -218,7 +296,8 @@ immBtn.addEventListener('click', () => {
 
 /* ============ INIT ============ */
 updateIdle();
-switchTab('lpe');
+const initialTab=new URLSearchParams(window.location.search).get('tool');
+switchTab(initialTab in camPos ? initialTab : 'overview');
 
 /* ============ ANIMATION ============ */
 const clock = new THREE.Clock();
@@ -309,7 +388,7 @@ function updateLPEState(dt, t) {
           currentActiveLayer = layer;
         }
       }
-      if (!S.immOn) {
+      if (currentTab==='lpe') {
         narrStatus.textContent = currentPhase.narr;
         narrStatus.style.color = currentPhase.color;
         narrDetail.textContent = currentPhase.detail;
@@ -326,7 +405,7 @@ function updateLPEState(dt, t) {
     if (phase.deposit) { growthLightColor = 0x7fd6ff; growthLightIntensity = 1.4 + Math.sin(t * 8) * 0.4; }
     else if (phase.meltback) { growthLightColor = 0xff6030; growthLightIntensity = 1.6 + Math.sin(t * 9) * 0.5; }
 
-    if (!S.immOn) {
+    if (currentTab==='lpe') {
       progBarEl.style.width = (cycleT / CYCLE_TOTAL_ANIM * 100).toFixed(1) + '%';
       const elapsedReal = CYCLE.slice(0, idx).reduce((a, p) => a + p.realMin, 0) + localT * CYCLE[idx].realMin;
       narrTime.textContent = `${fmtMin(elapsedReal)} / ${fmtMin(CYCLE_TOTAL_REAL)} simulated · ${Math.round(CYCLE_TOTAL_ANIM)} s demo`;
@@ -337,7 +416,7 @@ function updateLPEState(dt, t) {
     sliderTargetX = cycleDone ? UNLOAD_X : PARK_X;
     if (cycleDone) {
       displayTemp = Math.max(25, displayTemp - 1.5);
-      if (!S.immOn) {
+      if (currentTab==='lpe') {
         narrStatus.textContent = 'LPE COMPLETE';
         narrStatus.style.color = '#7ee6a0';
         narrDetail.textContent = `${depositedLayers} layers · 2.1 µm total · DH structure finished. Switch to Ion Mill to pattern a ridge.`;
@@ -345,7 +424,7 @@ function updateLPEState(dt, t) {
       }
       updateZoneReadouts(displayTemp);
       maybeUpdateProfile(displayTemp);
-    } else if (!S.immOn) {
+    } else if (currentTab==='lpe') {
       updateIdle();
     }
   }
@@ -441,9 +520,11 @@ function updateIMMState(dt, t) {
     if (idx !== S.immIdx) {
       S.immIdx = idx;
       const ph = IMM_CYCLE[idx];
-      narrStatus.textContent = ph.narr;
-      narrStatus.style.color = ph.color;
-      narrDetail.textContent = typeof ph.detail === 'function' ? ph.detail() : ph.detail;
+      if(currentTab==='imm'){
+        narrStatus.textContent = ph.narr;
+        narrStatus.style.color = ph.color;
+        narrDetail.textContent = typeof ph.detail === 'function' ? ph.detail() : ph.detail;
+      }
     }
 
     const ph = IMM_CYCLE[idx];
@@ -460,8 +541,10 @@ function updateIMMState(dt, t) {
     S.elapsedReal = IMM_CYCLE.slice(0, idx).reduce((a, p, k) => a + imRealMin(k), 0) + localT * imRealMin(idx);
     S.tiltNow = ph.tilt ? IBE.tilt : ph.tiltOut ? IBE.tilt * (1 - localT) : 0;
 
-    progBarEl.style.width = (S.immT / IMM_TOTAL * 100).toFixed(1) + '%';
-    narrTime.textContent = `IBE · ${fmtMin(S.elapsedReal)} of ${fmtMin(IMM_CYCLE.reduce((a, p, k) => a + imRealMin(k), 0))} real · demo ${Math.round(S.immT)}s / ${IMM_TOTAL}s`;
+    if(currentTab==='imm'){
+      progBarEl.style.width=(S.immT/IMM_TOTAL*100).toFixed(1)+'%';
+      narrTime.textContent=`IBE · ${fmtMin(S.elapsedReal)} of ${fmtMin(IMM_CYCLE.reduce((a,p,k)=>a+imRealMin(k),0))} real · demo ${Math.round(S.immT)}s / ${IMM_TOTAL}s`;
+    }
   }
 
   /* readouts */
@@ -551,42 +634,65 @@ function updateIMMState(dt, t) {
   XS.update(S.etch * IBE.depth, resLeft);
 }
 
-let lastFrameMs = -Infinity;
-let lastInteractionMs = -Infinity;
-for (const ev of ['pointerdown', 'pointermove', 'wheel']) {
-  renderer.domElement.addEventListener(ev, () => {lastInteractionMs = performance.now();}, {passive: true});
+// Geometry/simulation clocks are decoupled from view-specific DOM refreshes.
+let lastFrameMs=-Infinity,lastInteractionMs=-Infinity,lastShadowMs=-Infinity;
+let backgroundLpeDt=0,backgroundImmDt=0;
+let lastZoneReadMs=-Infinity, lastImmReadMs=-Infinity;
+for(const ev of ['pointerdown','pointermove','wheel']){
+ renderer.domElement.addEventListener(ev,()=>{lastInteractionMs=performance.now();},{passive:true});
 }
-function animate(now) {
-  requestAnimationFrame(animate);
-  if (document.hidden) {clock.getDelta(); return;}
-  const busy = cycleActive || S.immOn || camGoal || (now - lastInteractionMs < 700);
-  const minFrameMs = 1000 / (busy ? 60 : 24);
-  if (now - lastFrameMs < minFrameMs) return;
-  lastFrameMs = now;
-  const dt = Math.min(clock.getDelta(), 0.1);
-  const t = clock.getElapsedTime();
-
-  updateLPEState(dt, t);
-  updateIMMState(dt, t);
-
-  if (camGoal) {
-    camera.position.lerp(camGoal.pos, 0.07);
-    controls.target.lerp(camGoal.tgt, 0.07);
-    if (camera.position.distanceTo(camGoal.pos) < 0.05) camGoal = null;
-  }
-
-  placeLabel(lpeLabel, 0, 6.5, 0);
-  placeLabel(immLabel, 16, 7.5, 0);
-
-  controls.update();
-  renderer.render(scene, camera);
+function animate(now=0){
+ requestAnimationFrame(animate);
+ if(document.hidden){clock.getDelta();return;}
+ const focusActive=currentTab==='lpe'&&cycleActive||currentTab==='imm'&&S.immOn||currentTab==='mbe'&&mbeController?.isRunning();
+ const moving=!!camGoal||now-lastInteractionMs<750;
+ const targetFps=lowPower?(focusActive||moving?30:10):(focusActive||moving?45:12);
+ if(now-lastFrameMs<1000/targetFps)return;
+ lastFrameMs=now;
+ const dt=Math.min(clock.getDelta(),.22),t=clock.getElapsedTime();
+ if(currentTab==='lpe'){
+   updateLPEState(dt,t);backgroundLpeDt=0;
+ }else if(cycleActive){
+   backgroundLpeDt+=dt;
+   if(backgroundLpeDt>=.10){updateLPEState(backgroundLpeDt,t);backgroundLpeDt=0;}
+ }
+ if(currentTab==='imm'){
+   updateIMMState(dt,t);backgroundImmDt=0;
+ }else if(S.immOn){
+   backgroundImmDt+=dt;
+   if(backgroundImmDt>=.10){updateIMMState(backgroundImmDt,t);backgroundImmDt=0;}
+ }
+ if(mbeController && (currentTab==='mbe'||mbeController.isRunning())){
+   mbeController.update(dt,t,currentTab==='mbe');
+ }
+ if(camGoal){
+   camera.position.lerp(camGoal.pos,.11);
+   controls.target.lerp(camGoal.tgt,.11);
+   if(camera.position.distanceTo(camGoal.pos)<.04&&controls.target.distanceTo(camGoal.tgt)<.04)camGoal=null;
+ }
+ if(lpeLabel.style.display!=='none')placeLabel(lpeLabel,0,6.5,0);
+ if(immLabel.style.display!=='none')placeLabel(immLabel,16,7.5,0);
+ if(mbeLabel.style.display!=='none')placeLabel(mbeLabel,30,8.2,0);
+ controls.update();
+ // Static shadow atlases are not regenerated on every camera frame.
+ if(renderer.shadowMap.enabled&&(now-lastShadowMs>400)&&(focusActive||moving)){
+   renderer.shadowMap.needsUpdate=true;lastShadowMs=now;
+ }
+ renderer.render(scene,camera);
 }
-
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+window.addEventListener('resize',()=>{
+ camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();
+ renderer.setSize(window.innerWidth,window.innerHeight);
+ renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,lowPower?1:1.25));
+ renderer.shadowMap.needsUpdate=true;
 });
-
-animate();
+// Exposes lightweight, read-only render diagnostics for browser tests / profiling.
+window.__foundryDiagnostics=()=>({
+ view:currentTab,rendererCount:document.querySelectorAll('canvas').length,
+ mbeLoaded:!!mbeController,
+ detailed:{lpe:machine.visible,imm:IMM.visible,mbe:mbeController?.MBE.visible??false},
+ proxies:Object.fromEntries(Object.entries(room.proxies).map(([k,p])=>[k,p.visible])),
+ drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,
+ pixelRatio:renderer.getPixelRatio(),shadowMap:renderer.shadowMap.enabled
+});
+requestAnimationFrame(animate);
