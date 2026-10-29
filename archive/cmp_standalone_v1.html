@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CMP — Chemical Mechanical Planarization</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#06070a;
+    font-family:ui-sans-serif,system-ui,sans-serif;color:#cfe4ff}
+  canvas{display:block}
+  #hud{position:fixed;left:26px;top:22px;pointer-events:none;letter-spacing:.04em}
+  #hud h1{margin:0;font-size:28px;font-weight:700;letter-spacing:.22em;
+    background:linear-gradient(90deg,#eaf4ff,#7fb6ff 60%,#3d7fd6);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  #hud p{margin:6px 0 0;font-size:10.5px;text-transform:uppercase;
+    letter-spacing:.24em;color:#5f7d9e}
+  #leftPanel{position:fixed;left:22px;bottom:22px;width:316px;
+    background:rgba(11,15,21,.82);border:1px solid rgba(88,128,172,.22);
+    border-radius:12px;padding:14px 16px;backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);font-size:11px;user-select:none;
+    box-shadow:0 18px 48px rgba(0,0,0,.55)}
+  .lbl{font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;
+    color:#5f7d9e;margin:0 0 6px}
+  .lbl + .lbl{margin-top:10px}
+  #narrator{background:rgba(30,50,75,.35);border-left:2px solid #3d7fd6;
+    border-radius:4px;padding:9px 11px 8px;margin-bottom:10px;min-height:88px;
+    display:flex;flex-direction:column;justify-content:space-between}
+  #narrStatus{font-size:11px;letter-spacing:.14em;font-weight:700;color:#7fc4ff;transition:color .3s}
+  #narrDetail{font-size:10.5px;color:#a6c4e0;line-height:1.5;margin-top:4px}
+  #narrTime{font-size:9px;color:#5f7d9e;letter-spacing:.14em;margin-top:7px;
+    font-variant-numeric:tabular-nums}
+  #xsecSvg{width:100%;height:100px;display:block;margin-bottom:4px;
+    background:rgba(8,16,26,.4);border-radius:4px}
+  #progWrap{height:3px;background:rgba(80,120,170,.18);border-radius:2px;
+    overflow:hidden;margin-bottom:8px}
+  #progBar{height:100%;width:0%;background:linear-gradient(90deg,#3d7fd6,#7fc4ff);
+    box-shadow:0 0 8px rgba(93,170,255,.7);transition:width .1s linear}
+  #rightPanel{position:fixed;right:22px;top:22px;width:256px;
+    background:rgba(11,15,21,.78);border:1px solid rgba(88,128,172,.22);
+    border-radius:12px;padding:14px 16px;backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);user-select:none;
+    box-shadow:0 18px 48px rgba(0,0,0,.55)}
+  #rightPanel .lbl{font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;
+    color:#5f7d9e;margin-bottom:8px}
+  #rightPanel .lbl + .lbl{margin-top:12px}
+  .specs{font-size:9.5px;display:flex;flex-direction:column;gap:3px;margin-bottom:4px}
+  .specs div{display:flex;justify-content:space-between;gap:6px}
+  .specs span:first-child{color:#5f7d9e;letter-spacing:.1em}
+  .specs span:last-child{color:#a6c4e0;font-variant-numeric:tabular-nums;text-align:right}
+  .spec-group{font-size:8px;letter-spacing:.24em;text-transform:uppercase;
+    color:#3f5872;margin:6px 0 2px;padding-top:4px;
+    border-top:1px solid rgba(88,128,172,0.15)}
+  .spec-group:first-child{margin-top:0;border-top:none;padding-top:0}
+  .temps{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
+  .trow{display:flex;justify-content:space-between;align-items:center;
+    font-size:10.5px;letter-spacing:.1em;font-variant-numeric:tabular-nums}
+  .trow span:first-child{color:#5f7d9e;letter-spacing:.18em}
+  .trow span:last-child{color:#ffb066}
+  .trow .v-green{color:#7ee6a0 !important}
+  .trow .v-red{color:#ff6a5a !important}
+  .dot{display:inline-block;width:6px;height:6px;border-radius:50%;
+    margin-right:7px;vertical-align:middle;background:var(--c,#ff7a2a);
+    box-shadow:0 0 8px var(--c,#ff7a2a)}
+  #playBtn{width:100%;padding:9px 12px;margin-top:4px;
+    background:linear-gradient(180deg,#2c5686,#1b3a5c);border:1px solid #3d7fd6;
+    border-radius:7px;color:#dbeaff;font-size:10.5px;letter-spacing:.2em;
+    text-transform:uppercase;font-weight:600;cursor:pointer;
+    transition:all .15s ease;font-family:inherit}
+  #playBtn:hover{background:linear-gradient(180deg,#3a6ba8,#244a72);
+    box-shadow:0 0 16px rgba(93,170,255,.35)}
+  #playBtn:active{transform:scale(.98)}
+  #playBtn.running{background:linear-gradient(180deg,#6a3a1a,#4a2610);
+    border-color:#ff7a2a;color:#ffd4a8}
+  #playBtn.done{background:linear-gradient(180deg,#1a5a30,#0f3a1e);
+    border-color:#4dbb7a;color:#a8e8c0}
+  .label3d{position:fixed;top:0;left:0;padding:4px 9px;
+    background:rgba(10,15,22,.9);border:1px solid #3d7fd6;border-radius:5px;
+    font-size:10px;letter-spacing:.15em;color:#7fc4ff;white-space:nowrap;
+    pointer-events:none;will-change:transform,opacity;
+    box-shadow:0 4px 12px rgba(0,0,0,.5);transition:opacity .25s;
+    font-variant-numeric:tabular-nums}
+  #hint{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);
+    font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:#3f5872;pointer-events:none;white-space:nowrap}
+  #hint b{color:#7fa8cf;font-weight:600}
+</style>
+</head>
+<body>
+
+<div id="hud"><h1>CMP</h1><p>Chemical Mechanical Planarization · STI Oxide Polish</p></div>
+
+<div id="leftPanel">
+  <div class="lbl">Live Process</div>
+  <div id="narrator">
+    <div id="narrStatus">IDLE</div>
+    <div id="narrDetail">Press Run to polish the STI oxide down to the SiN stop layer.</div>
+    <div id="narrTime">—</div>
+  </div>
+  <div class="lbl">Wafer Cross-Section <span style="color:#3f5872;font-size:9px">(live)</span></div>
+  <svg id="xsecSvg" viewBox="0 0 300 100" preserveAspectRatio="none">
+    <g id="xsecContent"></g>
+  </svg>
+  <div class="lbl">Progress</div>
+  <div id="progWrap"><div id="progBar"></div></div>
+</div>
+
+<div id="rightPanel">
+  <div class="lbl">Process Conditions</div>
+  <div class="specs">
+    <div class="spec-group">Mechanical</div>
+    <div><span>Applied pressure</span><span>3.0 psi</span></div>
+    <div><span>Platen rotation</span><span>80 rpm</span></div>
+    <div><span>Carrier rotation</span><span>75 rpm</span></div>
+    <div><span>Carrier offset</span><span>0.5 R platen</span></div>
+    <div><span>Conditioner</span><span>6 lb · diamond grid</span></div>
+    <div class="spec-group">Slurry</div>
+    <div><span>Chemistry</span><span>Colloidal SiO₂ · KOH</span></div>
+    <div><span>pH</span><span>10.5</span></div>
+    <div><span>Particle size</span><span>~120 nm</span></div>
+    <div><span>Flow rate</span><span>200 mL/min</span></div>
+    <div class="spec-group">Target</div>
+    <div><span>Film</span><span>SiO₂ over SiN</span></div>
+    <div><span>Oxide to remove</span><span>500 nm</span></div>
+    <div><span>SiO₂ rate</span><span>100 nm/min</span></div>
+    <div><span>SiN rate</span><span>5 nm/min (20:1)</span></div>
+  </div>
+  <div class="lbl">Live Readouts</div>
+  <div class="temps">
+    <div class="trow"><span><i class="dot" style="--c:#7fc4ff"></i>Platen</span><span class="v-green" id="v1">—</span></div>
+    <div class="trow"><span><i class="dot" style="--c:#5f9fd6"></i>Carrier</span><span class="v-green" id="v2">—</span></div>
+    <div class="trow"><span><i class="dot" style="--c:#ffb066"></i>Down-force</span><span id="v3">—</span></div>
+    <div class="trow"><span><i class="dot" style="--c:#7ee6a0"></i>Removal rate</span><span class="v-green" id="v4">—</span></div>
+    <div class="trow"><span><i class="dot" style="--c:#c8a0b0"></i>Oxide removed</span><span id="v5">—</span></div>
+    <div class="trow"><span><i class="dot" style="--c:#d8d8d8"></i>SiN exposed</span><span id="v6">—</span></div>
+    <div class="trow"><span><i class="dot" style="--c:#ff8a2a"></i>Endpoint</span><span id="v7">—</span></div>
+  </div>
+  <button id="playBtn">▶ Run CMP Cycle</button>
+</div>
+
+<div id="hint"><b>drag</b> orbit &nbsp;·&nbsp; <b>scroll</b> zoom &nbsp;·&nbsp; <b>right-drag</b> pan</div>
+
+<script type="importmap">
+{ "imports": {
+  "three":"https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls }   from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+/* ============ RENDERER / SCENE / CAMERA ============ */
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.12;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x06070a);
+scene.fog = new THREE.Fog(0x06070a, 28, 70);
+
+/* Camera raised with the table — target sits at the platen/carrier
+ * working height, which is now the natural eye-level of the action. */
+const camera = new THREE.PerspectiveCamera(38, innerWidth/innerHeight, 0.1, 200);
+camera.position.set(6.0, 4.7, 7.4);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0.7, 1.75, 0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.minDistance = 3.5;
+controls.maxDistance = 32;
+controls.maxPolarAngle = Math.PI * 0.495;
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+/* ============ LIGHTS ============ */
+scene.add(new THREE.AmbientLight(0xffffff, 0.28));
+scene.add(new THREE.HemisphereLight(0x9dc4ff, 0x0a0d12, 0.55));
+
+const key = new THREE.DirectionalLight(0xfff2e0, 2.1);
+key.position.set(7, 12, 7);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+const sc = key.shadow.camera;
+sc.left=-9; sc.right=9; sc.top=9; sc.bottom=-9; sc.near=1; sc.far=35;
+key.shadow.bias = -0.0005;
+key.shadow.normalBias = 0.02;
+scene.add(key);
+
+const fill = new THREE.DirectionalLight(0x5b8fd6, 0.85);
+fill.position.set(-7, 6, -6); scene.add(fill);
+
+const rim = new THREE.PointLight(0x4da3ff, 35, 26, 2);
+rim.position.set(-6, 6, -6); scene.add(rim);
+
+/* ============ MATERIALS ============ */
+const MAT = {
+  tableTop: new THREE.MeshStandardMaterial({ color:0x3a4048, metalness:0.7, roughness:0.5 }),
+  tableLeg: new THREE.MeshStandardMaterial({ color:0x282c34, metalness:0.85, roughness:0.55 }),
+  tableShelf: new THREE.MeshStandardMaterial({ color:0x2a2e36, metalness:0.7, roughness:0.6 }),
+  cabinet:  new THREE.MeshStandardMaterial({ color:0x1a1e24, metalness:0.6, roughness:0.6 }),
+  cabinetDoor: new THREE.MeshStandardMaterial({ color:0x24282f, metalness:0.7, roughness:0.5 }),
+  drainBottle: new THREE.MeshPhysicalMaterial({ color:0x6a8a9a, metalness:0, roughness:0.15, transparent:true, opacity:0.6, clearcoat:1 }),
+
+  platen:   new THREE.MeshStandardMaterial({ color:0x5a6270, metalness:0.9, roughness:0.35, envMapIntensity:1.4 }),
+  platenTop:new THREE.MeshStandardMaterial({ color:0x2a3038, metalness:0.7, roughness:0.5 }),
+  pad:      null,
+  padTrail: new THREE.MeshPhysicalMaterial({
+    color:0x3a4a5a, metalness:0.1, roughness:0.15,
+    transparent:true, opacity:0, depthWrite:false, clearcoat:1, clearcoatRoughness:0.05,
+    emissive:0x4a8acc, emissiveIntensity:0
+  }),
+  condTrail: new THREE.MeshPhysicalMaterial({
+    color:0xc8d0d8, metalness:0.1, roughness:0.2,
+    transparent:true, opacity:0, depthWrite:false, clearcoat:1, clearcoatRoughness:0.08,
+    emissive:0x8a8acc, emissiveIntensity:0.15
+  }),
+
+  carrier:  new THREE.MeshStandardMaterial({ color:0xb0bcc8, metalness:0.9, roughness:0.35 }),
+  carrierFilm: new THREE.MeshStandardMaterial({ color:0x2a2020, metalness:0.1, roughness:0.85 }),
+  retainingRing: new THREE.MeshStandardMaterial({ color:0xa87a48, metalness:0.85, roughness:0.4, emissive:0x1a0e02, emissiveIntensity:0.3 }),
+  wafer:    new THREE.MeshStandardMaterial({ color:0x4a5a6a, metalness:0.85, roughness:0.2, envMapIntensity:1.4, emissive:0x000000, emissiveIntensity:0 }),
+
+  steel:    new THREE.MeshStandardMaterial({ color:0xc3ccd5, metalness:1.0, roughness:0.24 }),
+  steel2:   new THREE.MeshStandardMaterial({ color:0x939da8, metalness:1.0, roughness:0.38 }),
+  steel3:   new THREE.MeshStandardMaterial({ color:0x5b636d, metalness:1.0, roughness:0.52 }),
+  dark:     new THREE.MeshStandardMaterial({ color:0x14161a, metalness:0.55, roughness:0.62 }),
+  copper:   new THREE.MeshStandardMaterial({ color:0xb87333, metalness:1.0, roughness:0.3 }),
+
+  diamond:  new THREE.MeshStandardMaterial({ color:0x2a2a30, metalness:0.4, roughness:0.7 }),
+  diamondGrit: new THREE.MeshStandardMaterial({ color:0xb8b8c0, metalness:0.9, roughness:0.4, emissive:0x1a1a20, emissiveIntensity:0.2 }),
+
+  slurry:   new THREE.MeshStandardMaterial({ color:0x8ab8d8, metalness:0.1, roughness:0.15, transparent:true, opacity:0.85, emissive:0x1a3a5a, emissiveIntensity:0.3 }),
+  slurryThin: new THREE.MeshBasicMaterial({ color:0x8ab8d8, transparent:true, opacity:0.35, depthWrite:false }),
+  slurryFilm: new THREE.MeshBasicMaterial({ color:0xa8d4f0, transparent:true, opacity:0, depthWrite:false, side:THREE.DoubleSide, blending:THREE.AdditiveBlending }),
+  hose:     new THREE.MeshStandardMaterial({ color:0x1a2a3a, metalness:0.2, roughness:0.7 }),
+
+  indicatorR: new THREE.MeshStandardMaterial({ color:0xd04030, metalness:0.5, roughness:0.5, emissive:0x401008, emissiveIntensity:0.6 }),
+  indicatorG: new THREE.MeshStandardMaterial({ color:0x40a060, metalness:0.5, roughness:0.5, emissive:0x104020, emissiveIntensity:0.6 }),
+  ledG:     new THREE.MeshStandardMaterial({ color:0x001a05, emissive:0x36ff78, emissiveIntensity:3.5 }),
+  ledA:     new THREE.MeshStandardMaterial({ color:0x1a0d00, emissive:0xffa02a, emissiveIntensity:3.5 }),
+  contactGlow: new THREE.MeshBasicMaterial({
+    color:0x7fe0ff, transparent:true, opacity:0, depthWrite:false,
+    blending:THREE.AdditiveBlending
+  }),
+};
+
+/* Pad texture — dimpled polyurethane via canvas */
+(function(){
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#4a4a50';
+  ctx.fillRect(0, 0, 256, 256);
+  for (let row = 0; row < 16; row++) {
+    for (let col = 0; col < 16; col++) {
+      const x = col * 16 + (row % 2) * 8;
+      const y = row * 16;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, 7);
+      g.addColorStop(0, '#2a2a30');
+      g.addColorStop(0.7, '#3a3a40');
+      g.addColorStop(1, '#55555a');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, 7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(3, 3);
+  tex.anisotropy = 4;
+  MAT.pad = new THREE.MeshStandardMaterial({ color:0xa0a0a8, map:tex, metalness:0.1, roughness:0.85 });
+})();
+
+/* ============ HELPERS ============ */
+const cyl = (rt,rb,h,m,s=32,o=false) => new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,s,1,o),m);
+const box = (w,h,d,m) => new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);
+
+function tubeAlong(pts, r, m, seg=20, rad=6){
+  const c = new THREE.CatmullRomCurve3(pts.map(p => new THREE.Vector3(...p)));
+  return new THREE.Mesh(new THREE.TubeGeometry(c, seg, r, rad, false), m);
+}
+
+/* ============ FLOOR ============ */
+const floor = new THREE.Mesh(new THREE.CircleGeometry(45, 48),
+  new THREE.MeshStandardMaterial({ color:0x0b0e13, roughness:0.7, metalness:0.5 }));
+floor.rotation.x = -Math.PI/2; floor.receiveShadow = true;
+scene.add(floor);
+
+const grid = new THREE.GridHelper(80, 40, 0x1d3348, 0x111a23);
+grid.position.y = 0.003;
+grid.material.transparent = true;
+grid.material.opacity = 0.4;
+scene.add(grid);
+
+/* ============================================================
+   EQUIPMENT TABLE
+   ============================================================
+   Tool-stand height: 1.10 m top surface puts the platen at 1.50 m
+   — a comfortable working height for a standing tech. The 0.85 m
+   old value read as a coffee table next to the 4.8 m carrier column. */
+const TABLE_TOP_Y = 1.10;
+const TABLE_THICK = 0.10;
+const TABLE_W = 7.0;
+const TABLE_D = 7.0;
+const LEG_H = TABLE_TOP_Y - TABLE_THICK;
+
+/* Table top */
+const tableTop = box(TABLE_W, TABLE_THICK, TABLE_D, MAT.tableTop);
+tableTop.position.y = TABLE_TOP_Y - TABLE_THICK/2;
+tableTop.castShadow = true; tableTop.receiveShadow = true;
+scene.add(tableTop);
+
+/* Table edge trim — below the surface, no coplanar faces */
+const edgeTrim = box(TABLE_W + 0.04, 0.06, TABLE_D + 0.04, MAT.dark);
+edgeTrim.position.y = TABLE_TOP_Y - 0.06;
+scene.add(edgeTrim);
+
+/* Apron — perimeter skirt below the top. Stiffens the structure and
+ * hides the gap between table top and the equipment below, so the top
+ * reads as a solid tool surface rather than a floating slab. */
+const APRON_H = 0.16;
+const APRON_T = 0.03;
+const apronY = TABLE_TOP_Y - TABLE_THICK - APRON_H/2;
+for (const z of [-(TABLE_D/2 - APRON_T/2), TABLE_D/2 - APRON_T/2]) {
+  const panel = box(TABLE_W - 2*APRON_T, APRON_H, APRON_T, MAT.tableLeg);
+  panel.position.set(0, apronY, z);
+  panel.receiveShadow = true;
+  scene.add(panel);
+}
+for (const x of [-(TABLE_W/2 - APRON_T/2), TABLE_W/2 - APRON_T/2]) {
+  const panel = box(APRON_T, APRON_H, TABLE_D - 2*APRON_T, MAT.tableLeg);
+  panel.position.set(x, apronY, 0);
+  panel.receiveShadow = true;
+  scene.add(panel);
+}
+
+/* Legs */
+const legPositions = [[-3.0, -3.0], [-3.0, 3.0], [3.0, -3.0], [3.0, 3.0]];
+legPositions.forEach(([x,z]) => {
+  const leg = box(0.16, LEG_H, 0.16, MAT.tableLeg);
+  leg.position.set(x, LEG_H/2, z);
+  leg.castShadow = true; leg.receiveShadow = true;
+  scene.add(leg);
+
+  const foot = cyl(0.22, 0.24, 0.05, MAT.dark, 12);
+  foot.position.set(x, 0.025, z);
+  foot.castShadow = true;
+  scene.add(foot);
+
+  const gusset = box(0.30, 0.22, 0.30, MAT.tableShelf);
+  gusset.position.set(x + Math.sign(x)*(-0.16), LEG_H - 0.11, z + Math.sign(z)*(-0.16));
+  scene.add(gusset);
+});
+
+/* Lower shelf — raised proportionally with the table (0.32 → 0.42) so
+ * the understructure doesn't look hollow. */
+const shelfY = 0.42;
+const shelf = box(TABLE_W - 0.5, 0.05, TABLE_D - 0.5, MAT.tableShelf);
+shelf.position.y = shelfY;
+shelf.receiveShadow = true;
+scene.add(shelf);
+
+for (const z of [-2.5, 2.5]) {
+  const rail = box(TABLE_W - 0.6, 0.06, 0.08, MAT.tableLeg);
+  rail.position.set(0, shelfY - 0.05, z);
+  scene.add(rail);
+}
+
+/* ============================================================
+   UNDER-TABLE EQUIPMENT
+   ============================================================
+   Cabinet sits on the (now higher) shelf and is tall enough to fill
+   the space cleanly up to 5 cm below the table slab underside (1.00).
+   Top at 0.945 → clears by 5.5 cm. */
+const cabinet = box(2.0, 0.50, 1.2, MAT.cabinet);
+cabinet.position.set(-2.0, 0.695, 0);
+cabinet.castShadow = true; cabinet.receiveShadow = true;
+scene.add(cabinet);
+
+const cabinetDoor = box(0.02, 0.34, 0.55, MAT.cabinetDoor);
+cabinetDoor.position.set(-0.99, 0.695, 0);
+scene.add(cabinetDoor);
+const cabinetHandle = cyl(0.015, 0.015, 0.15, MAT.copper, 8);
+cabinetHandle.rotation.z = Math.PI/2;
+cabinetHandle.position.set(-0.95, 0.695, 0);
+scene.add(cabinetHandle);
+
+const led1 = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 6), MAT.ledG.clone());
+led1.position.set(-1.5, 0.83, 0.61);
+scene.add(led1);
+const led2 = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 6), MAT.ledA.clone());
+led2.position.set(-1.4, 0.83, 0.61);
+scene.add(led2);
+
+/* Drain bottle — on the floor, below the shelf */
+const drainBottle = cyl(0.28, 0.28, 0.26, MAT.drainBottle, 20);
+drainBottle.position.set(2.3, 0.13, 0.4);
+drainBottle.castShadow = true;
+scene.add(drainBottle);
+
+const drainBottleCap = cyl(0.16, 0.20, 0.06, MAT.steel2, 16);
+drainBottleCap.position.set(2.3, 0.27, 0.4);
+scene.add(drainBottleCap);
+
+const drainContents = cyl(0.26, 0.26, 0.13, new THREE.MeshStandardMaterial({ color:0x3a4a5a, metalness:0.2, roughness:0.4 }), 20);
+drainContents.position.set(2.3, 0.065, 0.4);
+scene.add(drainContents);
+
+/* ============================================================
+   CATCH TRAY on the table top
+   ============================================================ */
+const trayBaseY = TABLE_TOP_Y;   // = 1.10
+
+const trayBase = box(6.2, 0.20, 6.2, MAT.tableShelf);
+trayBase.position.y = trayBaseY + 0.10;
+trayBase.castShadow = true; trayBase.receiveShadow = true;
+scene.add(trayBase);
+
+const trayWall = cyl(2.85, 2.90, 0.24, MAT.tableShelf, 48, true);
+trayWall.position.y = trayBaseY + 0.20 + 0.12;
+trayWall.castShadow = true; trayWall.receiveShadow = true;
+scene.add(trayWall);
+
+const trayFloor = cyl(2.85, 2.85, 0.03, MAT.dark, 48);
+trayFloor.position.y = trayBaseY + 0.20 + 0.015;
+trayFloor.receiveShadow = true;
+scene.add(trayFloor);
+
+/* Drain port at tray edge → over the wall, down past the (raised) table
+ * edge, under the shelf, into the side of the floor bottle. Upper five
+ * waypoints were raised by 0.25 to track the new table height. */
+scene.add(tubeAlong([
+  [2.85, 1.32, 0.4],
+  [2.86, 1.53, 0.4],
+  [3.05, 1.56, 0.4],
+  [3.45, 1.40, 0.4],
+  [3.58, 1.11, 0.4],
+  [3.58, 0.22, 0.4],
+  [3.20, 0.18, 0.4],
+  [2.75, 0.18, 0.4],
+  [2.60, 0.20, 0.4],
+], 0.055, MAT.hose, 60));
+
+/* ============================================================
+   PLATEN + PAD
+   ============================================================ */
+const PLATEN_Y = trayBaseY + 0.20 + 0.20;   // 1.50
+const platenGroup = new THREE.Group();
+platenGroup.position.y = PLATEN_Y;
+scene.add(platenGroup);
+
+const platen = cyl(2.0, 2.0, 0.16, MAT.platen, 64);
+platen.castShadow = true; platen.receiveShadow = true;
+platenGroup.add(platen);
+
+const platenTop = cyl(1.95, 1.95, 0.04, MAT.platenTop, 64);
+platenTop.position.y = 0.10;
+platenGroup.add(platenTop);
+
+const pad = cyl(2.02, 2.02, 0.06, MAT.pad, 64);
+pad.position.y = 0.15; pad.castShadow = true; pad.receiveShadow = true;
+platenGroup.add(pad);
+
+const padTrail = new THREE.Mesh(
+  new THREE.RingGeometry(0.4, 1.6, 96),
+  MAT.padTrail.clone()
+);
+padTrail.rotation.x = -Math.PI / 2;
+padTrail.position.y = 0.190;
+padTrail.renderOrder = 1;
+platenGroup.add(padTrail);
+
+const condTrail = new THREE.Mesh(
+  new THREE.RingGeometry(0.70, 1.85, 64),
+  MAT.condTrail.clone()
+);
+condTrail.rotation.x = -Math.PI / 2;
+condTrail.position.y = 0.196;
+condTrail.renderOrder = 2;
+platenGroup.add(condTrail);
+
+for (let i = 0; i < 4; i++) {
+  const stripe = box(1.85, 0.005, 0.09, MAT.indicatorR);
+  stripe.rotation.y = (i / 4) * Math.PI * 2;
+  stripe.position.y = 0.183;
+  platenGroup.add(stripe);
+}
+
+const hub = cyl(0.30, 0.32, 0.22, MAT.steel2, 24);
+hub.position.y = 0.19; hub.castShadow = true;
+platenGroup.add(hub);
+
+const hubTop = cyl(0.22, 0.22, 0.06, MAT.dark, 24);
+hubTop.position.y = 0.32;
+platenGroup.add(hubTop);
+
+const slurryPuddle = cyl(0.45, 0.45, 0.012, MAT.slurryThin, 32);
+slurryPuddle.position.y = 0.186;
+platenGroup.add(slurryPuddle);
+
+/* ============================================================
+   WAFER CARRIER
+   ============================================================ */
+const CARRIER_OFFSET_X = 1.0;
+const PAD_TOP_Y = PLATEN_Y + 0.18;   // 1.68
+const CONTACT_Y = PAD_TOP_Y + 0.2375;
+const LIFT_Y = CONTACT_Y + 0.65;
+
+const carrierGroup = new THREE.Group();
+carrierGroup.position.set(CARRIER_OFFSET_X, LIFT_Y, 0);
+scene.add(carrierGroup);
+
+const carrierHousing = cyl(0.60, 0.60, 0.36, MAT.carrier, 40);
+carrierHousing.castShadow = true; carrierHousing.receiveShadow = true;
+carrierGroup.add(carrierHousing);
+
+const carrierFilm = cyl(0.55, 0.55, 0.03, MAT.carrierFilm, 40);
+carrierFilm.position.y = -0.19;
+carrierGroup.add(carrierFilm);
+
+const wafer = cyl(0.50, 0.50, 0.025, MAT.wafer, 48);
+wafer.position.y = -0.215;
+wafer.castShadow = true; wafer.receiveShadow = true;
+carrierGroup.add(wafer);
+
+const slurryFilm = cyl(0.52, 0.52, 0.004, MAT.slurryFilm.clone(), 48);
+slurryFilm.position.y = -0.235;
+carrierGroup.add(slurryFilm);
+
+const contactGlow = new THREE.Mesh(
+  new THREE.TorusGeometry(0.50, 0.025, 8, 48),
+  MAT.contactGlow.clone()
+);
+contactGlow.rotation.x = Math.PI / 2;
+contactGlow.position.y = -0.235;
+carrierGroup.add(contactGlow);
+
+const waferNotch = box(0.06, 0.001, 0.04, MAT.indicatorG);
+waferNotch.position.set(0.42, -0.20, 0);
+carrierGroup.add(waferNotch);
+
+const retRing = cyl(0.57, 0.57, 0.10, MAT.retainingRing, 48, true);
+retRing.position.y = -0.175;
+carrierGroup.add(retRing);
+
+for (let i = 0; i < 16; i++) {
+  const a = (i / 16) * Math.PI * 2;
+  const notch = box(0.03, 0.10, 0.02, MAT.steel3);
+  notch.position.set(Math.cos(a) * 0.58, -0.175, Math.sin(a) * 0.58);
+  notch.rotation.y = -a;
+  carrierGroup.add(notch);
+}
+
+for (let i = 0; i < 3; i++) {
+  const s = box(0.45, 0.01, 0.06, MAT.indicatorR);
+  s.rotation.y = (i / 3) * Math.PI * 2;
+  s.position.y = 0.185;
+  carrierGroup.add(s);
+}
+
+const carrierTop = cyl(0.55, 0.60, 0.06, MAT.steel2, 40);
+carrierTop.position.y = 0.20;
+carrierGroup.add(carrierTop);
+
+const carrierShaft = cyl(0.11, 0.11, 1.10, MAT.steel2, 20);
+carrierShaft.position.y = 0.75;
+carrierShaft.castShadow = true;
+carrierGroup.add(carrierShaft);
+
+const carrierMotor = cyl(0.26, 0.26, 0.32, MAT.dark, 24);
+carrierMotor.position.y = 1.45;
+carrierMotor.castShadow = true;
+carrierGroup.add(carrierMotor);
+
+const carrierMotorCap = cyl(0.22, 0.26, 0.08, MAT.steel2, 24);
+carrierMotorCap.position.y = 1.65;
+carrierGroup.add(carrierMotorCap);
+
+const vacuumUnion = cyl(0.08, 0.08, 0.10, MAT.steel3, 16);
+vacuumUnion.position.y = 1.74;
+carrierGroup.add(vacuumUnion);
+
+const vacuumStub = cyl(0.04, 0.04, 0.30, MAT.hose, 10);
+vacuumStub.position.y = 1.94;
+carrierGroup.add(vacuumStub);
+
+const actuator = cyl(0.16, 0.16, 0.55, MAT.copper, 20);
+actuator.position.y = 1.95;
+carrierGroup.add(actuator);
+
+const carrierLED = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 6), MAT.ledG.clone());
+carrierLED.position.set(0.14, 1.68, 0.10);
+carrierGroup.add(carrierLED);
+
+/* ============================================================
+   SLURRY DELIVERY ARM
+   ============================================================ */
+const slurryArm = new THREE.Group();
+slurryArm.position.set(2.75, TABLE_TOP_Y, 1.5);
+scene.add(slurryArm);
+
+const slurryPost = cyl(0.10, 0.12, 1.90, MAT.steel2, 16);
+slurryPost.position.y = 0.95;
+slurryPost.castShadow = true;
+slurryArm.add(slurryPost);
+
+const slurryBase = cyl(0.20, 0.22, 0.08, MAT.steel3, 16);
+slurryBase.position.y = 0.04;
+slurryArm.add(slurryBase);
+
+const slurryBeam = box(2.45, 0.10, 0.10, MAT.steel2);
+slurryBeam.position.set(-1.225, 1.90, 0);
+slurryBeam.castShadow = true;
+slurryArm.add(slurryBeam);
+
+const slurryDrop = cyl(0.05, 0.05, 1.15, MAT.steel3, 12);
+slurryDrop.position.set(-2.45, 1.325, 0);
+slurryArm.add(slurryDrop);
+
+const nozzle = cyl(0.05, 0.06, 0.10, MAT.copper, 12);
+nozzle.position.set(-2.45, 0.70, 0);
+nozzle.castShadow = true;
+slurryArm.add(nozzle);
+
+const nozzleTip = cyl(0.025, 0.04, 0.06, MAT.copper, 12);
+nozzleTip.position.set(-2.45, 0.62, 0);
+slurryArm.add(nozzleTip);
+
+slurryArm.add(tubeAlong([
+  [0, 0.15, 0],
+  [0, 1.70, 0],
+  [-0.60, 1.95, 0],
+  [-2.45, 1.95, 0],
+  [-2.45, 0.68, 0],
+], 0.040, MAT.hose, 30));
+
+/* ============================================================
+   CONDITIONER ARM
+   ============================================================ */
+const conditionerArm = new THREE.Group();
+conditionerArm.position.set(-2.75, TABLE_TOP_Y, 0.8);
+scene.add(conditionerArm);
+
+const conditionerPost = cyl(0.10, 0.12, 1.90, MAT.steel2, 16);
+conditionerPost.position.y = 0.95;
+conditionerPost.castShadow = true;
+conditionerArm.add(conditionerPost);
+
+const conditionerBase = cyl(0.20, 0.22, 0.08, MAT.steel3, 16);
+conditionerBase.position.y = 0.04;
+conditionerArm.add(conditionerBase);
+
+const conditionerBeam = box(2.45, 0.08, 0.08, MAT.steel2);
+conditionerBeam.position.set(1.225, 1.90, 0);
+conditionerBeam.castShadow = true;
+conditionerArm.add(conditionerBeam);
+
+const dropGroup = new THREE.Group();
+dropGroup.position.set(1.90, 1.90, 0);
+conditionerArm.add(dropGroup);
+
+const dropRod = cyl(0.05, 0.05, 1.20, MAT.steel3, 12);
+dropRod.position.y = -0.60;
+dropRod.castShadow = true;
+dropGroup.add(dropRod);
+
+const conditionerPivot = new THREE.Group();
+conditionerPivot.position.y = -1.20;
+dropGroup.add(conditionerPivot);
+
+const conditionerHead = cyl(0.20, 0.22, 0.14, MAT.steel2, 20);
+conditionerHead.position.y = -0.02;
+conditionerHead.castShadow = true;
+conditionerPivot.add(conditionerHead);
+
+const diamondDisk = cyl(0.17, 0.17, 0.04, MAT.diamond, 32);
+diamondDisk.position.y = -0.10;
+diamondDisk.castShadow = true;
+conditionerPivot.add(diamondDisk);
+
+for (let i = 0; i < 24; i++) {
+  const r = 0.04 + Math.random() * 0.12;
+  const a = (i / 24) * Math.PI * 2;
+  const grit = new THREE.Mesh(new THREE.SphereGeometry(0.008, 4, 3), MAT.diamondGrit);
+  grit.position.set(Math.cos(a) * r, -0.125, Math.sin(a) * r);
+  conditionerPivot.add(grit);
+}
+
+const conditionerIndicator = box(0.15, 0.005, 0.03, MAT.indicatorR);
+conditionerIndicator.position.set(0.08, 0.04, 0);
+conditionerPivot.add(conditionerIndicator);
+
+/* ============================================================
+   3D LABEL
+   ============================================================ */
+const cmpLabel = document.createElement('div');
+cmpLabel.className = 'label3d';
+cmpLabel.textContent = 'CMP · STI POLISH';
+cmpLabel.style.color = '#7fc4ff';
+cmpLabel.style.borderColor = '#7fc4ff';
+document.body.appendChild(cmpLabel);
+
+const _pv = new THREE.Vector3();
+function placeLabel(el, x, y, z) {
+  _pv.set(x, y, z).project(camera);
+  const sx = (_pv.x * 0.5 + 0.5) * innerWidth;
+  const sy = (-_pv.y * 0.5 + 0.5) * innerHeight;
+  el.style.transform = `translate(-50%,-100%) translate(${sx}px,${sy}px)`;
+  el.style.opacity = (_pv.z < 1) ? '1' : '0';
+}
+
+/* ============ CONTACT HEAT LIGHT ============ */
+const polishContact = new THREE.PointLight(0xffa040, 0, 1.5, 2);
+polishContact.position.set(CARRIER_OFFSET_X, PAD_TOP_Y + 0.05, 0);
+scene.add(polishContact);
+
+/* ============ STATE ============ */
+const S = {
+  t: 0, on: false, done: false, idx: -1,
+  platenRPM: 0, carrierRPM: 0, downForce: 0,
+  conditionerSwing: 0, conditioning: false,
+  condLift: 0,
+  slurryFlow: 0,
+  oxideRemoved: 0,
+  endpoint: false,
+  endpointFlash: 0,
+  overpolish: 0,
+  waferLift: 1,
+  prevWaferLift: 1,
+  platenAngle: 0,
+  carrierAngle: 0,
+};
+
+/* ============ DOM ============ */
+const nStat = document.getElementById('narrStatus');
+const nDet = document.getElementById('narrDetail');
+const nTime = document.getElementById('narrTime');
+const progBar = document.getElementById('progBar');
+const playBtn = document.getElementById('playBtn');
+const xsecContent = document.getElementById('xsecContent');
+
+function setLiveReadouts() {
+  document.getElementById('v1').textContent = Math.round(S.platenRPM) + ' rpm';
+  document.getElementById('v2').textContent = Math.round(S.carrierRPM) + ' rpm';
+  document.getElementById('v3').textContent = S.downForce.toFixed(1) + ' psi';
+  const rate = S.downForce * (100/3.0);
+  document.getElementById('v4').textContent = rate > 0.5 ? rate.toFixed(0) + ' nm/min' : '—';
+  document.getElementById('v5').textContent = S.oxideRemoved.toFixed(0) + ' / 500 nm';
+  const exposed = S.oxideRemoved >= 500;
+  document.getElementById('v6').textContent = exposed ? 'YES' : 'no';
+  document.getElementById('v6').className = exposed ? 'v-green' : '';
+  const epEl = document.getElementById('v7');
+  if (S.endpoint) { epEl.textContent = 'DETECTED'; epEl.className = 'v-green'; }
+  else if (S.on && S.downForce > 0.5) { epEl.textContent = 'searching'; epEl.className = ''; }
+  else { epEl.textContent = '—'; epEl.className = ''; }
+}
+
+function setIdle() {
+  if (S.done) {
+    nStat.textContent = 'CMP COMPLETE';
+    nStat.style.color = '#7ee6a0';
+    nDet.textContent = 'STI planarization finished. Oxide cleared to SiN stop layer; brief overpolish removed residual topography. Slight dishing in wide trenches and near-zero SiN erosion — within spec.';
+    nTime.textContent = 'Cycle complete';
+  } else {
+    nStat.textContent = 'IDLE';
+    nStat.style.color = '#5f7d9e';
+    nDet.textContent = 'Press Run to polish the STI oxide down to the SiN stop layer.';
+    nTime.textContent = '—';
+  }
+}
+
+/* ============ CYCLE ============ */
+const CYCLE = [
+  { dur: 2.0, real: 1.0, narr: 'LOAD · wafer to carrier', color:'#7fc4ff',
+    detail: 'Wafer picked up by the carrier head, held face-down on the backing film by vacuum. Carrier offset from platen center — real CMP geometry, so each wafer point sees a varying pad velocity as both rotate.',
+    target: { platenRPM: 0, carrierRPM: 0, downForce: 0, waferLift: 1, conditionerSwing: 0, conditioning: false, slurryFlow: 0 } },
+  { dur: 2.0, real: 1.0, narr: 'CONDITIONER · pad prep', color:'#ffaa66',
+    detail: 'Diamond conditioner sweeps radially across the pad. Re-opens pad pores and refreshes the surface so the next wafer starts from a known pad state. Platen spins slowly during conditioning.',
+    target: { platenRPM: 30, carrierRPM: 0, downForce: 0, waferLift: 1, conditionerSwing: 1, conditioning: true, slurryFlow: 80 } },
+  { dur: 12.0, real: 5.0, narr: 'POLISH · SiO₂ removal', color:'#7ee6a0',
+    detail: 'Carrier lowers the wafer onto the pad at 3 psi. Platen and carrier co-rotate in the same direction at slightly different speeds (80 / 75 rpm); the 0.5 R offset makes every wafer point sweep a rosette path, time-averaging relative velocity so removal stays uniform. Colloidal SiO₂ at pH 10.5 both etches (chemical) and abrades (mechanical). Preston: R = k·P·v ≈ 100 nm/min.',
+    target: { platenRPM: 80, carrierRPM: 75, downForce: 3.0, waferLift: 0, conditionerSwing: 0.5, conditioning: true, slurryFlow: 200 },
+    polish: true },
+  { dur: 2.0, real: 0.5, narr: 'ENDPOINT · overpolish', color:'#7ee6a0',
+    detail: 'SiO₂ cleared to the SiN stop layer. Overpolish runs ~30 s to clear residual oxide in low spots. SiN selectivity (20:1) limits SiN erosion to ~3 nm. Slight dishing of oxide in wide trenches.',
+    target: { platenRPM: 80, carrierRPM: 75, downForce: 2.5, waferLift: 0, conditionerSwing: 0.5, conditioning: true, slurryFlow: 200 },
+    overpolish: true },
+  { dur: 1.5, real: 1.0, narr: 'UNLOAD · carrier lift', color:'#5f7d9e',
+    detail: 'Carrier lifts wafer off the pad. Pad continues to spin down, slurry stops, conditioner retracts.',
+    target: { platenRPM: 20, carrierRPM: 10, downForce: 0, waferLift: 1, conditionerSwing: 0, conditioning: false, slurryFlow: 0 } },
+];
+
+const TOTAL = CYCLE.reduce((s, p) => s + p.dur, 0);
+const TOTAL_REAL = CYCLE.reduce((s, p) => s + p.real, 0);
+
+/* ============ CROSS-SECTION ============ */
+function updateXsec() {
+  const ySubTop = 85;
+  const ySubBot = 100;
+  const ySiNTopBase = 70;
+
+  const oxideRemoved = S.oxideRemoved;
+  const oxideLeft = Math.max(0, 500 - oxideRemoved);
+  const oxideH_px = oxideLeft * (45 / 500);
+
+  const erosionPx = S.endpoint ? Math.min(1, S.overpolish) : 0;
+  const siNTop = ySiNTopBase + erosionPx;
+  const oxideTop = siNTop - oxideH_px;
+
+  const dishPx = S.endpoint ? Math.min(4, S.overpolish * 4) : 0;
+
+  const t1 = { x: 78, w: 44 };
+  const t2 = { x: 172, w: 28 };
+
+  let html = '';
+
+  html += `<rect x="10" y="${ySubTop}" width="280" height="${ySubBot - ySubTop}" fill="#4a5a6a"/>`;
+  html += `<text x="14" y="${ySubTop + 9}" font-size="6" fill="#a0c0e0">Si substrate</text>`;
+
+  html += `<rect x="10" y="${siNTop}" width="${t1.x - 10}" height="${ySubTop - siNTop}" fill="#b8c0d8"/>`;
+  html += `<rect x="${t1.x + t1.w}" y="${siNTop}" width="${t2.x - (t1.x + t1.w)}" height="${ySubTop - siNTop}" fill="#b8c0d8"/>`;
+  html += `<rect x="${t2.x + t2.w}" y="${siNTop}" width="${290 - (t2.x + t2.w)}" height="${ySubTop - siNTop}" fill="#b8c0d8"/>`;
+  if (ySubTop - siNTop > 4) {
+    html += `<text x="14" y="${siNTop + 9}" font-size="6" fill="#2a3040">SiN stop</text>`;
+  }
+
+  if (oxideH_px > 0.3) {
+    html += `<rect x="10" y="${oxideTop.toFixed(1)}" width="280" height="${(siNTop - oxideTop).toFixed(1)}" fill="#8a98b8" opacity="0.92"/>`;
+    if (oxideH_px > 10) {
+      html += `<text x="14" y="${(oxideTop + 9).toFixed(1)}" font-size="6" fill="#1a2030">SiO₂ overfill</text>`;
+    }
+  }
+
+  const t1Top = siNTop + dishPx;
+  const t2Top = siNTop + dishPx * 0.7;
+  html += `<rect x="${t1.x}" y="${t1Top.toFixed(1)}" width="${t1.w}" height="${(ySubTop - t1Top).toFixed(1)}" fill="#8a98b8"/>`;
+  html += `<rect x="${t2.x}" y="${t2Top.toFixed(1)}" width="${t2.w}" height="${(ySubTop - t2Top).toFixed(1)}" fill="#8a98b8"/>`;
+
+  if (!S.endpoint) {
+    html += `<line x1="6" y1="${ySiNTopBase}" x2="294" y2="${ySiNTopBase}" stroke="#7ee6a0" stroke-width="0.4" stroke-dasharray="2 2" opacity="0.6"/>`;
+    html += `<text x="220" y="${ySiNTopBase - 3}" font-size="5" fill="#7ee6a0">SiN top (target)</text>`;
+  } else {
+    html += `<line x1="6" y1="${ySiNTopBase}" x2="294" y2="${ySiNTopBase}" stroke="#7ee6a0" stroke-width="0.5" opacity="0.5"/>`;
+    html += `<text x="220" y="${ySiNTopBase - 3}" font-size="5" fill="#7ee6a0">ENDPOINT HIT</text>`;
+  }
+
+  html += `<text x="220" y="10" font-size="6" fill="#7fc4ff">${Math.min(500, S.oxideRemoved).toFixed(0)} / 500 nm</text>`;
+
+  if (dishPx > 1) {
+    html += `<text x="${t1.x + 2}" y="${(t1Top - 1).toFixed(1)}" font-size="4.5" fill="#6b8db0">dish</text>`;
+  }
+
+  if (S.endpointFlash > 0.05) {
+    const a = S.endpointFlash;
+    html += `<rect x="10" y="${siNTop}" width="280" height="${ySubTop - siNTop}" fill="none" stroke="#7ee6a0" stroke-width="2" opacity="${a}"/>`;
+    html += `<text x="100" y="${siNTop - 8}" font-size="10" fill="#7ee6a0" opacity="${a}" font-weight="bold" letter-spacing="2">ENDPOINT</text>`;
+  }
+
+  xsecContent.innerHTML = html;
+}
+
+/* ============ RUN ============ */
+playBtn.addEventListener('click', () => {
+  if (S.on) {
+    S.on = false;
+    playBtn.textContent = '▶ Run CMP Cycle';
+    playBtn.classList.remove('running');
+    return;
+  }
+  S.t = 0; S.idx = -1; S.on = true; S.done = false;
+  S.platenRPM = 0; S.carrierRPM = 0; S.downForce = 0;
+  S.oxideRemoved = 0; S.endpoint = false;
+  S.endpointFlash = 0; S.overpolish = 0;
+  S.conditionerSwing = 0; S.conditioning = false; S.slurryFlow = 0;
+  S.waferLift = 1; S.prevWaferLift = 1;
+  updateXsec();
+  playBtn.textContent = '■ Stop CMP';
+  playBtn.classList.add('running');
+  playBtn.classList.remove('done');
+});
+
+setIdle();
+setLiveReadouts();
+updateXsec();
+
+/* ============ ANIMATION ============ */
+const clock = new THREE.Clock();
+let xsecTick = 0;
+
+const dropPool = [];
+for (let i = 0; i < 14; i++) {
+  const drop = new THREE.Mesh(new THREE.SphereGeometry(0.014, 5, 4), MAT.slurry.clone());
+  drop.material.opacity = 0.9;
+  drop.visible = false;
+  drop.userData = { age: Math.random(), vy: 0 };
+  scene.add(drop);
+  dropPool.push(drop);
+}
+
+const runoffPool = [];
+for (let i = 0; i < 10; i++) {
+  const drop = new THREE.Mesh(new THREE.SphereGeometry(0.018, 5, 4), MAT.slurry.clone());
+  drop.material.opacity = 0.85;
+  drop.visible = false;
+  drop.userData = { age: Math.random(), vx: 0, vy: 0, vz: 0 };
+  scene.add(drop);
+  runoffPool.push(drop);
+}
+
+const splashPool = [];
+for (let i = 0; i < 12; i++) {
+  const sp = new THREE.Mesh(new THREE.SphereGeometry(0.011, 4, 3), MAT.slurry.clone());
+  sp.material.opacity = 0.8;
+  sp.visible = false;
+  sp.userData = { age: Math.random(), vx: 0, vy: 0, vz: 0 };
+  scene.add(sp);
+  splashPool.push(sp);
+}
+
+const dripPool = [];
+for (let i = 0; i < 10; i++) {
+  const d = new THREE.Mesh(new THREE.SphereGeometry(0.013, 5, 4), MAT.slurry.clone());
+  d.material.opacity = 0.85;
+  d.visible = false;
+  d.userData = { age: 2, vx: 0, vy: 0, vz: 0 };
+  scene.add(d);
+  dripPool.push(d);
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.1);
+  const t = clock.getElapsedTime();
+
+  if (S.on) {
+    S.t += dt;
+    if (S.t >= TOTAL) {
+      S.t = TOTAL; S.on = false; S.done = true;
+      playBtn.textContent = '✓ CMP Complete';
+      playBtn.classList.remove('running');
+      playBtn.classList.add('done');
+      setIdle();
+    }
+
+    let acc = 0, idx = -1, local = 0;
+    for (let i = 0; i < CYCLE.length; i++) {
+      if (S.t < acc + CYCLE[i].dur || i === CYCLE.length - 1) {
+        idx = i; local = Math.min(1, (S.t - acc) / CYCLE[i].dur); break;
+      }
+      acc += CYCLE[i].dur;
+    }
+
+    if (idx !== S.idx && S.on) {
+      S.idx = idx;
+      const ph = CYCLE[idx];
+      nStat.textContent = ph.narr;
+      nStat.style.color = ph.color;
+      nDet.textContent = ph.detail;
+    }
+
+    const ph = CYCLE[idx];
+
+    const approach = (a, b, k) => a + (b - a) * Math.min(1, dt * k);
+    S.platenRPM       = approach(S.platenRPM, ph.target.platenRPM, 3);
+    S.carrierRPM      = approach(S.carrierRPM, ph.target.carrierRPM, 3);
+    S.downForce       = approach(S.downForce, ph.target.downForce, 3);
+    S.waferLift       = approach(S.waferLift, ph.target.waferLift, 2);
+    S.conditionerSwing = approach(S.conditionerSwing, ph.target.conditionerSwing, 2);
+    S.slurryFlow      = approach(S.slurryFlow, ph.target.slurryFlow, 2);
+    S.conditioning    = ph.target.conditioning;
+
+    if (ph.polish && S.waferLift < 0.1) {
+      const rate = S.downForce * (100 / 3.0);
+      const demoFactor = (ph.real * 60) / (ph.dur * 0.8);
+      S.oxideRemoved = Math.min(500, S.oxideRemoved + (rate * demoFactor * dt) / 60);
+      if (S.oxideRemoved >= 500 && !S.endpoint) {
+        S.endpoint = true;
+        S.endpointFlash = 1.0;
+      }
+    }
+
+    if (ph.overpolish) {
+      S.oxideRemoved = 500;
+      S.overpolish = Math.min(1, S.overpolish + dt / ph.dur);
+      if (!S.endpoint) {
+        S.endpoint = true;
+        S.endpointFlash = 1.0;
+      }
+    }
+
+    progBar.style.width = (S.t / TOTAL * 100).toFixed(1) + '%';
+    if (S.on) {
+      const elapsedReal = CYCLE.slice(0, idx).reduce((a, p) => a + p.real, 0) + local * CYCLE[idx].real;
+      nTime.textContent = `${Math.round(S.t)}s / ${Math.round(TOTAL)}s demo · ~${elapsedReal.toFixed(1)} of ${TOTAL_REAL.toFixed(1)} min real`;
+    }
+    setLiveReadouts();
+  } else {
+    const decay = Math.max(0, 1 - dt * 2.5);
+    S.platenRPM *= decay;
+    S.carrierRPM *= decay;
+    S.downForce *= decay;
+    S.slurryFlow *= decay;
+    S.conditionerSwing *= decay;
+    S.conditioning = false;
+    setLiveReadouts();
+  }
+
+  S.endpointFlash = Math.max(0, S.endpointFlash - dt * 1.5);
+
+  const justLifted = S.waferLift > 0.5 && S.prevWaferLift < 0.5;
+  S.prevWaferLift = S.waferLift;
+
+  if (justLifted) {
+    let spawned = 0;
+    for (const d of dripPool) {
+      if (d.userData.age >= 1 && spawned < 6) {
+        const a = Math.random() * Math.PI * 2;
+        d.position.set(
+          CARRIER_OFFSET_X + Math.cos(a) * 0.45,
+          carrierGroup.position.y - 0.20,
+          Math.sin(a) * 0.45
+        );
+        d.userData.age = 0;
+        d.userData.vx = Math.cos(a) * 0.15;
+        d.userData.vz = Math.sin(a) * 0.15;
+        d.userData.vy = -0.1;
+        d.visible = true;
+        spawned++;
+      }
+    }
+  }
+
+  S.platenAngle += S.platenRPM * (Math.PI * 2) / 60 * dt;
+  platenGroup.rotation.y = S.platenAngle;
+
+  S.carrierAngle += S.carrierRPM * (Math.PI * 2) / 60 * dt;
+  carrierGroup.rotation.y = S.carrierAngle;
+
+  carrierGroup.position.y = LIFT_Y - (LIFT_Y - CONTACT_Y) * (1 - S.waferLift);
+
+  const sweepBase = 1.30 + 0.55 * S.conditionerSwing;
+  const sweepOsc  = Math.sin(t * 1.8) * 0.55 * S.conditionerSwing;
+  dropGroup.position.x = sweepBase + sweepOsc;
+  conditionerPivot.rotation.y = t * 10;
+
+  const isPolishing = S.downForce > 1.0 && S.waferLift < 0.1;
+  const isConditioning = S.conditioning && S.platenRPM > 5;
+
+  S.condLift += (((isConditioning) ? 0 : 0.10) - S.condLift) * Math.min(1, dt * 3);
+  conditionerPivot.position.y = -1.20 + S.condLift;
+
+  const trailTarget = isPolishing ? 0.35 : (S.endpoint ? 0.18 : 0);
+  padTrail.material.opacity += (trailTarget - padTrail.material.opacity) * Math.min(1, dt * 2);
+  padTrail.material.emissiveIntensity = (isPolishing ? 0.5 + Math.sin(t * 6) * 0.15 : 0) + (S.endpointFlash * 1.5);
+
+  const condTarget = isConditioning ? 0.22 : (S.conditioning ? 0.08 : 0.02);
+  condTrail.material.opacity += (condTarget - condTrail.material.opacity) * Math.min(1, dt * 2);
+  condTrail.material.emissiveIntensity = isConditioning ? 0.15 + Math.sin(t * 4) * 0.05 : 0.08;
+
+  slurryFilm.material.opacity += ((isPolishing ? 0.35 : 0) - slurryFilm.material.opacity) * Math.min(1, dt * 4);
+
+  const glowTarget = isPolishing ? 0.55 : 0;
+  contactGlow.material.opacity += (glowTarget - contactGlow.material.opacity) * Math.min(1, dt * 3);
+  const glowPulse = 0.6 + Math.sin(t * 5) * 0.2 + S.endpointFlash * 0.8;
+  contactGlow.material.color.setRGB(
+    0.5 + S.endpointFlash * 0.4,
+    0.88 + S.endpointFlash * 0.1,
+    1.0
+  );
+  contactGlow.material.opacity = Math.min(1, contactGlow.material.opacity * glowPulse + S.endpointFlash * 0.5);
+
+  MAT.wafer.emissiveIntensity = isPolishing ? 0.15 + Math.sin(t * 4) * 0.05 : 0;
+  MAT.wafer.emissive.setHex(0xff4010);
+
+  polishContact.intensity = isPolishing ? (2.5 + Math.sin(t * 8) * 0.6 + S.endpointFlash * 4) : 0;
+
+  const nozzleWorld = new THREE.Vector3(
+    slurryArm.position.x - 2.45,
+    TABLE_TOP_Y + 0.62,
+    slurryArm.position.z
+  );
+  dropPool.forEach(drop => {
+    if (S.slurryFlow > 30) {
+      drop.visible = true;
+      drop.userData.age += dt * 1.8;
+      if (drop.userData.age >= 1) {
+        drop.userData.age = 0;
+        drop.position.set(
+          nozzleWorld.x + (Math.random() - 0.5) * 0.04,
+          nozzleWorld.y,
+          nozzleWorld.z + (Math.random() - 0.5) * 0.04
+        );
+        drop.userData.vy = -1.0 - Math.random() * 0.5;
+      }
+      drop.position.y += drop.userData.vy * dt;
+      if (drop.position.y < PAD_TOP_Y) drop.userData.age = 1;
+    } else {
+      drop.visible = false;
+    }
+  });
+
+  runoffPool.forEach(drop => {
+    if (S.slurryFlow > 30 && S.platenRPM > 10) {
+      drop.visible = true;
+      drop.userData.age += dt * 1.5;
+      if (drop.userData.age >= 1) {
+        drop.userData.age = 0;
+        const a = Math.random() * Math.PI * 2;
+        drop.position.set(Math.cos(a) * 2.0, PAD_TOP_Y + 0.10, Math.sin(a) * 2.0);
+        const outSpeed = 0.8 + Math.random() * 0.5;
+        drop.userData.vx = Math.cos(a) * outSpeed;
+        drop.userData.vz = Math.sin(a) * outSpeed;
+        drop.userData.vy = 0.1;
+      }
+      drop.position.x += drop.userData.vx * dt;
+      drop.position.z += drop.userData.vz * dt;
+      drop.position.y += drop.userData.vy * dt;
+      drop.userData.vy -= 2.0 * dt;
+      if (drop.position.y < trayBaseY + 0.23) drop.userData.age = 1;
+    } else {
+      drop.visible = false;
+    }
+  });
+
+  splashPool.forEach(sp => {
+    if (isPolishing) {
+      sp.visible = true;
+      sp.userData.age += dt * 2.5;
+      if (sp.userData.age >= 1) {
+        sp.userData.age = 0;
+        const a = Math.random() * Math.PI * 2;
+        sp.position.set(
+          CARRIER_OFFSET_X + Math.cos(a) * 0.50,
+          PAD_TOP_Y + 0.01,
+          Math.sin(a) * 0.50
+        );
+        const speed = 0.4 + Math.random() * 0.5;
+        sp.userData.vx = Math.cos(a) * speed;
+        sp.userData.vz = Math.sin(a) * speed;
+        sp.userData.vy = 0.3 + Math.random() * 0.4;
+      }
+      sp.position.x += sp.userData.vx * dt;
+      sp.position.z += sp.userData.vz * dt;
+      sp.position.y += sp.userData.vy * dt;
+      sp.userData.vy -= 1.5 * dt;
+      if (sp.position.y < PAD_TOP_Y) sp.userData.age = 1;
+    } else {
+      sp.visible = false;
+    }
+  });
+
+  dripPool.forEach(d => {
+    if (d.userData.age < 1) {
+      d.visible = true;
+      d.userData.age += dt * 1.5;
+      d.position.x += d.userData.vx * dt;
+      d.position.z += d.userData.vz * dt;
+      d.position.y += d.userData.vy * dt;
+      d.userData.vy -= 2.5 * dt;
+      if (d.position.y < PAD_TOP_Y) d.userData.age = 1;
+    } else {
+      d.visible = false;
+    }
+  });
+
+  MAT.slurryThin.opacity = 0.15 + (S.slurryFlow / 200) * 0.35;
+
+  carrierLED.material = isPolishing ? MAT.ledG : MAT.ledA;
+
+  if ((xsecTick++ % 3) === 0) updateXsec();
+
+  placeLabel(cmpLabel, 0, 4.9, 0);
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+animate();
+</script>
+</body>
+</html>
