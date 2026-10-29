@@ -46,6 +46,7 @@ test('LPE matches four detailed furnace zones, tube length and four grounded fra
  assert.equal(byName(p,'lpe-frame-leg').length,4);
  assert.equal(byName(p,'lpe-frame-longitudinal-rail').length,2);
  assert.equal(byName(p,'lpe-furnace-cradle').length,2);
+ assert.equal(byName(p,'lpe-furnace-cradle')[0].geometry.parameters.depth,2.60);
  const frameLeg=byName(p,'lpe-frame-leg')[0];
  assert.equal(frameLeg.position.y-frameLeg.geometry.parameters.height/2,0);
  assert.equal(p.userData.silhouette.detailedFrameTopY,1.36);
@@ -57,11 +58,16 @@ test('ion mill chamber and load lock meet their supported frame and pump pedesta
  assert.equal(byName(p,'imm-floor-skid').length,2);
  assert.equal(byName(p,'imm-load-lock-post').length,1);
  assert.equal(byName(p,'imm-pump-pedestal').length,1);
+ assert.equal(byName(p,'imm-collar-frame-bracket').length,4);
+ assert.equal(byName(p,'imm-turbo-base').length,1);
  assert.equal(byName(p,'imm-chamber')[0].geometry.parameters.radiusTop,1.8);
  const post=byName(p,'imm-frame-leg')[0];
  assert.ok(Math.abs(post.position.y+post.geometry.parameters.height/2-1.70)<1e-9);
  const pedestal=byName(p,'imm-pump-pedestal')[0];
  assert.equal(pedestal.position.y-pedestal.geometry.parameters.height/2,0);
+ const turboBase=byName(p,'imm-turbo-base')[0];
+ assert.ok(Math.abs(turboBase.position.y-turboBase.geometry.parameters.height/2-
+ (pedestal.position.y+pedestal.geometry.parameters.height/2))<1e-8);
  const loadLockPost=byName(p,'imm-load-lock-post')[0];
  assert.ok(loadLockPost.position.y+loadLockPost.geometry.parameters.height/2>=3);
  assert.equal(p.userData.silhouette.loadLockSupported,true);
@@ -70,6 +76,7 @@ test('MBE retains tapered top, manipulator, collar and four floor posts',()=>{
  const {proxies}=makeRoom();
  const p=proxies.mbe;
  assert.equal(byName(p,'mbe-frame-leg').length,4);
+ assert.equal(byName(p,'mbe-collar-frame-bracket').length,4);
  assert.equal(byName(p,'mbe-tapered-top').length,1);
  assert.equal(byName(p,'mbe-support-collar').length,1);
  assert.equal(byName(p,'mbe-manipulator-motor').length,1);
