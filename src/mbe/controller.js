@@ -75,7 +75,7 @@ function updateProcess(dt,wallTime){
    const renderedHeight=l.height*fraction;
    l.mesh.scale.y=Math.max(0.0001,renderedHeight);
    l.mesh.position.y=l.baseY-renderedHeight/2;
-   l.mesh.material.emissiveIntensity=i===S.activeLayer?(.21+.04*Math.sin(wallTime*4)):.15;
+   l.mesh.material.emissiveIntensity=i===S.activeLayer?(.22+.10*Math.sin(wallTime*4)):.15;
  });
  if(S.t>=TOTAL){
    S.on=false;S.done=true;S.rateMLps=0;S.activeLayer=-1;
