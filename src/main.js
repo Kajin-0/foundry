@@ -313,7 +313,11 @@ function currentStackHeight() {
   return h;
 }
 
+let lastLpeUiTick=-Infinity,lastImmUiTick=-Infinity;
 function updateLPEState(dt, t) {
+  // Keep animated geometry smooth, but refresh HUD/SVG at no more than 10 Hz.
+  const uiDue=currentTab==='lpe' && (t-lastLpeUiTick>=.10);
+  if(uiDue)lastLpeUiTick=t;
   zoneCoils.forEach((c, i) => {
     const glow = 0.3 + Math.max(0, (displayTemp - 25) / 800) * 3.0;
     c.material.emissiveIntensity = glow + Math.sin(t * 1.9 + i * 2.1) * 0.15;
@@ -406,26 +410,24 @@ function updateLPEState(dt, t) {
     if (phase.deposit) { growthLightColor = 0x7fd6ff; growthLightIntensity = 1.4 + Math.sin(t * 8) * 0.4; }
     else if (phase.meltback) { growthLightColor = 0xff6030; growthLightIntensity = 1.6 + Math.sin(t * 9) * 0.5; }
 
-    if (currentTab==='lpe') {
+    if (uiDue) {
       progBarEl.style.width = (cycleT / CYCLE_TOTAL_ANIM * 100).toFixed(1) + '%';
       const elapsedReal = CYCLE.slice(0, idx).reduce((a, p) => a + p.realMin, 0) + localT * CYCLE[idx].realMin;
       narrTime.textContent = `${fmtMin(elapsedReal)} / ${fmtMin(CYCLE_TOTAL_REAL)} simulated · ${Math.round(CYCLE_TOTAL_ANIM)} s demo`;
     }
-    updateZoneReadouts(displayTemp);
-    maybeUpdateProfile(displayTemp);
+    if(uiDue){updateZoneReadouts(displayTemp);maybeUpdateProfile(displayTemp);}
   } else {
     sliderTargetX = cycleDone ? UNLOAD_X : PARK_X;
     if (cycleDone) {
       displayTemp = Math.max(25, displayTemp - 1.5);
-      if (currentTab==='lpe') {
+      if (uiDue) {
         narrStatus.textContent = 'LPE COMPLETE';
         narrStatus.style.color = '#7ee6a0';
         narrDetail.textContent = `${depositedLayers} layers · 2.1 µm total · DH structure finished. Switch to Ion Mill to pattern a ridge.`;
         narrTime.textContent = `${fmtMin(CYCLE_TOTAL_REAL)} simulated cycle · complete`;
       }
-      updateZoneReadouts(displayTemp);
-      maybeUpdateProfile(displayTemp);
-    } else if (currentTab==='lpe') {
+      if(uiDue){updateZoneReadouts(displayTemp);maybeUpdateProfile(displayTemp);}
+    } else if (uiDue) {
       updateIdle();
     }
   }
@@ -493,8 +495,10 @@ function updateLPEState(dt, t) {
 }
 
 function updateIMMState(dt, t) {
+  const uiDue=currentTab==='imm' && (t-lastImmUiTick>=.10);
+  if(uiDue)lastImmUiTick=t;
   /* LPE's idle branch rewrites the narrator every frame while the mill is stopped; re-assert the mill's result */
-  if (!S.immOn && S.hold && currentTab === 'imm' && !cycleActive) {
+  if (uiDue && !S.immOn && S.hold && currentTab === 'imm' && !cycleActive) {
     narrStatus.textContent = S.hold.s; narrStatus.style.color = S.hold.c; narrDetail.textContent = S.hold.d; narrTime.textContent = S.hold.t;
   }
   if (S.immOn) {
@@ -542,13 +546,14 @@ function updateIMMState(dt, t) {
     S.elapsedReal = IMM_CYCLE.slice(0, idx).reduce((a, p, k) => a + imRealMin(k), 0) + localT * imRealMin(idx);
     S.tiltNow = ph.tilt ? IBE.tilt : ph.tiltOut ? IBE.tilt * (1 - localT) : 0;
 
-    if(currentTab==='imm'){
+    if(uiDue){
       progBarEl.style.width=(S.immT/IMM_TOTAL*100).toFixed(1)+'%';
       narrTime.textContent=`IBE · ${fmtMin(S.elapsedReal)} of ${fmtMin(IMM_CYCLE.reduce((a,p,k)=>a+imRealMin(k),0))} real · demo ${Math.round(S.immT)}s / ${IMM_TOTAL}s`;
     }
   }
 
-  /* readouts */
+  /* DOM readouts are 10 Hz; process physics/geometry remain frame-accurate. */
+  if(uiDue){
   document.getElementById('v1').textContent = fmtP(S.press);
   document.getElementById('v7').textContent = fmtP(S.pLock);
   document.getElementById('v2').textContent = S.beam.toFixed(2) + ' mA/cm²';
@@ -559,6 +564,7 @@ function updateIMMState(dt, t) {
   v5.textContent = S.etch > 0 ? (rem > 0 ? rem.toFixed(2) + ' µm' : 'ACTIVE HIT') : '—';
   v5.style.color = S.etch > 0 && rem < 0.05 ? '#ff6a5a' : '';
   document.getElementById('v6').textContent = S.etch > 0 ? Math.max(0, IBE.resistT - dNow / IBE.sel).toFixed(2) + ' µm' : '—';
+  }
 
   /* plasma visuals — additive blend gives the characteristic blue glow */
   MAT.plasma.opacity = S.beam * 1.2;
@@ -632,7 +638,7 @@ function updateIMMState(dt, t) {
   /* resist is consumed at depth / selectivity (selectivity is an assumption) */
   const resLeft = Math.max(0.02, 1 - (S.etch * IBE.depth / IBE.sel) / IBE.resistT);
   resist.scale.y = resLeft; resist.position.y = MASK_TOP + RES_H * resLeft / 2;
-  XS.update(S.etch * IBE.depth, resLeft);
+  if(uiDue)XS.update(S.etch * IBE.depth, resLeft);
 }
 
 // Geometry/simulation clocks are decoupled from view-specific DOM refreshes.
