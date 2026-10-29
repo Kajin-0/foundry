@@ -302,6 +302,7 @@ test('expanded room grid stays beyond the equipment bays, portrait overview fits
    wide.roomBounds.maxX+100
  );
  expect(wide.viewGeometry.fov).toBe(40);
+ expect(wide.shadowResolution).toBe(1024);
  expect(wide.viewGeometry.fogFar).toBe(110);
  expect(wide.rendererCount).toBe(1);
  await page.setViewportSize({width:390,height:844});
@@ -310,6 +311,8 @@ test('expanded room grid stays beyond the equipment bays, portrait overview fits
  expect(portrait.viewGeometry.maxDistance).toBeGreaterThan(85);
  expect(portrait.viewGeometry.fogFar).toBeGreaterThan(110);
  expect(portrait.pixelRatio).toBeLessThanOrEqual(1);
+ expect(portrait.shadowResolution).toBe(512);
+ expect(portrait.shadowMap).toBe(false);
  expect(portrait.ground).toEqual(wide.ground);
  await page.locator('#tabCMP').click();
  await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.cmpLoaded),{timeout:30000}).toBe(true);

@@ -794,6 +794,13 @@ window.addEventListener('resize',()=>{
  // A rotated phone or resized browser must update the GPU budget as well.
  lowPower=window.innerWidth<900||
    !!(window.matchMedia&&window.matchMedia('(pointer:coarse)').matches);
+ // Restore the original full-resolution shadow atlas when switching back
+ // to a desktop-sized viewport. Reallocate only if the budget changed.
+ const shadowResolution=lowPower?512:1024;
+ if(keyLight.shadow.mapSize.x!==shadowResolution){
+   keyLight.shadow.mapSize.set(shadowResolution,shadowResolution);
+   if(keyLight.shadow.map){keyLight.shadow.map.dispose();keyLight.shadow.map=null;}
+ }
  renderer.shadowMap.enabled=!lowPower;
  renderer.shadowMap.needsUpdate=true;
  renderer.setSize(window.innerWidth,window.innerHeight);
@@ -823,6 +830,7 @@ window.__foundryDiagnostics=()=>({
  proxies:Object.fromEntries(Object.entries(room.proxies).map(([k,p])=>[k,p.visible])),
  drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,
  pixelRatio:renderer.getPixelRatio(),shadowMap:renderer.shadowMap.enabled,
+ shadowResolution:keyLight.shadow.mapSize.x,
   ground:{floorSize:room.layout.floorSize,gridSize:room.layout.gridSize,
    gridDivisions:room.layout.gridDivisions,shared:true},
   roomBounds:{minX:room.layout.minX,maxX:room.layout.maxX,
