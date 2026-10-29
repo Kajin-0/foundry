@@ -1,12 +1,9 @@
 import * as THREE from 'three';
-import {createMBEScene} from './scene.js';
 import {createMBEUI} from './ui.js';
 import {CYCLE,TOTAL,P_BASE,P_GROWTH,ROTATION_RPM,ML_NM,phaseAt,lerpLog,layerThicknessUmAt,rateMLs,previousSetpoint,LAYER_INFO} from './process.js';
-const {renderer,scene,camera,controls,clipPlane,MAT,CH_TOP,cells,cellBeams,growthLayers,waferGroup,holder,heaterLight,beamIn,beamOut,bfmPivot}=createMBEScene();
-const label=document.createElement('div');
-label.className='label3d';label.textContent='MBE · UHV CHAMBER';document.body.appendChild(label);
-const labelPoint=new THREE.Vector3();
-
+// MBE shares the one room renderer, camera, and render clock.
+export function createMBEController(model) {
+const {MBE,clipPlane,MAT,CH_TOP,cells,cellBeams,growthLayers,waferGroup,holder,heaterLight,beamIn,beamOut,bfmPivot}=model;
 function freshState(){
  return {t:0,on:false,done:false,idx:-1,press:P_BASE,pLock:760,subT:25,
   gaOpen:0,alOpen:0,asOpen:0,gaT:200,alT:200,asT:200,
@@ -16,8 +13,8 @@ function freshState(){
 const S=freshState(), UI=createMBEUI(S);
 // The substrate is still in the load lock until the transfer phase.
 waferGroup.visible=false;
-const play=document.getElementById('playBtn');
-const cut=document.getElementById('cut');
+const play=document.getElementById('mbePlayBtn');
+const cut=document.getElementById('mbeCut');
 function applyCut(){clipPlane.constant=1.55-Number(cut.value)/100*2.9;}
 cut.addEventListener('input',applyCut);applyCut();
 
@@ -114,10 +111,7 @@ function updateVisuals(dt,t){
  S.bfmSwing+=(bfmTarget-S.bfmSwing)*Math.min(1,dt*2);
  bfmPivot.rotation.y=-S.bfmSwing*Math.PI;
  MAT.bfmFace.emissiveIntensity=calibration?1.2:0;
- labelPoint.set(0,CH_TOP+1.9,0).project(camera);
- const sx=(labelPoint.x*.5+.5)*innerWidth,sy=(-labelPoint.y*.5+.5)*innerHeight;
- label.style.transform='translate(-50%,-100%) translate('+sx+'px,'+sy+'px)';
- label.style.opacity=labelPoint.z<1?'1':'0';
+
 }
 function sampleRHEED(t){
  if(!(S.on||S.done))return;
@@ -134,25 +128,23 @@ function sampleRHEED(t){
  }
  UI.sampleRHEED(intensity);
 }
-const clock=new THREE.Clock();
-let lastDraw=-Infinity,lastUI=-Infinity,lastRHEED=-Infinity;
-function animate(now=0){
- requestAnimationFrame(animate);
- if(document.hidden){clock.getDelta();return;}
- const busy=S.on||controls.enabled&&now-lastDraw<120;
- const maxInterval=1000/(S.on?60:24);
- if(now-lastDraw<maxInterval)return;
- const dt=Math.min(.10,clock.getDelta()),t=clock.getElapsedTime();
- lastDraw=now;
- updateProcess(dt,t);
- updateVisuals(dt,t);
- if(now-lastUI>=100){UI.updateReadouts();UI.updateXsec();lastUI=now;}
- if(now-lastRHEED>=65){sampleRHEED(t);lastRHEED=now;}
- controls.update();renderer.render(scene,camera);
+let uiAccumulator=0,rheedAccumulator=0;
+function update(dt,wallTime,visible){
+ // Background growth is allowed, but offscreen machines do not redraw GPU
+ // materials, SVG traces or hundreds of DOM readouts each frame.
+ if(S.on)updateProcess(dt,wallTime);
+ if(visible) {
+   updateVisuals(dt,wallTime);
+   uiAccumulator+=dt;
+   rheedAccumulator+=dt;
+   if(uiAccumulator>=0.10){UI.updateReadouts();UI.updateXsec();uiAccumulator=0;}
+   if(rheedAccumulator>=0.065){sampleRHEED(wallTime);rheedAccumulator=0;}
+ }
 }
-addEventListener('resize',()=>{
- camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
- renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
- renderer.setSize(innerWidth,innerHeight);
-});
-requestAnimationFrame(animate);
+function refresh() {
+ updateVisuals(0,0);
+ UI.updateReadouts();
+ UI.updateXsec();
+}
+return {MBE, update, refresh, isRunning:()=>S.on, state:S};
+}

@@ -3,23 +3,24 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>LPE + Ion Mill — Virtual Lab (v11.6)</title>
+<title>Foundry · Interactive Photodetector Fabrication Laboratory</title>
 <link rel="stylesheet" href="./styles.css" />
 
 </head>
 <body>
 
 <div id="hud">
-  <h1>LPE + ION MILL</h1>
-  <p>Virtual lab · GaAs/AlGaAs DH laser fabrication</p>
-  <nav class="foundry-nav" aria-label="Foundry tools"><a href="./index.html" aria-current="page">LPE / Ion Mill</a><a href="./mbe.html">MBE</a></nav>
+  <h1>FOUNDRY</h1>
+  <p>One virtual laboratory · Three fabrication tools</p>
+  
 </div>
 
 <div id="leftPanel">
+  <div id="lpeLeft">
   <div class="label">Live Process</div>
   <div id="narrator">
     <div id="narrStatus">IDLE</div>
-    <div id="narrDetail">Two tools loaded. Each runs independently — LPE grows the DH stack; ion mill etches a ridge through photoresist (Ar⁺ ion-beam etch).</div>
+    <div id="narrDetail">One virtual lab with three independent tools: LPE and MBE grow GaAs/AlGaAs layers; ion milling patterns a ridge using Ar⁺.</div>
     <div id="narrTime">—</div>
   </div>
   <div class="label">Thermal Profile (LPE)</div>
@@ -38,12 +39,48 @@
   <div id="stack">
     <div class="layer sub"><span class="mat">GaAs (100) substrate</span><span class="thick">350 µm</span></div>
   </div>
+  </div>
+  <div id="mbeLeft" hidden>
+
+  <div class="label">Live Process</div>
+  <div id="mbeNarrator">
+    <div id="mbeNarrStatus">IDLE</div>
+    <div id="mbeNarrDetail">Press Run to grow the DH laser structure by molecular beam epitaxy.</div>
+    <div id="mbeNarrTime">—</div>
+  </div>
+  <div class="label">RHEED · (00) specular · schematic <span id="mbeRheedVal" style="color:#7ee6a0;font-size:10px">—</span></div>
+  <svg id="mbeRheedSvg" viewBox="0 0 300 60" preserveAspectRatio="none">
+    <line x1="0" y1="52" x2="300" y2="52" stroke="#2a3a4a" stroke-width=".5"/>
+    <line x1="0" y1="8" x2="300" y2="8" stroke="#2a3a4a" stroke-width=".3" stroke-dasharray="2 2"/>
+    <line x1="0" y1="30" x2="300" y2="30" stroke="#2a3a4a" stroke-width=".3" stroke-dasharray="2 2"/>
+    <text x="4" y="12" font-size="6" fill="#5f7d9e">100</text>
+    <text x="4" y="54" font-size="6" fill="#5f7d9e">0</text>
+    <path id="mbeRheedPath" d="" stroke="#7ee6a0" stroke-width="1.2" fill="none"/>
+  </svg>
+  <div class="label">Wafer Cross-Section <span style="color:#3f5872;font-size:9px">(live)</span></div>
+  <svg id="mbeXsecSvg" viewBox="0 0 300 88" preserveAspectRatio="none">
+    <g id="mbeXsecContent"></g>
+  </svg>
+  <div class="label">Progress</div>
+  <div id="mbeProgWrap"><div id="mbeProgBar"></div></div>
+
+  </div>
+  <div id="overviewLeft" hidden>
+    <div class="label">Virtual fabrication room</div>
+    <div class="room-note">Three instruments, one shared 3D laboratory. Select a station to inspect its equipment and run its independent process animation.</div>
+    <div class="lab-description"><b>LPE</b><span>Liquid-phase growth</span></div>
+    <div class="lab-description"><b>Ion Mill</b><span>Ar⁺ subtractive patterning</span></div>
+    <div class="lab-description"><b>MBE</b><span>UHV epitaxial deposition</span></div>
+    <div class="room-note">Overview uses lightweight station representations for fast rendering. Select a tool to see its full detailed model.</div>
+  </div>
 </div>
 
 <div id="rightPanel">
-  <div class="tabs">
-    <button class="tab active" id="tabLPE">LPE</button>
-    <button class="tab" id="tabIMM">Ion Mill</button>
+  <div class="tabs" role="group" aria-label="Select fabrication station">
+    <button class="tab" id="tabOverview" type="button">Room</button>
+    <button class="tab active" id="tabLPE" type="button">LPE</button>
+    <button class="tab" id="tabIMM" type="button">Ion Mill</button>
+    <button class="tab" id="tabMBE" type="button">MBE</button>
   </div>
 
   <div id="lpeControls">
@@ -98,18 +135,48 @@
     </div>
     <button id="immBtn">▶ Run Ion Mill</button>
   </div>
+  <div id="overviewControls" hidden>
+    <div class="label">Foundry · One shared room</div>
+    <p class="room-note">Move between LPE, ion milling, and MBE without loading another page or starting a second WebGL renderer.</p>
+    <p class="room-note">Rotate to explore the three equipment bays. Select a station above for a detailed cutaway and dedicated controls.</p>
+  </div>
+  <div id="mbeControls" hidden>
+
+  <div class="label">Process Conditions</div>
+  <div class="specs">
+    <div><span>Base pressure</span><span>5×10⁻¹¹ Torr</span></div>
+    <div><span>Growth pressure</span><span>~2×10⁻⁸ Torr*</span></div>
+    <div><span>Substrate</span><span>GaAs (100) · 2"</span></div>
+    <div><span>Growth temp</span><span>580 °C</span></div>
+    <div><span>Growth rate</span><span>GaAs 1.0 ML/s ≈ 1 µm/hr</span></div>
+    <div><span>As:Ga BEP</span><span>~15:1 · BEP ratio</span></div>
+    <div><span>Wafer rotation</span><span>20 rpm</span></div>
+    <div><span>RHEED</span><span>15 keV · grazing 4°</span></div>
+    <div><span>Cells</span><span>Ga · Al · As K-cells</span></div>
+    <div><span>Cryopanel</span><span>LN₂ · 77 K</span></div>
+    <div><span>Pumps</span><span>Ion + Ti-sub + cryo</span></div>
+    <div><span>Flux monitor</span><span>BFM ion gauge</span></div>
+  </div>
+  <div class="label">Chamber Cutaway</div>
+  <input type="range" id="mbeCut" min="0" max="100" value="58" />
+  <div class="label">Live Readouts</div>
+  <div class="temps">
+    <div class="trow"><span><i class="dot" style="--c:#7fc4ff"></i>Chamber</span><span class="v-green" id="mbeV1">—</span></div>
+    <div class="trow"><span><i class="dot" style="--c:#5f9fd6"></i>Load lock</span><span class="v-green" id="mbeV7b">—</span></div>
+    <div class="trow"><span><i class="dot" style="--c:#ff5a20"></i>Substrate T</span><span class="v-red" id="mbeV2">—</span></div>
+    <div class="trow"><span><i class="dot" style="--c:#ffb066"></i>Ga cell</span><span id="mbeV3">—</span></div>
+    <div class="trow"><span><i class="dot" style="--c:#d8d8d8"></i>Al cell</span><span id="mbeV4">—</span></div>
+    <div class="trow"><span><i class="dot" style="--c:#c8a0b0"></i>As cell</span><span id="mbeV5">—</span></div>
+    <div class="trow"><span><i class="dot" style="--c:#7ee6a0"></i>Growth rate</span><span class="v-green" id="mbeV6">—</span></div>
+    <div class="trow"><span><i class="dot" style="--c:#7ee6a0"></i>MLs grown</span><span id="mbeV7">—</span></div>
+  </div>
+  <div class="specs" style="margin-top:3px"><div><span>*Pressure / RHEED / film</span><span>Illustrative, not calibrated</span></div></div>
+  <button id="mbePlayBtn">▶ Run MBE Cycle</button>
+
+  </div>
 </div>
 
 <div id="hint"><b>drag</b> orbit &nbsp;·&nbsp; <b>scroll</b> zoom &nbsp;·&nbsp; <b>right-drag</b> pan</div>
-
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-  }
-}
-</script>
 
 <script type="module" src="./src/main.js"></script>
 </body>
