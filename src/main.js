@@ -126,7 +126,7 @@ function updateIdle() {
   displayTemp = 25;
   narrStatus.textContent = 'IDLE';
   narrStatus.style.color = '#5f7d9e';
-  narrDetail.textContent = 'Two tools loaded. Each runs independently — LPE grows the DH stack; ion mill etches a ridge through photoresist (Ar⁺ ion-beam etch).';
+  narrDetail.textContent = 'One virtual lab with three independent tools: LPE and MBE grow GaAs/AlGaAs layers; ion milling patterns a ridge using Ar⁺.';
   narrTime.textContent = `LPE · ${fmtMin(CYCLE_TOTAL_REAL)} simulated · ~${Math.round(CYCLE_TOTAL_ANIM)} s demo`;
   updateZoneReadouts(25);
   maybeUpdateProfile(25);
@@ -637,6 +637,15 @@ function updateIMMState(dt, t) {
 
 // Geometry/simulation clocks are decoupled from view-specific DOM refreshes.
 let lastFrameMs=-Infinity,lastInteractionMs=-Infinity,lastShadowMs=-Infinity;
+const cpuRenderMs=[],presentIntervalsMs=[];
+function recordSample(list,value){
+ if(Number.isFinite(value)&&value>=0){list.push(value);if(list.length>90)list.shift();}
+}
+function p95(list){
+ if(!list.length)return null;
+ const sorted=[...list].sort((a,b)=>a-b);
+ return Number(sorted[Math.floor((sorted.length-1)*.95)].toFixed(2));
+}
 let backgroundLpeDt=0,backgroundImmDt=0;
 let lastZoneReadMs=-Infinity, lastImmReadMs=-Infinity;
 for(const ev of ['pointerdown','pointermove','wheel']){
@@ -649,6 +658,7 @@ function animate(now=0){
  const moving=!!camGoal||now-lastInteractionMs<750;
  const targetFps=lowPower?(focusActive||moving?30:10):(focusActive||moving?45:12);
  if(now-lastFrameMs<1000/targetFps)return;
+ if(Number.isFinite(lastFrameMs))recordSample(presentIntervalsMs,now-lastFrameMs);
  lastFrameMs=now;
  const dt=Math.min(clock.getDelta(),.22),t=clock.getElapsedTime();
  if(currentTab==='lpe'){
@@ -679,7 +689,9 @@ function animate(now=0){
  if(renderer.shadowMap.enabled&&(now-lastShadowMs>400)&&(focusActive||moving)){
    renderer.shadowMap.needsUpdate=true;lastShadowMs=now;
  }
+ const renderStart=performance.now();
  renderer.render(scene,camera);
+ recordSample(cpuRenderMs,performance.now()-renderStart);
 }
 window.addEventListener('resize',()=>{
  camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();
@@ -694,6 +706,9 @@ window.__foundryDiagnostics=()=>({
  detailed:{lpe:machine.visible,imm:IMM.visible,mbe:mbeController?.MBE.visible??false},
  proxies:Object.fromEntries(Object.entries(room.proxies).map(([k,p])=>[k,p.visible])),
  drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,
- pixelRatio:renderer.getPixelRatio(),shadowMap:renderer.shadowMap.enabled
+ pixelRatio:renderer.getPixelRatio(),shadowMap:renderer.shadowMap.enabled,
+ cpuRenderP95ms:p95(cpuRenderMs),
+ // Observed frame cadence, including intentional idle throttling; not GPU FPS.
+ frameIntervalP95ms:p95(presentIntervalsMs)
 });
 requestAnimationFrame(animate);
