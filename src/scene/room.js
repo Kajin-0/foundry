@@ -119,7 +119,7 @@ export function buildRoom(scene,{batchProxies=true}={}){
    box(p,'lpe-frame-longitudinal-rail',9.25,.14,.14,steel,0,1.36,z);
   // Subtle support cradles at the same x coordinates as the real saddles.
   for(const x of [-3.5,3.5]){
-   box(p,'lpe-furnace-cradle',.20,.28,1.70,pale,x,1.29,0);
+   box(p,'lpe-furnace-cradle',.20,.28,2.60,pale,x,1.29,0);
    hoop(p,'lpe-saddle-outline',SHELL_OUT+.03,.055,pale,x,center,0,'x');
   }
   p.userData.silhouette={
@@ -147,6 +147,16 @@ export function buildRoom(scene,{batchProxies=true}={}){
   }
   for(const z of [-2.2,2.2])
    box(p,'imm-cross-frame',4.50,.11,.11,steel,0,1.40,z);
+  // Four short radial arms meet the outer frame corners at the lower collar.
+  for(const x of [-2.2,2.2])for(const z of [-2.2,2.2]){
+   const radial=new THREE.Vector3(x,0,z),r=radial.length();
+   const inside=new THREE.Vector3(x*1.90/r,1.70,z*1.90/r);
+   const outside=new THREE.Vector3(x,1.70,z);
+   const delta=outside.clone().sub(inside);
+   const arm=box(p,'imm-collar-frame-bracket',delta.length(),.12,.12,steel,
+      (inside.x+outside.x)/2,1.70,(inside.z+outside.z)/2);
+   arm.quaternion.setFromUnitVectors(new THREE.Vector3(1,0,0),delta.normalize());
+  }
   // Top source is joined by the neutralizer/neck, not hovering above it.
   cylinder(p,'imm-source-neck',.70,.70,.92,steel,0,5.48,0,14);
   cylinder(p,'imm-ion-source',.75,.75,.60,dark,0,6.10,0,16);
@@ -158,6 +168,7 @@ export function buildRoom(scene,{batchProxies=true}={}){
   box(p,'imm-load-lock-brace',1.14,.12,.12,steel,2.15,1.63,0);
   // A pump block/pedestal beneath the bottom chamber flange.
   box(p,'imm-pump-pedestal',1.30,.55,1.34,dark,0,.275,0);
+  cylinder(p,'imm-turbo-base',.35,.30,.23,dark,0,.665,0,12);
   cylinder(p,'imm-turbo-pump',.45,.45,.55,steel,0,1.05,0,12);
   cylinder(p,'imm-pump-neck',.37,.37,.40,pale,0,1.52,0,10);
   // Front vacuum viewport, recognizable without interior plasma effects.
@@ -190,6 +201,16 @@ export function buildRoom(scene,{batchProxies=true}={}){
   }
   for(const z of [-1.9,1.9])
    box(p,'mbe-frame-side-rail',4.14,.10,.11,steel,0,1.45,z);
+  // Brackets from the lower UHV collar to each corner: no hanging vessel.
+  for(const x of [-2,2])for(const z of [-1.9,1.9]){
+    const radial=new THREE.Vector3(x,0,z),r=radial.length();
+    const inside=new THREE.Vector3(x*1.65/r,1.94,z*1.65/r);
+    const outside=new THREE.Vector3(x,1.94,z);
+    const delta=outside.clone().sub(inside);
+    const arm=box(p,'mbe-collar-frame-bracket',delta.length(),.10,.10,steel,
+      (inside.x+outside.x)/2,1.94,(inside.z+outside.z)/2);
+    arm.quaternion.setFromUnitVectors(new THREE.Vector3(1,0,0),delta.normalize());
+  }
   // External vacuum ports are visible; K-cells stay INSIDE the opaque
   // chamber, rather than an unexplained block below the vessel.
   cylinder(p,'mbe-side-flange',.29,.29,.33,steel,1.60,3.0,0,12,'x');
