@@ -321,3 +321,31 @@ test('expanded room grid stays beyond the equipment bays, portrait overview fits
  await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics().viewGeometry.fov)).toBe(72);
  expect(errors).toEqual([]);
 });
+
+test('equipment navigation stays legible and scrollable when more bays are added',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto('/');
+ const m=await page.locator('.tabs').evaluate(node=>{
+  const added=document.createElement('button');
+  added.type='button';added.className='tab';added.textContent='Future Tool';
+  node.appendChild(added);
+  const rectBefore=node.getBoundingClientRect();
+  const button=added;
+  button.scrollIntoView({block:'nearest',inline:'nearest'});
+  return {
+   scrollWidth:node.scrollWidth,clientWidth:node.clientWidth,
+   navWidthBefore:rectBefore.width,navWidthAfter:node.getBoundingClientRect().width,
+   overflow:getComputedStyle(node).overflowX,
+   tabFontSize:getComputedStyle(button).fontSize,
+   scrollLeft:node.scrollLeft
+  };
+ });
+ expect(m.overflow).toBe('auto');
+ expect(m.scrollWidth).toBeGreaterThan(m.clientWidth);
+ expect(m.navWidthAfter).toBe(m.navWidthBefore);
+ expect(parseFloat(m.tabFontSize)).toBeGreaterThanOrEqual(9);
+ expect(m.scrollLeft).toBeGreaterThan(0);
+ await page.locator('#tabLPE').click();
+ await expect(page.locator('#lpeControls')).toBeVisible();
+ await expect(page.locator('canvas')).toHaveCount(1);
+});
