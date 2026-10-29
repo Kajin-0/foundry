@@ -1,6 +1,6 @@
-# Foundry — Interactive Photodetector Process Lab
+# Foundry — Interactive Semiconductor Process Lab
 
-A **single shared 3D semiconductor fabrication laboratory** containing LPE, Ar⁺ ion milling, and MBE equipment. All stations share one Three.js scene, camera, WebGL renderer and navigation controls. The physics are illustrative, with tested layer/rate calculations where applicable.
+A **single shared 3D semiconductor fabrication laboratory** containing LPE, Ar⁺ ion milling, MBE, and CMP equipment. All stations share one Three.js scene, camera, WebGL renderer and navigation controls. The physics are illustrative, with tested layer/rate calculations where applicable.
 
 ## Run locally
 
@@ -21,10 +21,11 @@ GitHub Pages deployment is automatic from `main` via
 
 - **Entire laboratory:** https://kajin-0.github.io/foundry/
 - **Direct MBE station link:** https://kajin-0.github.io/foundry/?tool=mbe
+- **Direct CMP station link:** https://kajin-0.github.io/foundry/?tool=cmp
 - Older `/mbe.html` links redirect to that station in the same room.
 
-The shared lab initially displays three equipment stations in overview.
-Selecting **LPE**, **Ion Mill** or **MBE** focuses the camera and opens the
+The shared lab initially displays four equipment stations in overview.
+Selecting **LPE**, **Ion Mill**, **MBE** or **CMP** focuses the camera and opens the
 chosen machine's full detailed geometry and controls.
 
 ## Performance architecture
@@ -32,7 +33,7 @@ chosen machine's full detailed geometry and controls.
 - Exactly **one** WebGL renderer, camera and shared light/environment.
 - High-detail equipment only for the selected bay; other tools remain present
   as lightweight 3D room representations (LOD).
-- MBE geometry and its module are loaded on first selection, not at initial visit.
+- MBE and CMP geometry/modules load on first selection, not at initial visit.
 - Pixel ratio capped at 1.25 desktop / 1 on low-power or mobile screens.
 - Shadows disabled on low-power devices; selected equipment shadows use a
   reduced atlas refreshed at most a few times per second.
@@ -46,8 +47,9 @@ chosen machine's full detailed geometry and controls.
 ## Project structure
 
 - `src/main.js`: shared room and station navigation, LPE/ion state, shared render loop
-- `src/scene/room.js`: common laboratory with three stations and lightweight LOD stand-ins
-- `src/mbe/scene.js`, `src/mbe/controller.js`, `src/mbe/ui.js`: lazily loaded MBE equipment and process interface
+- `src/scene/room.js`: common laboratory with four stations and lightweight LOD stand-ins
+- `src/mbe/scene.js`, `src/mbe/controller.js`, `src/mbe/ui.js`: lazily loaded MBE process
+- `src/cmp/`: lazily loaded CMP equipment, deterministic STI recipe, controller and display
 - `src/config/geometry.js`: common geometry/epitaxial stack inputs
 - `src/scene/context.js`: WebGL, shared materials, camera, lighting
 - `src/scene/helpers.js`: reusable geometry and GPU-instanced bolt rings
@@ -57,7 +59,8 @@ chosen machine's full detailed geometry and controls.
 - `src/process/ion-etch.js`: analytical sputter-yield rate and mill timeline
 - `src/ui/`: thermal profile and wafer cross-section SVGs
 - `public/styles.css`: styles
-- `archive/lpe_ibe_v11_6.html`: preserved monolithic source for comparison
+- `archive/lpe_ibe_v11_6.html`: preserved LPE/ion baseline
+- `archive/cmp_standalone_v1.html`: preserved user-supplied CMP source
 
 ## Product philosophy
 
@@ -81,3 +84,20 @@ LPE layer thicknesses and temperature histories are scripted, not outcomes of a 
 - DPR capped at 1.5; smaller shadow atlas on narrow screens
 
 **Release gate:** compare visually against the archived HTML; test both cycles including abort/restart and cutaways. Benchmark transfer size, median/p95 frame time, FPS, WebGL draw calls, and browser console errors on target devices. See `docs/VALIDATION.md`.
+
+## Chemical mechanical planarization (CMP)
+
+The fourth station demonstrates a **separate silicon shallow-trench-isolation
+(STI) oxide polish**, not a step applied to the GaAs/AlGaAs epitaxial wafer.
+The illustrative recipe uses 3 psi down-force, 80/75 rpm platen/carrier,
+alkaline colloidal-silica slurry, 500 nm oxide removal at a nominal 100 nm/min
+and a SiN stop at 5 nm/min. A compressed 30-second represented overpolish
+produces an illustrative 2.5 nm of SiN loss.
+
+The equipment has a floor-supported bench, rotating platen, conditioned pad,
+slurry arm and physically anchored, telescoping overhead carrier gantry.
+The pad-contact geometry is checked in unit tests. The selected model is
+loaded on demand; repeated rigid parts are batched and slurry droplets use
+one instanced pool. Controls stay minimal: **Run/Stop** plus read-only
+process conditions and live readouts. Existing focus/minimize tools work.
+See `docs/CMP_MODEL.md` for exact assumptions and limitations.

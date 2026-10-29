@@ -14,7 +14,8 @@ import {mergeStaticDrawCalls} from './merge-static.js';
 export const BAYS=Object.freeze({
  lpe:{x:0,name:'Liquid phase epitaxy'},
  imm:{x:16,name:'Ion beam mill'},
- mbe:{x:30,name:'Molecular beam epitaxy'}
+ mbe:{x:30,name:'Molecular beam epitaxy'},
+ cmp:{x:46,name:'Chemical mechanical planarization'}
 });
 
 export function buildRoom(scene,{batchProxies=true}={}){
@@ -56,12 +57,12 @@ export function buildRoom(scene,{batchProxies=true}={}){
  };
 
  // One room-wide backdrop, floor and bay outlines, not duplicated rooms.
- const back=box(room,'room-rear-wall',57,11,.18,dark,14,5.5,-9.8);
+ const back=box(room,'room-rear-wall',88,11,.18,dark,24.5,5.5,-9.8);
  back.material=new THREE.MeshStandardMaterial({
    color:0x101a26,roughness:.85,metalness:.15,
    transparent:true,opacity:.72,depthWrite:false,side:THREE.DoubleSide
  });
- for(const x of [-10,9,23,40])
+ for(const x of [-10,9,23,40,57])
   box(room,'room-wall-support',.15,10.5,.22,steel,x,5.25,-9.4);
 
  const proxies={},proxyStats={};
@@ -223,7 +224,33 @@ export function buildRoom(scene,{batchProxies=true}={}){
   };
  }
 
- // The three previews are fully static, so equivalent-material rigid meshes
+ // CMP has a grounded tool bench, polishing pad and supported carrier gantry.
+ {
+  const p=proxies.cmp;
+  box(p,'cmp-table-top',6.5,.12,6.5,steel,0,1.04,0);
+  for(const x of [-2.85,2.85])for(const z of [-2.85,2.85])
+   box(p,'cmp-table-leg',.19,.99,.19,dark,x,.495,z);
+  box(p,'cmp-lower-shelf',6.2,.10,6.2,dark,0,.35,0);
+  cylinder(p,'cmp-catch-tray',2.85,2.85,.18,pale,0,1.22,0,20);
+  cylinder(p,'cmp-platen-and-pad',2.02,2.02,.24,dark,0,1.57,0,20);
+  cylinder(p,'cmp-offset-carrier',.60,.60,.36,pale,1,2.38,0,16);
+  cylinder(p,'cmp-carrier-shaft',.13,.13,1.35,steel,1,3.22,0,12);
+  cylinder(p,'cmp-carrier-motor',.30,.30,.40,dark,1,4.05,0,12);
+  for(const x of [-2.7,2.7])
+   box(p,'cmp-overhead-post',.20,3.78,.20,steel,x,2.97,-2.45);
+  box(p,'cmp-overhead-beam',5.60,.20,.24,steel,0,4.87,-2.45);
+  box(p,'cmp-head-support',.23,.16,2.55,pale,1,4.87,-1.20);
+  box(p,'cmp-slurry-support',.15,1.8,.15,pale,2.45,2,1.4);
+  box(p,'cmp-slurry-arm',2,.12,.15,pale,1.55,2.87,1.4);
+  box(p,'cmp-conditioner-support',.15,1.8,.15,pale,-2.45,2,.8);
+  box(p,'cmp-conditioner-arm',2,.12,.15,pale,-1.60,2.87,.8);
+  p.userData.silhouette={
+   source:'cmp/scene.js',tableTopY:1.10,tableWidth:6.5,
+   floorLegCount:4,overheadAnchored:true,platenRadius:2.02,carrierOffset:1
+  };
+ }
+
+ // The four previews are fully static, so equivalent-material rigid meshes
  // can be submitted as far fewer GPU draws without losing any triangles.
  for(const [key,p] of Object.entries(proxies)){
   p.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=false;}});

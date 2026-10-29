@@ -28,7 +28,7 @@ controls.target.set(7.5, 3, 0);
 controls.enableDamping = true;
 controls.dampingFactor = 0.06;
 controls.minDistance = 6;
-controls.maxDistance = 55;
+controls.maxDistance = 85; // 4-bay overview requires a wider orbit radius
 controls.maxPolarAngle = Math.PI * 0.495;
 
 const pmrem = new THREE.PMREMGenerator(renderer);

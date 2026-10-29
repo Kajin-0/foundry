@@ -17,6 +17,7 @@ const {cyl,box,boltRing,tubeAlong,makeCoil,annularTube} = createGeometryHelpers(
 const {machine,zoneCoils,zoneLights,growthLayers,growthLayersGroup,contactRing,meltBridge,melts,sliderGroup,subRing,substrate,growthLight,sliderGlow,bubbles,pidScreens,otcLed,inletWheel,meltMats,baseMeltEmissive} = buildLpe({scene,MAT,clipPlane,cyl,box,boltRing,tubeAlong,makeCoil,annularTube});
 const {IMM,etchL,wafer,resist,MASK_TOP,RES_H,tiltG,beamCone,plasma,plasmaCore,sputters,chamberLight,neutMat,leafL,leafR,shutterMat,shutterY,BT,BB,stg,RW,FW,vpGlow} = buildIonMill({scene,MAT,cyl,box,annularTube,tubeAlong});
 const room=buildRoom(scene);
+let cmpController=null,cmpLoading=null;
 const panelVisibility=initPanelVisibility();
 let mbeController=null;
 let mbeLoading=null;
@@ -46,6 +47,11 @@ mbeLabel.textContent='MBE · UHV CHAMBER';
 mbeLabel.style.color='#9dd4ff';
 mbeLabel.style.borderColor='#7fc4ff';
 document.body.appendChild(mbeLabel);
+const cmpLabel=document.createElement('div');
+cmpLabel.className='label3d';
+cmpLabel.textContent='CMP · OXIDE POLISH';
+cmpLabel.style.color='#9ed0f8';cmpLabel.style.borderColor='#7fc4ff';
+document.body.appendChild(cmpLabel);
 
 const _v3 = new THREE.Vector3();
 function placeLabel(el, wx, wy, wz) {
@@ -183,23 +189,49 @@ function depositLayer(idx) {
 /* ============ ONE SHARED ROOM · CAMERA / STATION SWITCH ============ */
 let currentTab='overview';
 const camPos={
- overview:{pos:new THREE.Vector3(14,17,46),tgt:new THREE.Vector3(14,3.25,0)},
+ overview:{pos:new THREE.Vector3(22,22,64),tgt:new THREE.Vector3(22,3.25,0)},
  lpe:{pos:new THREE.Vector3(7.5,11,22),tgt:new THREE.Vector3(0,2.6,0)},
  imm:{pos:new THREE.Vector3(23,10,12),tgt:new THREE.Vector3(16,3.2,0)},
- mbe:{pos:new THREE.Vector3(36.8,3.8,12.5),tgt:new THREE.Vector3(30,4.4,0)}
+ mbe:{pos:new THREE.Vector3(36.8,3.8,12.5),tgt:new THREE.Vector3(30,4.4,0)},
+ cmp:{pos:new THREE.Vector3(52,7.6,13),tgt:new THREE.Vector3(46,2.2,0)}
 };
 let camGoal=null;
 const tabEls={
  overview:document.getElementById('tabOverview'),
  lpe:document.getElementById('tabLPE'),
  imm:document.getElementById('tabIMM'),
- mbe:document.getElementById('tabMBE')
+ mbe:document.getElementById('tabMBE'),
+ cmp:document.getElementById('tabCMP')
 };
 const leftLPE=document.getElementById('lpeLeft'),leftMBE=document.getElementById('mbeLeft');
 const leftOverview=document.getElementById('overviewLeft');
 const rightMBE=document.getElementById('mbeControls');
 const rightOverview=document.getElementById('overviewControls');
 const mbeButton=document.getElementById('mbePlayBtn');
+const cmpButton=document.getElementById('cmpPlayBtn');
+async function ensureCMP(){
+ if(cmpController)return cmpController;
+ if(!cmpLoading){
+  cmpLoading=Promise.all([import('./cmp/scene.js'),import('./cmp/controller.js')])
+  .then(([modelModule,controllerModule])=>{
+   const model=modelModule.buildCMP({scene,batchStatic:!window.__foundryDisableCmpBatching});
+   cmpController=controllerModule.createCMPController(model);
+   cmpController.group.visible=currentTab==='cmp';
+   room.setFocus(currentTab);
+   cmpButton.disabled=false;
+   cmpController.refresh();
+   renderer.shadowMap.needsUpdate=true;
+   return cmpController;
+  }).catch(error=>{
+   cmpLoading=null;
+   cmpButton.disabled=true;
+   document.getElementById('cmpNarrDetail').textContent='CMP model could not load. Reload to retry.';
+   console.error('CMP station failed:',error);
+   throw error;
+  });
+ }
+ return cmpLoading;
+}
 async function ensureMBE(){
  if(mbeController)return mbeController;
  if(!mbeLoading){
@@ -228,10 +260,12 @@ function showProcessPanel(tab){
  document.getElementById('lpeOnlyIllustrations').hidden=tab!=='lpe';
  document.getElementById('ionOnlyIllustrations').hidden=tab!=='imm';
  leftMBE.hidden=tab!=='mbe';
+ document.getElementById('cmpLeft').hidden=tab!=='cmp';
  leftOverview.hidden=tab!=='overview';
  lpeControlsEl.style.display=tab==='lpe'?'block':'none';
  immControlsEl.style.display=tab==='imm'?'block':'none';
  rightMBE.hidden=tab!=='mbe';
+ document.getElementById('cmpControls').hidden=tab!=='cmp';
  rightOverview.hidden=tab!=='overview';
 }
 function switchTab(tab){
@@ -240,7 +274,8 @@ function switchTab(tab){
  machine.visible=tab==='lpe';
  IMM.visible=tab==='imm';
  if(mbeController)mbeController.MBE.visible=tab==='mbe';
- room.setFocus(tab==='mbe'&&!mbeController?'overview':tab);
+ if(cmpController)cmpController.group.visible=tab==='cmp';
+ room.setFocus((tab==='mbe'&&!mbeController)||(tab==='cmp'&&!cmpController)?'overview':tab);
  for(const [id,button] of Object.entries(tabEls)){
    button.classList.toggle('active',id===tab);
    button.setAttribute('aria-pressed',String(id===tab));
@@ -249,7 +284,7 @@ function switchTab(tab){
  camGoal=camPos[tab];
  controls.maxPolarAngle=tab==='mbe'?Math.PI*.73:Math.PI*.495;
  // One physically shared key light; its shadow frustum follows the chosen station.
- const x=tab==='overview'?14:BAYS[tab].x;
+ const x=tab==='overview'?22:BAYS[tab].x;
  keyLight.position.set(x+9,18,14);
  keyLight.target.position.set(x,3,0);
  keyLight.target.updateMatrixWorld();
@@ -259,6 +294,7 @@ function switchTab(tab){
  lpeLabel.style.display=tab==='overview'||tab==='lpe'?'block':'none';
  immLabel.style.display=tab==='overview'||tab==='imm'?'block':'none';
  mbeLabel.style.display=tab==='overview'||tab==='mbe'?'block':'none';
+ cmpLabel.style.display=tab==='overview'||tab==='cmp'?'block':'none';
  if(tab==='lpe'){
    if(currentPhase){narrStatus.textContent=currentPhase.narr;narrStatus.style.color=currentPhase.color;narrDetail.textContent=currentPhase.detail;}
    else updateIdle();
@@ -283,6 +319,13 @@ function switchTab(tab){
      document.getElementById('mbeNarrDetail').textContent='Opening the MBE station in the shared lab…';
      void ensureMBE();
    } else mbeController.refresh();
+ }
+ if(tab==='cmp'){
+   if(!cmpController){
+     cmpButton.disabled=true;
+     document.getElementById('cmpNarrDetail').textContent='Loading CMP equipment into the shared lab…';
+     void ensureCMP();
+   } else cmpController.refresh();
  }
 }
 for(const [id,button] of Object.entries(tabEls))button.addEventListener('click',()=>switchTab(id));
@@ -684,7 +727,7 @@ for(const ev of ['pointerdown','pointermove','wheel']){
 function animate(now=0){
  requestAnimationFrame(animate);
  if(document.hidden){clock.getDelta();return;}
- const focusActive=currentTab==='lpe'&&cycleActive||currentTab==='imm'&&S.immOn||currentTab==='mbe'&&mbeController?.isRunning();
+ const focusActive=currentTab==='lpe'&&cycleActive||currentTab==='imm'&&S.immOn||currentTab==='mbe'&&mbeController?.isRunning()||currentTab==='cmp'&&cmpController?.isRunning();
  const moving=!!camGoal||now-lastInteractionMs<750;
  // Do not artificially restrict interaction to 30/45 Hz on capable GPUs.
  const targetFps=lowPower?(focusActive||moving?45:18):(focusActive||moving?60:24);
@@ -707,6 +750,9 @@ function animate(now=0){
  if(mbeController && (currentTab==='mbe'||mbeController.isRunning())){
    mbeController.update(dt,t,currentTab==='mbe');
  }
+ if(cmpController && (currentTab==='cmp'||cmpController.isRunning())){
+   cmpController.update(dt,t,currentTab==='cmp');
+ }
  if(camGoal){
    // Wall-clock interpolation: a slow GPU no longer stretches a room-to-room
    // camera transition over many seconds just because it renders fewer frames.
@@ -718,6 +764,7 @@ function animate(now=0){
  if(lpeLabel.style.display!=='none')placeLabel(lpeLabel,0,6.5,0);
  if(immLabel.style.display!=='none')placeLabel(immLabel,16,7.5,0);
  if(mbeLabel.style.display!=='none')placeLabel(mbeLabel,30,8.2,0);
+ if(cmpLabel.style.display!=='none')placeLabel(cmpLabel,46,5.3,0);
  controls.update();
  // Static shadow atlases are not regenerated on every camera frame.
  if(renderer.shadowMap.enabled&&(now-lastShadowMs>400)&&(focusActive||moving)){
@@ -737,11 +784,15 @@ window.addEventListener('resize',()=>{
 window.__foundryDiagnostics=()=>({
  view:currentTab,panels:panelVisibility.state(),rendererCount:document.querySelectorAll('canvas').length,
  mbeLoaded:!!mbeController,
+ cmpLoaded:!!cmpController,
+ cmpState:cmpController?.getState()??null,
+ cmpGeometry:cmpController?.geometry??null,
+ cmpRenderOptimization:cmpController?.renderOptimization??null,
  mbeRenderOptimization:mbeController?.renderOptimization??null,
  lpeRenderOptimization,immRenderOptimization,
  ionMill:{waferLocalPosition:wafer.position.toArray(),waferMounted:wafer.userData.mountedOnStage,
    assembly:IMM.userData.ionMillAssembly,presetTilt:IBE.tilt,presetDepth:IBE.depth},
- detailed:{lpe:machine.visible,imm:IMM.visible,mbe:mbeController?.MBE.visible??false},
+ detailed:{lpe:machine.visible,imm:IMM.visible,mbe:mbeController?.MBE.visible??false,cmp:cmpController?.group.visible??false},
  proxies:Object.fromEntries(Object.entries(room.proxies).map(([k,p])=>[k,p.visible])),
  drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,
  pixelRatio:renderer.getPixelRatio(),shadowMap:renderer.shadowMap.enabled,
