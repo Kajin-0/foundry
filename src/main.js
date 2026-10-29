@@ -4,6 +4,7 @@ import {createGeometryHelpers} from './scene/helpers.js';
 import {buildLpe} from './scene/lpe.js';
 import {buildIonMill} from './scene/ion-mill.js';
 import {buildRoom,BAYS} from './scene/room.js';
+import {calculateOverviewView,LAB_FOG_FAR} from './scene/room-layout.js';
 import {mergeStaticDrawCalls} from './scene/merge-static.js';
 import {createThermalProfile} from './ui/thermal-profile.js';
 import {createCrossSection} from './ui/cross-section.js';
@@ -12,11 +13,13 @@ import {BINS,PARK_X,UNLOAD_X,WELL_OFFSETS,CONTACT_THR,ZONES,BASE_TOP,SUB_TOP,MEL
 import {CYCLE,CYCLE_TOTAL_ANIM,CYCLE_TOTAL_REAL,fmtMin} from './process/lpe-cycle.js';
 import {IBE,ibeRate,millMin,P_BASE,P_WORK,P_PREP,IMM_CYCLE,IMM_TOTAL,IMM_MILL,fmtP,imRealMin,lerpLog} from './process/ion-etch.js';
 
-const {renderer,scene,camera,controls,clipPlane,clipPlaneIMM,MAT,keyLight,rimLPE,rimIMM,lowPower} = createSceneContext();
+const {renderer,scene,camera,controls,clipPlane,clipPlaneIMM,MAT,keyLight,rimLPE,rimIMM,lowPower:initialLowPower} = createSceneContext();
+let lowPower=initialLowPower;
 const {cyl,box,boltRing,tubeAlong,makeCoil,annularTube} = createGeometryHelpers(MAT);
 const {machine,zoneCoils,zoneLights,growthLayers,growthLayersGroup,contactRing,meltBridge,melts,sliderGroup,subRing,substrate,growthLight,sliderGlow,bubbles,pidScreens,otcLed,inletWheel,meltMats,baseMeltEmissive} = buildLpe({scene,MAT,clipPlane,cyl,box,boltRing,tubeAlong,makeCoil,annularTube});
 const {IMM,etchL,wafer,resist,MASK_TOP,RES_H,tiltG,beamCone,plasma,plasmaCore,sputters,chamberLight,neutMat,leafL,leafR,shutterMat,shutterY,BT,BB,stg,RW,FW,vpGlow} = buildIonMill({scene,MAT,cyl,box,annularTube,tubeAlong});
 const room=buildRoom(scene);
+let overviewView=calculateOverviewView(room.layout,window.innerWidth,window.innerHeight);
 let cmpController=null,cmpLoading=null;
 const panelVisibility=initPanelVisibility();
 let mbeController=null;
@@ -59,7 +62,7 @@ function placeLabel(el, wx, wy, wz) {
   const sx = (_v3.x * 0.5 + 0.5) * window.innerWidth;
   const sy = (-_v3.y * 0.5 + 0.5) * window.innerHeight;
   el.style.transform = `translate(-50%, -100%) translate(${sx}px, ${sy}px)`;
-  el.style.opacity = (_v3.z < 1) ? '1' : '0';
+  el.style.opacity = (_v3.z >= -1 && _v3.z <= 1 && Math.abs(_v3.x)<=1.03 && Math.abs(_v3.y)<=1.03) ? '1' : '0';
 }
 
 /* ============ SHADOWS ============ */
@@ -189,7 +192,10 @@ function depositLayer(idx) {
 /* ============ ONE SHARED ROOM · CAMERA / STATION SWITCH ============ */
 let currentTab='overview';
 const camPos={
- overview:{pos:new THREE.Vector3(22,22,64),tgt:new THREE.Vector3(22,3.25,0)},
+ overview:{
+  pos:new THREE.Vector3(overviewView.centerX,overviewView.targetY+overviewView.height,overviewView.distance),
+  tgt:new THREE.Vector3(overviewView.centerX,overviewView.targetY,0)
+ },
  lpe:{pos:new THREE.Vector3(7.5,11,22),tgt:new THREE.Vector3(0,2.6,0)},
  imm:{pos:new THREE.Vector3(23,10,12),tgt:new THREE.Vector3(16,3.2,0)},
  mbe:{pos:new THREE.Vector3(36.8,3.8,12.5),tgt:new THREE.Vector3(30,4.4,0)},
@@ -282,9 +288,15 @@ function switchTab(tab){
  }
  showProcessPanel(tab);
  camGoal=camPos[tab];
+ // Portrait overview uses a wider lens; station details retain 40 degrees.
+ camera.fov=tab==='overview'?overviewView.fov:40;
+ camera.far=Math.max(300,overviewView.distance*2.4);
+ camera.updateProjectionMatrix();
+ scene.fog.far=tab==='overview'?overviewView.fogFar:LAB_FOG_FAR;
+ controls.maxDistance=tab==='overview'?overviewView.maxDistance:85;
  controls.maxPolarAngle=tab==='mbe'?Math.PI*.73:Math.PI*.495;
  // One physically shared key light; its shadow frustum follows the chosen station.
- const x=tab==='overview'?22:BAYS[tab].x;
+ const x=tab==='overview'?room.layout.centerX:BAYS[tab].x;
  keyLight.position.set(x+9,18,14);
  keyLight.target.position.set(x,3,0);
  keyLight.target.updateMatrixWorld();
@@ -762,9 +774,9 @@ function animate(now=0){
    if(camera.position.distanceTo(camGoal.pos)<.04&&controls.target.distanceTo(camGoal.tgt)<.04)camGoal=null;
  }
  if(lpeLabel.style.display!=='none')placeLabel(lpeLabel,0,6.5,0);
- if(immLabel.style.display!=='none')placeLabel(immLabel,16,7.5,0);
- if(mbeLabel.style.display!=='none')placeLabel(mbeLabel,30,8.2,0);
- if(cmpLabel.style.display!=='none')placeLabel(cmpLabel,46,5.3,0);
+ if(immLabel.style.display!=='none')placeLabel(immLabel,BAYS.imm.x,7.5,0);
+ if(mbeLabel.style.display!=='none')placeLabel(mbeLabel,BAYS.mbe.x,8.2,0);
+ if(cmpLabel.style.display!=='none')placeLabel(cmpLabel,BAYS.cmp.x,5.3,0);
  controls.update();
  // Static shadow atlases are not regenerated on every camera frame.
  if(renderer.shadowMap.enabled&&(now-lastShadowMs>400)&&(focusActive||moving)){
@@ -775,10 +787,32 @@ function animate(now=0){
  recordSample(cpuRenderMs,performance.now()-renderStart);
 }
 window.addEventListener('resize',()=>{
- camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();
+ camera.aspect=window.innerWidth/window.innerHeight;
+ overviewView=calculateOverviewView(room.layout,window.innerWidth,window.innerHeight);
+ camPos.overview.pos.set(overviewView.centerX,overviewView.targetY+overviewView.height,overviewView.distance);
+ camPos.overview.tgt.set(overviewView.centerX,overviewView.targetY,0);
+ // A rotated phone or resized browser must update the GPU budget as well.
+ lowPower=window.innerWidth<900||
+   !!(window.matchMedia&&window.matchMedia('(pointer:coarse)').matches);
+ // Restore the original full-resolution shadow atlas when switching back
+ // to a desktop-sized viewport. Reallocate only if the budget changed.
+ const shadowResolution=lowPower?512:1024;
+ if(keyLight.shadow.mapSize.x!==shadowResolution){
+   keyLight.shadow.mapSize.set(shadowResolution,shadowResolution);
+   if(keyLight.shadow.map){keyLight.shadow.map.dispose();keyLight.shadow.map=null;}
+ }
+ renderer.shadowMap.enabled=!lowPower;
+ renderer.shadowMap.needsUpdate=true;
  renderer.setSize(window.innerWidth,window.innerHeight);
  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,lowPower?1:1.25));
- renderer.shadowMap.needsUpdate=true;
+ if(currentTab==='overview'){
+   camera.fov=overviewView.fov;
+   camera.far=Math.max(300,overviewView.distance*2.4);
+   scene.fog.far=overviewView.fogFar;
+   controls.maxDistance=overviewView.maxDistance;
+   camGoal=camPos.overview;
+ }
+ camera.updateProjectionMatrix();
 });
 // Exposes lightweight, read-only render diagnostics for browser tests / profiling.
 window.__foundryDiagnostics=()=>({
@@ -796,6 +830,13 @@ window.__foundryDiagnostics=()=>({
  proxies:Object.fromEntries(Object.entries(room.proxies).map(([k,p])=>[k,p.visible])),
  drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,
  pixelRatio:renderer.getPixelRatio(),shadowMap:renderer.shadowMap.enabled,
+ shadowResolution:keyLight.shadow.mapSize.x,
+  ground:{floorSize:room.layout.floorSize,gridSize:room.layout.gridSize,
+   gridDivisions:room.layout.gridDivisions,shared:true},
+  roomBounds:{minX:room.layout.minX,maxX:room.layout.maxX,
+   centerX:room.layout.centerX,span:room.layout.span,wallWidth:room.layout.wallWidth},
+  viewGeometry:{fov:camera.fov,far:camera.far,fogFar:scene.fog.far,
+   maxDistance:controls.maxDistance},
  cpuRenderP95ms:p95(cpuRenderMs),
  // Observed frame cadence, including intentional idle throttling; not GPU FPS.
  frameIntervalP95ms:p95(presentIntervalsMs),

@@ -37,3 +37,19 @@ At 3 psi the wafer must touch the pad; the gantry must support the head.
 Keep the instanced droplets, rigid-mesh batching, lazy load, 10 Hz SVG UI,
 and Run/Stop-only preset controls. Browser tests cover the fourth station,
 one renderer, minimization and mobile controls.
+
+## Shared room sizing and performance audit (October 2026)
+The ground/grid moved out of LPE to `buildRoom()` (do not recreate a
+station-specific floor). `src/scene/room-layout.js` derives the room's
+ground size, 2-unit-pitch grid, rear wall and responsive overview from
+`BAYS` and station footprint widths. When adding equipment, extend
+`BAYS` and the proxy/controller/UI; never hardcode new wall/grid limits.
+Keep a shared opaque ground with only 2 triangles and a single GridHelper
+line draw. The wall is opaque to avoid large-area blending.
+Portrait overview uses a wider FOV so the end bays remain framed; tool
+views always restore the original 40° lens and normal fog range.
+The mobile pixel ratio and shadows must be recomputed on resize.
+Room labels should not render beyond the camera clip volume.
+Tests cover a hypothetical fifth station, ground mesh count and original
+four-bay envelope without modifying any process physics. This project
+does not claim measured real-device FPS from headless Chromium.

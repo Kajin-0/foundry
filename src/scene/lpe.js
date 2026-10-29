@@ -9,20 +9,7 @@ const meltMats = BINS.map(b => new THREE.MeshStandardMaterial({
 const baseMeltEmissive = BINS.map(b => 0.45 + b.glow * 0.3);
 
 
-/* ============ FLOOR ============ */
-const floor = new THREE.Mesh(
-  new THREE.CircleGeometry(80, 64),
-  new THREE.MeshStandardMaterial({ color: 0x0b0e13, roughness: 0.6, metalness: 0.55 })
-);
-floor.rotation.x = -Math.PI / 2;
-floor.receiveShadow = true;
-scene.add(floor);
-
-const grid = new THREE.GridHelper(120, 60, 0x1d3348, 0x111a23);
-grid.position.y = 0.003;
-grid.material.transparent = true;
-grid.material.opacity = 0.4;
-scene.add(grid);
+/* Floor/grid are shared lab infrastructure in scene/room.js. */
 
 /* ============ LPE MACHINE ============ */
 const machine = new THREE.Group();

@@ -25,6 +25,18 @@ test('the 4 proxies occupy their real shared-room bays',()=>{
   assert.ok(box.max.y>4,key+' is too small for detailed outer shape');
  }
  assert.equal(model.room.children.filter(c=>c.name.endsWith('bay-floor')).length,4);
+ const floor=model.room.getObjectByName('room-ground-plane');
+ const grid=model.room.getObjectByName('room-continuous-grid');
+ assert.ok(floor?.isMesh);
+ assert.ok(grid?.isLineSegments);
+ assert.equal(floor.geometry.type,'PlaneGeometry');
+ assert.equal(floor.geometry.index.count,6,'floor is a 2-triangle plane');
+ assert.equal(floor.position.x,model.layout.centerX);
+ assert.equal(grid.position.x,model.layout.centerX);
+ assert.equal(grid.geometry.attributes.position.count,model.layout.gridDivisions*4+4);
+ assert.equal(floor.geometry.parameters.width,model.layout.floorSize);
+ assert.equal(grid.geometry.attributes.position.count,4*(model.layout.gridDivisions+1));
+ assert.ok(model.layout.gridSize>=360,'grid ends must be beyond the fog horizon');
  model.setFocus('lpe');
  assert.equal(model.proxies.lpe.visible,false);
  assert.equal(model.proxies.imm.visible,true);

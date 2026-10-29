@@ -30,13 +30,18 @@ chosen machine's full detailed geometry and controls.
 
 ## Performance architecture
 
-- Exactly **one** WebGL renderer, camera and shared light/environment.
+- Exactly **one** WebGL renderer, camera, shared ground/grid and shared light/environment.
+- Ground/grid and rear-wall extents are generated from the equipment footprints;
+  future bays do not require manually lengthening the scene or hiding visible grid cutoffs.
 - High-detail equipment only for the selected bay; other tools remain present
   as lightweight 3D room representations (LOD).
 - MBE and CMP geometry/modules load on first selection, not at initial visit.
-- Pixel ratio capped at 1.25 desktop / 1 on low-power or mobile screens.
+- Pixel ratio capped at 1.25 desktop / 1 on low-power or mobile screens,
+  including after a resize or device-orientation change.
 - Shadows disabled on low-power devices; selected equipment shadows use a
   reduced atlas refreshed at most a few times per second.
+- Room overview framing derives from bay extents and adapts the lens on portrait displays.
+  Detailed-station camera optics remain unchanged.
 - Process animations and readouts update independently of rendering; hidden
   machine state advances at reduced CPU frequency, and SVG updates are throttled.
 - Read-only browser performance snapshot: `window.__foundryDiagnostics()`

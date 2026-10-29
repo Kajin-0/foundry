@@ -288,3 +288,73 @@ test('CMP retains geometry while batching rigid parts into fewer WebGL draw call
  expect(batched.cmpRenderOptimization.verifiedTriangleIndices).toBeGreaterThan(0);
  expect(batched.rendererCount).toBe(1);
 });
+
+test('expanded room grid stays beyond the equipment bays, portrait overview fits and station quality returns',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.setViewportSize({width:1440,height:900});
+ await page.goto('/');
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics?.()?.ground?.shared)).toBe(true);
+ const wide=await page.evaluate(()=>window.__foundryDiagnostics());
+ expect(wide.ground.floorSize).toBeGreaterThan(400);
+ expect(wide.ground.gridDivisions).toBe(wide.ground.gridSize/2);
+ expect(wide.roomBounds.maxX).toBe(50);
+ expect(wide.roomBounds.centerX+wide.ground.gridSize/2).toBeGreaterThan(
+   wide.roomBounds.maxX+100
+ );
+ expect(wide.viewGeometry.fov).toBe(40);
+ expect(wide.shadowResolution).toBe(1024);
+ expect(wide.viewGeometry.fogFar).toBe(110);
+ expect(wide.rendererCount).toBe(1);
+ await page.setViewportSize({width:390,height:844});
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics().viewGeometry.fov),{timeout:15000}).toBe(72);
+ const portrait=await page.evaluate(()=>window.__foundryDiagnostics());
+ expect(portrait.viewGeometry.maxDistance).toBeGreaterThan(85);
+ expect(portrait.viewGeometry.fogFar).toBeGreaterThan(110);
+ expect(portrait.pixelRatio).toBeLessThanOrEqual(1);
+ expect(portrait.shadowResolution).toBe(512);
+ expect(portrait.shadowMap).toBe(false);
+ expect(portrait.ground).toEqual(wide.ground);
+ await page.locator('#tabCMP').click();
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.cmpLoaded),{timeout:30000}).toBe(true);
+ const cmp=await page.evaluate(()=>window.__foundryDiagnostics());
+ expect(cmp.viewGeometry.fov).toBe(40);
+ expect(cmp.viewGeometry.fogFar).toBe(110);
+ expect(cmp.rendererCount).toBe(1);
+ await page.locator('#tabOverview').click();
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics().viewGeometry.fov)).toBe(72);
+ await page.setViewportSize({width:1440,height:900});
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics().shadowResolution)).toBe(1024);
+ const restored=await page.evaluate(()=>window.__foundryDiagnostics());
+ expect(restored.viewGeometry.fov).toBe(40);
+ expect(restored.viewGeometry.fogFar).toBe(110);
+ expect(restored.shadowMap).toBe(true);
+ expect(errors).toEqual([]);
+});
+
+test('equipment navigation stays legible and scrollable when more bays are added',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto('/');
+ const m=await page.locator('.tabs').evaluate(node=>{
+  const added=document.createElement('button');
+  added.type='button';added.className='tab';added.textContent='Future Tool';
+  node.appendChild(added);
+  const rectBefore=node.getBoundingClientRect();
+  const button=added;
+  button.scrollIntoView({block:'nearest',inline:'nearest'});
+  return {
+   scrollWidth:node.scrollWidth,clientWidth:node.clientWidth,
+   navWidthBefore:rectBefore.width,navWidthAfter:node.getBoundingClientRect().width,
+   overflow:getComputedStyle(node).overflowX,
+   tabFontSize:getComputedStyle(button).fontSize,
+   scrollLeft:node.scrollLeft
+  };
+ });
+ expect(m.overflow).toBe('auto');
+ expect(m.scrollWidth).toBeGreaterThan(m.clientWidth);
+ expect(m.navWidthAfter).toBe(m.navWidthBefore);
+ expect(parseFloat(m.tabFontSize)).toBeGreaterThanOrEqual(9);
+ expect(m.scrollLeft).toBeGreaterThan(0);
+ await page.locator('#tabLPE').click();
+ await expect(page.locator('#lpeControls')).toBeVisible();
+ await expect(page.locator('canvas')).toHaveCount(1);
+});
