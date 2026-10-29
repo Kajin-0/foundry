@@ -98,3 +98,7 @@
     font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase;
     color: #3f5872; pointer-events: none; white-space: nowrap; }
   #hint b { color: #7fa8cf; font-weight: 600; }
+
+#hud .foundry-nav{display:flex;gap:14px;margin-top:10px;pointer-events:auto;font-size:10px;letter-spacing:.12em;text-transform:uppercase}
+#hud .foundry-nav a{color:#89afce;text-decoration:none}
+#hud .foundry-nav a:hover,#hud .foundry-nav a[aria-current="page"]{color:#e6f3ff}
