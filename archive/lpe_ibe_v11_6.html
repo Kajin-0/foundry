@@ -1,0 +1,1769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LPE + Ion Mill — Virtual Lab (v11.6)</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #06070a;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  canvas { display: block; }
+  #hud { position: fixed; left: 26px; top: 22px; color: #cfe4ff; pointer-events: none; letter-spacing: 0.04em; }
+  #hud h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: 0.22em;
+    background: linear-gradient(90deg,#eaf4ff,#7fb6ff 60%,#3d7fd6);
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  #hud p { margin: 6px 0 0; font-size: 10.5px; text-transform: uppercase;
+    letter-spacing: 0.24em; color: #5f7d9e; }
+  #leftPanel { position: fixed; left: 22px; bottom: 22px; width: 306px;
+    background: rgba(11,15,21,0.82); border: 1px solid rgba(88,128,172,0.22);
+    border-radius: 12px; padding: 14px 16px; backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px); color: #cfe4ff;
+    box-shadow: 0 18px 48px rgba(0,0,0,0.55); user-select: none; font-size: 11px; }
+  #leftPanel .label { font-size: 9.5px; letter-spacing: 0.22em; text-transform: uppercase;
+    color: #5f7d9e; margin: 0 0 6px; }
+  #leftPanel .label + .label { margin-top: 11px; }
+  #narrator { background: rgba(30,50,75,0.35); border-left: 2px solid #3d7fd6;
+    border-radius: 4px; padding: 9px 11px 8px; margin-bottom: 10px; min-height: 88px;
+    display: flex; flex-direction: column; justify-content: space-between; }
+  #narrStatus { font-size: 11px; letter-spacing: 0.14em; font-weight: 700;
+    color: #7fc4ff; transition: color 0.3s; }
+  #narrDetail { font-size: 10.5px; color: #a6c4e0; line-height: 1.5; margin-top: 4px; }
+  #narrTime { font-size: 9px; color: #5f7d9e; letter-spacing: 0.14em; margin-top: 7px;
+    font-variant-numeric: tabular-nums; }
+  #tempProfile { width: 100%; height: 42px; display: block; margin-bottom: 2px; }
+  #progWrap { height: 3px; background: rgba(80,120,170,0.18); border-radius: 2px;
+    overflow: hidden; margin-bottom: 10px; }
+  #progBar { height: 100%; width: 0%;
+    background: linear-gradient(90deg, #3d7fd6, #7fc4ff);
+    box-shadow: 0 0 8px rgba(93,170,255,0.7); transition: width 0.1s linear; }
+  #stack { display: flex; flex-direction: column; gap: 2px; }
+  .layer { display: flex; justify-content: space-between; align-items: center;
+    padding: 2.5px 7px; border-radius: 3px; font-size: 10px; letter-spacing: 0.05em;
+    background: rgba(30,50,75,0.5); border-left: 2px solid #3d7fd6; color: #b8d4f0;
+    font-variant-numeric: tabular-nums; }
+  .layer .mat { color: #e0eefc; }
+  .layer .thick { color: #7fa8cf; font-size: 9px; }
+  .layer.sub { border-left-color: #566; background: rgba(20,25,32,0.6); color: #7088a0; }
+  .layer.new { animation: flash 0.7s ease; }
+  @keyframes flash { 0% { background: rgba(93,170,255,0.55); } 100% { background: rgba(30,50,75,0.5); } }
+  #rightPanel { position: fixed; right: 22px; top: 22px; width: 240px;
+    background: rgba(11,15,21,0.78); border: 1px solid rgba(88,128,172,0.22);
+    border-radius: 12px; padding: 14px 16px; backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px); color: #cfe4ff;
+    box-shadow: 0 18px 48px rgba(0,0,0,0.55); user-select: none; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 12px; }
+  .tab { flex: 1; padding: 6px 8px; border-radius: 5px; background: rgba(30,50,75,0.4);
+    color: #7fa8cf; font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase;
+    border: 1px solid transparent; cursor: pointer; text-align: center;
+    font-family: inherit; font-weight: 600; transition: all 0.2s; }
+  .tab.active { background: rgba(61,127,214,0.25); border-color: #3d7fd6;
+    color: #dbeaff; box-shadow: 0 0 8px rgba(93,170,255,0.3); }
+  .tab:hover { color: #cfe4ff; }
+  #rightPanel .label { font-size: 9.5px; letter-spacing: 0.22em; text-transform: uppercase;
+    color: #5f7d9e; margin-bottom: 8px; }
+  #rightPanel .label + .label { margin-top: 12px; }
+  #rightPanel input[type=range] { -webkit-appearance: none; appearance: none;
+    width: 100%; height: 4px; border-radius: 3px; outline: none;
+    background: linear-gradient(90deg, #3d7fd6, #1a2735); margin: 0 0 12px; }
+  #rightPanel input[type=range]::-webkit-slider-thumb { -webkit-appearance: none;
+    appearance: none; width: 14px; height: 14px; border-radius: 50%;
+    background: #dbeaff; border: 2px solid #3d7fd6;
+    box-shadow: 0 0 12px rgba(93,170,255,0.85); cursor: pointer; }
+  .specs { font-size: 9.5px; display: flex; flex-direction: column; gap: 3px; margin-bottom: 4px; }
+  .specs div { display: flex; justify-content: space-between; gap: 6px; }
+  .specs span:first-child { color: #5f7d9e; letter-spacing: 0.1em; }
+  .specs span:last-child { color: #a6c4e0; font-variant-numeric: tabular-nums; text-align: right; }
+  .temps { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+  .trow { display: flex; justify-content: space-between; align-items: center;
+    font-size: 10.5px; letter-spacing: 0.1em; font-variant-numeric: tabular-nums; }
+  .trow span:first-child { color: #5f7d9e; letter-spacing: 0.18em; }
+  .trow span:last-child { color: #ffb066; }
+  .trow .v-green { color: #7ee6a0 !important; }
+  .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    margin-right: 7px; vertical-align: middle;
+    background: var(--c, #ff7a2a); box-shadow: 0 0 8px var(--c, #ff7a2a); }
+  #playBtn, #immBtn { width: 100%; padding: 9px 12px; margin-top: 4px;
+    background: linear-gradient(180deg, #2c5686, #1b3a5c); border: 1px solid #3d7fd6;
+    border-radius: 7px; color: #dbeaff; font-size: 10.5px; letter-spacing: 0.2em;
+    text-transform: uppercase; font-weight: 600; cursor: pointer;
+    transition: all 0.15s ease; font-family: inherit; }
+  #playBtn:hover, #immBtn:hover { background: linear-gradient(180deg, #3a6ba8, #244a72);
+    box-shadow: 0 0 16px rgba(93,170,255,0.35); }
+  #playBtn:active, #immBtn:active { transform: scale(0.98); }
+  #playBtn.running, #immBtn.running { background: linear-gradient(180deg, #6a3a1a, #4a2610);
+    border-color: #ff7a2a; color: #ffd4a8; }
+  #playBtn.done, #immBtn.done { background: linear-gradient(180deg, #1a5a30, #0f3a1e);
+    border-color: #4dbb7a; color: #a8e8c0; }
+  .label3d { position: fixed; top: 0; left: 0; padding: 4px 9px;
+    background: rgba(10,15,22,0.90); border: 1px solid #3d7fd6; border-radius: 5px;
+    font-size: 10px; letter-spacing: 0.15em; color: #7fc4ff; white-space: nowrap;
+    pointer-events: none; will-change: transform, opacity;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5); transition: opacity 0.25s;
+    font-variant-numeric: tabular-nums; }
+  #hint { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
+    font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: #3f5872; pointer-events: none; white-space: nowrap; }
+  #hint b { color: #7fa8cf; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <h1>LPE + ION MILL</h1>
+  <p>Virtual lab · GaAs/AlGaAs DH laser fabrication</p>
+</div>
+
+<div id="leftPanel">
+  <div class="label">Live Process</div>
+  <div id="narrator">
+    <div id="narrStatus">IDLE</div>
+    <div id="narrDetail">Two tools loaded. Each runs independently — LPE grows the DH stack; ion mill etches a ridge through photoresist (Ar⁺ ion-beam etch).</div>
+    <div id="narrTime">—</div>
+  </div>
+  <div class="label">Thermal Profile (LPE)</div>
+  <svg id="tempProfile" viewBox="0 0 256 42" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id="tGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#3d7fd6" stop-opacity="0.35"/>
+        <stop offset="100%" stop-color="#3d7fd6" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <g id="tProfileContent"></g>
+  </svg>
+  <div class="label">Progress</div>
+  <div id="progWrap"><div id="progBar"></div></div>
+  <div class="label">Epitaxial Stack <span style="color:#3f5872;letter-spacing:0.1em;font-size:9px">(thickness not to scale)</span></div>
+  <div id="stack">
+    <div class="layer sub"><span class="mat">GaAs (100) substrate</span><span class="thick">350 µm</span></div>
+  </div>
+</div>
+
+<div id="rightPanel">
+  <div class="tabs">
+    <button class="tab active" id="tabLPE">LPE</button>
+    <button class="tab" id="tabIMM">Ion Mill</button>
+  </div>
+
+  <div id="lpeControls">
+    <div class="label">Process Conditions</div>
+    <div class="specs">
+      <div><span>Atmosphere</span><span>H₂ · 1 atm · 1 slpm</span></div>
+      <div><span>H₂ purity</span><span>Pd-diffused &lt;1 ppb</span></div>
+      <div><span>Substrate</span><span>GaAs (100) exact</span></div>
+      <div><span>Wafer</span><span>5×5 mm · 350 µm</span></div>
+      <div><span>Melt depth</span><span>2 mm</span></div>
+      <div><span>Furnace</span><span>2 main + 2 end zones</span></div>
+    </div>
+    <div class="label">Furnace Cutaway</div>
+    <input type="range" id="cut" min="0" max="100" value="64" />
+    <div class="label">Zone Temperatures</div>
+    <div class="temps">
+      <div class="trow"><span><i class="dot" style="--c:#ff9a4a"></i>Z1 End</span><span id="t1">—</span></div>
+      <div class="trow"><span><i class="dot" style="--c:#ff8a2a"></i>Z2 Main</span><span id="t2">—</span></div>
+      <div class="trow"><span><i class="dot" style="--c:#ff8a2a"></i>Z3 Main</span><span id="t3">—</span></div>
+      <div class="trow"><span><i class="dot" style="--c:#ff9a4a"></i>Z4 End</span><span id="t4">—</span></div>
+    </div>
+    <button id="playBtn">▶ Run Growth Cycle</button>
+  </div>
+
+  <div id="immControls" style="display:none">
+    <div class="label">Ion Beam Etch · Process</div>
+    <div class="specs">
+      <div><span>Ion species</span><span>Ar⁺</span></div>
+      <div><span>Beam energy</span><span>500 eV</span></div>
+      <div><span>Beam current</span><span>0.5 mA/cm²</span></div>
+      <div><span>Base / working P</span><span>&lt;5×10⁻⁶ / 2×10⁻⁴ Torr</span></div>
+      <div><span>Source</span><span>Kaufman 3-grid + neutraliser</span></div>
+      <div><span>Stage</span><span>Water-cooled · tilt · 14 rpm</span></div>
+    </div>
+    <div class="label">Stage Tilt <span id="tiltVal" style="color:#a6c4e0">30°</span></div>
+    <input type="range" id="tiltIMM" min="0" max="60" value="30" />
+    <div class="label">Etch Depth <span id="depthVal" style="color:#a6c4e0">0.40 µm</span></div>
+    <input type="range" id="depthIMM" min="20" max="70" value="40" />
+    <div class="label">Chamber Cutaway</div>
+    <input type="range" id="cutIMM" min="0" max="100" value="55" />
+    <div class="label">Wafer Cross-Section <span style="color:#3f5872;font-size:9px">(true µm scale)</span></div>
+    <svg id="xsec" viewBox="0 0 256 92" style="width:100%;height:auto;display:block;background:rgba(10,18,28,.5);border-radius:5px"></svg>
+    <div class="label">Live Readouts</div>
+    <div class="temps">
+      <div class="trow"><span><i class="dot" style="--c:#7fc4ff"></i>Chamber</span><span class="v-green" id="v1">—</span></div>
+      <div class="trow"><span><i class="dot" style="--c:#5f9fd6"></i>Load-lock</span><span class="v-green" id="v7">—</span></div>
+      <div class="trow"><span><i class="dot" style="--c:#7ee6a0"></i>Beam</span><span class="v-green" id="v2">—</span></div>
+      <div class="trow"><span><i class="dot" style="--c:#ff8a2a"></i>Stage</span><span id="v3">—</span></div>
+      <div class="trow"><span><i class="dot" style="--c:#ffd060"></i>Etch</span><span class="v-green" id="v4">—</span></div>
+      <div class="trow"><span><i class="dot" style="--c:#c08aff"></i>Above active</span><span id="v5">—</span></div>
+      <div class="trow"><span><i class="dot" style="--c:#d04830"></i>Resist left</span><span id="v6">—</span></div>
+    </div>
+    <button id="immBtn">▶ Run Ion Mill</button>
+  </div>
+</div>
+
+<div id="hint"><b>drag</b> orbit &nbsp;·&nbsp; <b>scroll</b> zoom &nbsp;·&nbsp; <b>right-drag</b> pan</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls }   from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+/* ============ RENDERER ============ */
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+renderer.localClippingEnabled = true;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x06070a);
+scene.fog = new THREE.Fog(0x06070a, 40, 110);
+
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 300);
+camera.position.set(7.5, 11, 22);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(7.5, 3, 0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.minDistance = 6;
+controls.maxDistance = 55;
+controls.maxPolarAngle = Math.PI * 0.495;
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+/* ============ CLIP PLANES ============ */
+const clipPlane    = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0.0);
+const clipPlaneIMM = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0.0);
+const CLIP     = { clippingPlanes: [clipPlane],    clipShadows: true };
+const CLIP_IMM = { clippingPlanes: [clipPlaneIMM], clipShadows: true };
+
+/* ============ LIGHTS ============ */
+scene.add(new THREE.AmbientLight(0xffffff, 0.25));
+scene.add(new THREE.HemisphereLight(0x9dc4ff, 0x0a0d12, 0.55));
+
+const keyLight = new THREE.DirectionalLight(0xfff2e0, 2.2);
+keyLight.position.set(9, 18, 14);
+keyLight.castShadow = true;
+keyLight.shadow.mapSize.set(2048, 2048);
+const sh = keyLight.shadow.camera;
+sh.left = -22; sh.right = 22; sh.top = 20; sh.bottom = -20; sh.near = 1; sh.far = 80;
+keyLight.shadow.bias = -0.0005;
+keyLight.shadow.normalBias = 0.025;
+scene.add(keyLight);
+
+const fill = new THREE.DirectionalLight(0x8ab8e8, 1.0);
+fill.position.set(-12, 6, -10);
+scene.add(fill);
+
+const rimLPE = new THREE.PointLight(0xff8040, 40, 34, 2);
+rimLPE.position.set(-11, 5, -8);
+scene.add(rimLPE);
+
+const rimIMM = new THREE.PointLight(0x6fb8ff, 35, 30, 2);
+rimIMM.position.set(20, 6, -6);
+scene.add(rimIMM);
+
+/* ============ MATERIALS ============ */
+const MAT = {
+  shell:    new THREE.MeshStandardMaterial({ color: 0x6c737c, metalness: 0.80, roughness: 0.58, envMapIntensity: 0.9, ...CLIP }),
+  insul:    new THREE.MeshStandardMaterial({ color: 0xe4dcc8, metalness: 0.02, roughness: 0.98, ...CLIP }),
+  former:   new THREE.MeshStandardMaterial({ color: 0xd2cec5, metalness: 0.04, roughness: 0.92, ...CLIP }),
+  coil:     new THREE.MeshStandardMaterial({ color: 0x3a2517, metalness: 0.92, roughness: 0.42, emissive: 0xff5a10, emissiveIntensity: 2.3, ...CLIP }),
+  ceramic:  new THREE.MeshStandardMaterial({ color: 0xd6d2ca, metalness: 0.04, roughness: 0.85, ...CLIP }),
+  tcSheath: new THREE.MeshStandardMaterial({ color: 0x8a8a85, metalness: 0.90, roughness: 0.40 }),
+  terminal: new THREE.MeshStandardMaterial({ color: 0xb8b8b0, metalness: 0.95, roughness: 0.35 }),
+
+  steel:    new THREE.MeshStandardMaterial({ color: 0xc3ccd5, metalness: 1.0, roughness: 0.24, envMapIntensity: 1.5 }),
+  steel2:   new THREE.MeshStandardMaterial({ color: 0x939da8, metalness: 1.0, roughness: 0.38, envMapIntensity: 1.3 }),
+  steel3:   new THREE.MeshStandardMaterial({ color: 0x5b636d, metalness: 1.0, roughness: 0.52, envMapIntensity: 1.1 }),
+  dark:     new THREE.MeshStandardMaterial({ color: 0x14161a, metalness: 0.55, roughness: 0.62 }),
+  copper:   new THREE.MeshStandardMaterial({ color: 0xb87333, metalness: 1.0, roughness: 0.30, envMapIntensity: 1.7 }),
+  rubber:   new THREE.MeshStandardMaterial({ color: 0x0c0e11, metalness: 0.1, roughness: 0.94 }),
+  hoseBlue: new THREE.MeshStandardMaterial({ color: 0x1550a0, metalness: 0.1, roughness: 0.72 }),
+  hoseRed:  new THREE.MeshStandardMaterial({ color: 0x8a2418, metalness: 0.1, roughness: 0.72 }),
+
+  glass:    new THREE.MeshPhysicalMaterial({
+              color: 0xdff4ff, metalness: 0.0, roughness: 0.03,
+              transparent: true, opacity: 0.11, depthWrite: false,
+              envMapIntensity: 2.6, clearcoat: 1.0, clearcoatRoughness: 0.02,
+              side: THREE.DoubleSide
+            }),
+
+  graphite:     new THREE.MeshStandardMaterial({ color: 0x33373c, metalness: 0.45, roughness: 0.72 }),
+  graphiteDark: new THREE.MeshStandardMaterial({ color: 0x202327, metalness: 0.40, roughness: 0.80 }),
+  substrate:    new THREE.MeshStandardMaterial({ color: 0x6db8e8, metalness: 0.75, roughness: 0.20, emissive: 0x0a2a44, emissiveIntensity: 1.0 }),
+
+  ledG: new THREE.MeshStandardMaterial({ color: 0x001a05, emissive: 0x36ff78, emissiveIntensity: 3.5 }),
+  ledA: new THREE.MeshStandardMaterial({ color: 0x1a0d00, emissive: 0xffa02a, emissiveIntensity: 3.5 }),
+  ledR: new THREE.MeshStandardMaterial({ color: 0x1a0505, emissive: 0xff2a2a, emissiveIntensity: 3.0 }),
+
+  bubblerGlass: new THREE.MeshPhysicalMaterial({ color: 0xcfe9ff, metalness: 0, roughness: 0.04,
+    transparent: true, opacity: 0.18, clearcoat: 1, clearcoatRoughness: 0.02 }),
+  oil: new THREE.MeshStandardMaterial({ color: 0x2a7fd6, metalness: 0.2, roughness: 0.15, emissive: 0x0a3a6a, emissiveIntensity: 0.9 }),
+  bubble: new THREE.MeshPhysicalMaterial({ color: 0xdff4ff, metalness: 0, roughness: 0.05,
+    transparent: true, opacity: 0.55, clearcoat: 1 }),
+  pd: new THREE.MeshStandardMaterial({ color: 0xbfc7d0, metalness: 1.0, roughness: 0.22, envMapIntensity: 1.6 }),
+  hotPd: new THREE.MeshStandardMaterial({ color: 0x331a08, emissive: 0xff5a15, emissiveIntensity: 1.8, roughness: 0.5 }),
+  gaugeFace: new THREE.MeshStandardMaterial({ color: 0xf0ede2, metalness: 0.05, roughness: 0.85 }),
+
+  /* ion-mill */
+  alum:   new THREE.MeshStandardMaterial({ color: 0xc8d2dc, metalness: 0.85, roughness: 0.40, envMapIntensity: 1.2, ...CLIP_IMM }),
+  resist: new THREE.MeshStandardMaterial({ color: 0xd04830, metalness: 0.1, roughness: 0.70, emissive: 0x401008, emissiveIntensity: 0.5 }),
+  beam:   new THREE.MeshBasicMaterial({ color: 0x8fe0ff, transparent: true, opacity: 0, depthWrite: false }),
+  plasma: new THREE.MeshBasicMaterial({ color: 0xb0e0ff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }),
+  plasmaCore: new THREE.MeshBasicMaterial({ color: 0xe0f4ff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }),
+  vpGlow: new THREE.MeshBasicMaterial({ color: 0x7fc4ff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }),
+  sput:   new THREE.MeshBasicMaterial({ color: 0xd0e0f0, transparent: true, opacity: 0.8 }),
+};
+
+/* ============ DIMENSIONS ============ */
+const TUBE_R = 0.42;
+const TUBE_LEN = 12.60;
+const TUBE_X = 6.30;
+const FORMER_IN = 0.55;
+const FORMER_OUT = 0.80;
+const COIL_R = 0.82;
+const INSUL_OUT = 1.60;
+const SHELL_OUT = 1.65;
+
+const WELL_OFFSETS = [-0.88, -0.44, 0, 0.44, 0.88];
+const SLIDER_HALF = 1.13;
+const PARK_X = 1.30;
+const UNLOAD_X = -1.30;
+const WELL_W = 0.22;
+const WELL_D = 0.22;
+const WELL_H = 0.10;
+const WALL_W = 0.22;
+
+const BASE_TOP = -0.30;
+const SUB_TOP = BASE_TOP + 0.001;
+const SUB_THICK = 0.020;
+const SUB_SIZE = 0.18;
+const SLIDER_BOT = -0.272;
+const MELT_H = 0.06;
+const BRIDGE_R = 0.05;
+const CONTACT_THR = 0.06;
+
+const BINS = [
+  { mat: 'Ga melt',      color: 0xc0c4c8, glow: 0.35, thickness: null },
+  { mat: 'GaAs (buffer)', color: 0xd8e0e8, glow: 0.80, thickness: 1.0 },
+  { mat: 'Al₀.₃Ga₀.₇As', color: 0xc8b8a8, glow: 0.90, thickness: 0.5 },
+  { mat: 'GaAs (active)', color: 0xdde5ee, glow: 0.85, thickness: 0.1 },
+  { mat: 'Al₀.₃Ga₀.₇As', color: 0xc8b8a8, glow: 0.90, thickness: 0.5 },
+];
+
+const meltMats = BINS.map(b => new THREE.MeshStandardMaterial({
+  color: b.color, metalness: 0.95, roughness: 0.10,
+  emissive: 0x331800, emissiveIntensity: 0.45 + b.glow * 0.3
+}));
+const baseMeltEmissive = BINS.map(b => 0.45 + b.glow * 0.3);
+
+/* ============ HELPERS ============ */
+const cyl = (rt, rb, h, mat, seg = 32, open = false) =>
+  new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg, 1, open), mat);
+const box = (w, h, d, mat) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+const boltGeo = new THREE.CylinderGeometry(0.026, 0.026, 0.055, 6);
+
+function boltRing(radius, count, mat = MAT.steel3, axis = 'x') {
+  const g = new THREE.Group();
+  for (let i = 0; i < count; i++) {
+    const a = (i / count) * Math.PI * 2;
+    const b = new THREE.Mesh(boltGeo, mat);
+    if (axis === 'x') {
+      b.rotation.z = Math.PI / 2;
+      b.position.set(0, Math.cos(a) * radius, Math.sin(a) * radius);
+    } else {
+      b.position.set(Math.cos(a) * radius, 0, Math.sin(a) * radius);
+    }
+    g.add(b);
+  }
+  return g;
+}
+
+function tubeAlong(points, radius, mat, seg = 32, radial = 8) {
+  const curve = new THREE.CatmullRomCurve3(points.map(p => new THREE.Vector3(...p)));
+  return new THREE.Mesh(new THREE.TubeGeometry(curve, seg, radius, radial, false), mat);
+}
+
+function makeCoil(radius, xStart, xEnd, turns, tubeR, mat) {
+  const pts = [];
+  const N = Math.round(turns * 12);
+  for (let i = 0; i <= N; i++) {
+    const t = i / N;
+    const a = t * turns * Math.PI * 2;
+    pts.push(new THREE.Vector3(
+      xStart + t * (xEnd - xStart),
+      Math.cos(a) * radius,
+      Math.sin(a) * radius
+    ));
+  }
+  const curve = new THREE.CatmullRomCurve3(pts);
+  return new THREE.Mesh(new THREE.TubeGeometry(curve, N * 2, tubeR, 5, false), mat);
+}
+
+function annularTube(rInner, rOuter, length, mat, seg = 32) {
+  const shape = new THREE.Shape();
+  shape.absarc(0, 0, rOuter, 0, Math.PI * 2, false);
+  const hole = new THREE.Path();
+  hole.absarc(0, 0, rInner, 0, Math.PI * 2, true);
+  shape.holes.push(hole);
+  const geo = new THREE.ExtrudeGeometry(shape, {
+    depth: length, bevelEnabled: false, curveSegments: seg
+  });
+  geo.translate(0, 0, -length / 2);
+  geo.rotateY(Math.PI / 2);
+  return new THREE.Mesh(geo, mat);
+}
+
+/* ============ FLOOR ============ */
+const floor = new THREE.Mesh(
+  new THREE.CircleGeometry(80, 40),
+  new THREE.MeshStandardMaterial({ color: 0x0b0e13, roughness: 0.6, metalness: 0.55 })
+);
+floor.rotation.x = -Math.PI / 2;
+floor.receiveShadow = true;
+scene.add(floor);
+
+const grid = new THREE.GridHelper(120, 60, 0x1d3348, 0x111a23);
+grid.position.y = 0.003;
+grid.material.transparent = true;
+grid.material.opacity = 0.4;
+scene.add(grid);
+
+/* ============ LPE MACHINE ============ */
+const machine = new THREE.Group();
+machine.position.y = 2.65;
+scene.add(machine);
+
+const frame = new THREE.Group();
+machine.add(frame);
+
+const LEG_TOP = -1.36, LEG_BOT = -2.65;
+const LEG_H = LEG_TOP - LEG_BOT;
+
+for (const x of [-4.55, 4.55]) {
+  for (const z of [-0.70, 0.70]) {
+    const leg = box(0.13, LEG_H, 0.13, MAT.steel3);
+    leg.position.set(x, (LEG_TOP + LEG_BOT) / 2, z);
+    frame.add(leg);
+    const foot = cyl(0.17, 0.20, 0.06, MAT.dark, 14);
+    foot.position.set(x, LEG_BOT + 0.03, z);
+    frame.add(foot);
+  }
+  const cross = box(0.11, 0.11, 1.55, MAT.steel3);
+  cross.position.set(x, LEG_TOP, 0);
+  frame.add(cross);
+}
+for (const z of [-0.70, 0.70]) {
+  const rail = box(9.25, 0.14, 0.14, MAT.steel3);
+  rail.position.set(0, -1.29, z);
+  frame.add(rail);
+}
+
+const ZONES = [
+  { x: -3.525, len: 2.30, role: 'end' },
+  { x: -1.175, len: 2.30, role: 'main' },
+  { x:  1.175, len: 2.30, role: 'main' },
+  { x:  3.525, len: 2.30, role: 'end' },
+];
+
+const zoneCoils = [];
+const zoneLights = [];
+
+ZONES.forEach((zone, i) => {
+  const cx = zone.x, len = zone.len;
+  const shellMesh = annularTube(INSUL_OUT, SHELL_OUT, len, MAT.shell, 40);
+  shellMesh.position.x = cx;
+  machine.add(shellMesh);
+
+  const insulMesh = annularTube(COIL_R + 0.02, INSUL_OUT, len - 0.02, MAT.insul, 32);
+  insulMesh.position.x = cx;
+  machine.add(insulMesh);
+
+  const formerMesh = annularTube(FORMER_IN, FORMER_OUT, len - 0.04, MAT.former, 32);
+  formerMesh.position.x = cx;
+  machine.add(formerMesh);
+
+  const coilMat = MAT.coil.clone();
+  coilMat.clippingPlanes = [clipPlane];
+  coilMat.clipShadows = true;
+  const coil = makeCoil(COIL_R, cx - len / 2 + 0.10, cx + len / 2 - 0.10, 15, 0.024, coilMat);
+  machine.add(coil);
+  zoneCoils.push(coil);
+
+  const tcFeed = cyl(0.045, 0.045, 0.12, MAT.ceramic, 10);
+  tcFeed.position.set(cx, -SHELL_OUT - 0.02, 0);
+  machine.add(tcFeed);
+
+  const tcSheath = cyl(0.018, 0.018, SHELL_OUT - FORMER_OUT + 0.10, MAT.tcSheath, 10);
+  tcSheath.position.set(cx, -(SHELL_OUT + FORMER_OUT) / 2, 0);
+  machine.add(tcSheath);
+
+  const tcTip = cyl(0.024, 0.024, 0.03, MAT.copper, 8);
+  tcTip.position.set(cx, -FORMER_OUT - 0.02, 0);
+  machine.add(tcTip);
+
+  const zl = new THREE.PointLight(0xff6a2a, 9, 5.4, 2);
+  zl.position.set(cx, -0.05, -0.60);
+  machine.add(zl);
+  zoneLights.push(zl);
+});
+
+for (const sign of [-1, +1]) {
+  const endX = sign * (ZONES[3].x + ZONES[3].len / 2);
+  const plate = annularTube(TUBE_R + 0.02, SHELL_OUT, 0.06, MAT.steel2, 32);
+  plate.position.x = endX;
+  machine.add(plate);
+  const bolts = boltRing(SHELL_OUT - 0.08, 12, MAT.steel3);
+  bolts.position.x = endX + sign * 0.04;
+  machine.add(bolts);
+}
+
+for (const sx of [-3.5, 3.5]) {
+  const saddle = new THREE.Mesh(
+    new THREE.TorusGeometry(SHELL_OUT + 0.04, 0.055, 6, 24, Math.PI * 0.8),
+    MAT.steel2
+  );
+  saddle.rotation.y = Math.PI / 2;
+  saddle.rotation.z = -Math.PI * 0.9;
+  saddle.position.set(sx, 0, 0);
+  frame.add(saddle);
+}
+
+const tube = cyl(TUBE_R, TUBE_R, TUBE_LEN, MAT.glass, 40, true);
+tube.rotation.z = Math.PI / 2;
+tube.renderOrder = 10;
+tube.castShadow = false; tube.receiveShadow = false;
+machine.add(tube);
+
+function endFitting(x, dir) {
+  const g = new THREE.Group();
+  g.position.x = x;
+  const flange = cyl(0.62, 0.62, 0.10, MAT.steel2, 32);
+  flange.rotation.z = Math.PI / 2; g.add(flange);
+  const oring = new THREE.Mesh(new THREE.TorusGeometry(0.50, 0.045, 6, 24), MAT.rubber);
+  oring.rotation.y = Math.PI / 2; oring.position.x = -dir * 0.06; g.add(oring);
+  const cap = cyl(0.50, 0.46, 0.16, MAT.steel2, 32);
+  cap.rotation.z = Math.PI / 2; cap.position.x = dir * 0.13; g.add(cap);
+  const bolts = boltRing(0.55, 16); bolts.position.x = dir * 0.055; g.add(bolts);
+
+  const waterCoil = new THREE.Mesh(new THREE.TorusGeometry(0.56, 0.024, 6, 24), MAT.copper);
+  waterCoil.rotation.y = Math.PI / 2;
+  waterCoil.position.x = dir * 0.02;
+  g.add(waterCoil);
+
+  const hoseY = -0.55, hoseZ = 0.30;
+  g.add(tubeAlong([
+    [dir * 0.02, hoseY, hoseZ], [dir * 0.08, hoseY - 0.30, hoseZ + 0.05],
+    [dir * 0.15, hoseY - 0.70, hoseZ + 0.10], [dir * 0.22, hoseY - 1.10, hoseZ + 0.18],
+    [dir * 0.28, hoseY - 1.55, hoseZ + 0.28], [dir * 0.32, hoseY - 2.10, hoseZ + 0.35],
+  ], 0.032, MAT.hoseBlue, 32));
+  g.add(tubeAlong([
+    [dir * 0.02, hoseY, -hoseZ], [dir * 0.08, hoseY - 0.30, -hoseZ - 0.05],
+    [dir * 0.15, hoseY - 0.70, -hoseZ - 0.10], [dir * 0.22, hoseY - 1.10, -hoseZ - 0.18],
+    [dir * 0.28, hoseY - 1.55, -hoseZ - 0.28], [dir * 0.32, hoseY - 2.10, -hoseZ - 0.35],
+  ], 0.032, MAT.hoseRed, 32));
+
+  machine.add(g);
+  return g;
+}
+
+const leftEnd  = endFitting(-TUBE_X, -1);
+const rightEnd = endFitting( TUBE_X,  1);
+
+const boatGroup = new THREE.Group();
+machine.add(boatGroup);
+
+const basePlate = box(5.60, 0.08, 0.55, MAT.graphiteDark);
+basePlate.position.set(0, BASE_TOP - 0.04, 0);
+boatGroup.add(basePlate);
+
+for (const [sx, sz, w, d] of [
+  [ 0,  0.12, 0.27, 0.03], [ 0, -0.12, 0.27, 0.03],
+  [ 0.12, 0, 0.03, 0.27], [-0.12, 0, 0.03, 0.27],
+]) {
+  const rim = box(w, 0.008, d, MAT.graphite);
+  rim.position.set(sx, BASE_TOP + 0.004, sz);
+  boatGroup.add(rim);
+}
+
+const substrate = box(SUB_SIZE, SUB_THICK, SUB_SIZE, MAT.substrate);
+substrate.position.set(0, SUB_TOP - SUB_THICK / 2, 0);
+boatGroup.add(substrate);
+
+const subRing = new THREE.Mesh(
+  new THREE.RingGeometry(0.13, 0.15, 24),
+  new THREE.MeshBasicMaterial({ color: 0x7fc4ff, transparent: true, opacity: 0.30, side: THREE.DoubleSide })
+);
+subRing.rotation.x = -Math.PI / 2;
+subRing.position.set(0, BASE_TOP + 0.0008, 0);
+boatGroup.add(subRing);
+
+const growthLayersGroup = new THREE.Group();
+boatGroup.add(growthLayersGroup);
+
+const growthLayers = [];
+const LAYER_BASE_Y = SUB_TOP + 0.0008;
+let cumulativeHeight = 0;
+const MIN_VIS = 0.0020, VIS_FACTOR = 0.0060;
+
+BINS.forEach((b, i) => {
+  if (b.thickness === null) { growthLayers[i] = null; return; }
+  const h = MIN_VIS + b.thickness * VIS_FACTOR;
+  const mat = new THREE.MeshStandardMaterial({
+    color: b.color, metalness: 0.85, roughness: 0.15,
+    emissive: b.color, emissiveIntensity: 0.12
+  });
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(SUB_SIZE * 0.86, 1, SUB_SIZE * 0.86), mat);
+  mesh.scale.y = 0.0001;
+  mesh.position.y = LAYER_BASE_Y + cumulativeHeight;
+  mesh.visible = false;
+  growthLayersGroup.add(mesh);
+  growthLayers[i] = { mesh, material: mat, height: h, baseY: LAYER_BASE_Y + cumulativeHeight, deposited: false, active: false };
+  cumulativeHeight += h;
+});
+
+let currentActiveLayer = null;
+
+const meltBridge = new THREE.Mesh(
+  new THREE.CylinderGeometry(BRIDGE_R, BRIDGE_R, 1, 16),
+  new THREE.MeshStandardMaterial({
+    color: 0xc0c4c8, metalness: 0.95, roughness: 0.10,
+    emissive: 0x331800, emissiveIntensity: 0.9
+  })
+);
+meltBridge.visible = false;
+boatGroup.add(meltBridge);
+
+const contactRing = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.10, 0.10, 0.003, 24, 1, true),
+  new THREE.MeshBasicMaterial({ color: 0x7fd6ff, transparent: true, opacity: 0, side: THREE.DoubleSide })
+);
+boatGroup.add(contactRing);
+
+const growthLight = new THREE.PointLight(0x7fd6ff, 0, 1.4, 2);
+growthLight.position.set(0, SUB_TOP + 0.15, 0);
+boatGroup.add(growthLight);
+
+const sliderGroup = new THREE.Group();
+sliderGroup.position.x = PARK_X;
+boatGroup.add(sliderGroup);
+
+for (const sign of [-1, +1]) {
+  const endBlock = box(0.14, WELL_H, 0.44, MAT.graphite);
+  endBlock.position.set(sign * (SLIDER_HALF - 0.07), SLIDER_BOT + WELL_H / 2, 0);
+  sliderGroup.add(endBlock);
+}
+for (let i = 0; i < 4; i++) {
+  const midX = (WELL_OFFSETS[i] + WELL_OFFSETS[i + 1]) / 2;
+  const wall = box(WALL_W, WELL_H, 0.44, MAT.graphite);
+  wall.position.set(midX, SLIDER_BOT + WELL_H / 2, 0);
+  sliderGroup.add(wall);
+}
+
+const melts = [];
+BINS.forEach((b, i) => {
+  const melt = box(WELL_W - 0.005, MELT_H, WELL_D - 0.005, meltMats[i]);
+  melt.position.set(WELL_OFFSETS[i], SLIDER_BOT + MELT_H / 2, 0);
+  sliderGroup.add(melt);
+  melts.push({ mesh: melt, baseY: melt.position.y });
+});
+
+const sliderGlow = new THREE.PointLight(0xff8a3a, 3.2, 2.6, 2);
+sliderGlow.position.set(0, SLIDER_BOT + WELL_H * 0.6, 0);
+sliderGroup.add(sliderGlow);
+
+const ROD_Y = SLIDER_BOT + WELL_H / 2;
+const ROD_LEN = 7.0;
+const pushRod = cyl(0.030, 0.030, ROD_LEN, MAT.graphiteDark, 12);
+pushRod.rotation.z = Math.PI / 2;
+pushRod.position.set(SLIDER_HALF + ROD_LEN / 2, ROD_Y, 0);
+sliderGroup.add(pushRod);
+
+const rodHandle = cyl(0.085, 0.085, 0.22, MAT.steel2, 14);
+rodHandle.rotation.z = Math.PI / 2;
+rodHandle.position.set(SLIDER_HALF + ROD_LEN + 0.11, ROD_Y, 0);
+sliderGroup.add(rodHandle);
+const rodKnob = cyl(0.12, 0.12, 0.06, MAT.copper, 14);
+rodKnob.rotation.z = Math.PI / 2;
+rodKnob.position.set(SLIDER_HALF + ROD_LEN + 0.25, ROD_Y, 0);
+sliderGroup.add(rodKnob);
+
+const bellowsGroup = new THREE.Group();
+bellowsGroup.position.set(TUBE_X + 0.12, ROD_Y, 0);
+machine.add(bellowsGroup);
+for (let i = 0; i < 9; i++) {
+  const fold = new THREE.Mesh(new THREE.TorusGeometry(0.135, 0.026, 6, 16), MAT.steel3);
+  fold.rotation.y = Math.PI / 2;
+  fold.position.x = i * 0.052;
+  bellowsGroup.add(fold);
+}
+
+const gas = new THREE.Group();
+machine.add(gas);
+
+leftEnd.add(tubeAlong([
+  [0, 0, 0], [-0.40, 0, 0.05], [-0.40, -0.75, 0.20], [-0.40, -1.30, 0.20],
+], 0.055, MAT.steel3, 32));
+
+const inletValve = cyl(0.11, 0.11, 0.20, MAT.copper, 14);
+inletValve.position.set(-0.40, -0.85, 0.20);
+inletValve.rotation.x = Math.PI / 2;
+leftEnd.add(inletValve);
+const inletWheel = new THREE.Mesh(new THREE.TorusGeometry(0.10, 0.022, 6, 16), MAT.copper);
+inletWheel.position.set(-0.40, -0.85, 0.20);
+inletWheel.rotation.x = Math.PI / 2;
+leftEnd.add(inletWheel);
+
+const pdGroup = new THREE.Group();
+pdGroup.position.set(-7.60, -0.65, 0.15);
+gas.add(pdGroup);
+const pdTube = cyl(0.075, 0.075, 1.10, MAT.pd, 16);
+pdTube.rotation.z = Math.PI / 2; pdGroup.add(pdTube);
+const pdHeat = cyl(0.10, 0.10, 0.55, MAT.hotPd, 16);
+pdHeat.rotation.z = Math.PI / 2; pdGroup.add(pdHeat);
+
+const pgGroup = new THREE.Group();
+pgGroup.position.set(-6.60, 0.10, 0.20);
+pgGroup.rotation.y = -0.25;
+gas.add(pgGroup);
+const pgFace = new THREE.Mesh(new THREE.CircleGeometry(0.105, 20), MAT.gaugeFace);
+pgFace.position.z = 0.001; pgGroup.add(pgFace);
+const pgRim = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.011, 6, 20), MAT.steel2);
+pgGroup.add(pgRim);
+
+const mfcGroup = new THREE.Group();
+mfcGroup.position.set(-6.05, -0.55, 0.20);
+gas.add(mfcGroup);
+for (let i = 0; i < 2; i++) {
+  const mfc = box(0.34, 0.22, 0.24, MAT.dark);
+  mfc.position.set(i * 0.44, 0, 0); mfcGroup.add(mfc);
+}
+
+gas.add(tubeAlong([
+  [-7.60, -0.65, 0.15], [-7.10, -0.65, 0.18], [-6.80, -0.55, 0.20],
+  [-6.60, -0.30, 0.20], [-6.60, 0.00, 0.20],
+], 0.030, MAT.steel3, 32));
+gas.add(tubeAlong([
+  [-6.60, 0.10, 0.20], [-6.45, 0.05, 0.20], [-6.25, -0.20, 0.20],
+  [-6.05, -0.30, 0.20], [-6.05, -0.40, 0.20],
+], 0.030, MAT.steel3, 32));
+gas.add(tubeAlong([
+  [-6.05, -0.66, 0.20], [-6.05, -0.85, 0.20], [-5.83, -0.85, 0.20],
+  [-5.61, -0.85, 0.20], [-5.61, -0.66, 0.20],
+], 0.030, MAT.steel3, 32));
+gas.add(tubeAlong([
+  [-5.83, -0.85, 0.20], [-5.83, -1.20, 0.22], [-6.00, -1.50, 0.22],
+  [-6.40, -1.50, 0.22], [-6.60, -1.40, 0.20], [-6.70, -1.30, 0.20],
+], 0.030, MAT.steel3, 48));
+
+const exhaust = new THREE.Group();
+exhaust.position.set(7.05, -1.55, 0.20);
+machine.add(exhaust);
+rightEnd.add(tubeAlong([
+  [0, 0.30, 0], [0.35, 0.10, 0.10], [0.60, -0.40, 0.15],
+  [0.75, -0.90, 0.18], [0.75, -1.33, 0.20],
+], 0.045, MAT.steel3, 32));
+
+const bubShell = cyl(0.13, 0.13, 0.40, MAT.bubblerGlass, 16);
+exhaust.add(bubShell);
+const oil = cyl(0.115, 0.115, 0.18, MAT.oil, 16);
+oil.position.y = -0.10; exhaust.add(oil);
+
+const bubbles = [];
+for (let i = 0; i < 14; i++) {
+  const r = 0.010 + Math.random() * 0.008;
+  const b = new THREE.Mesh(new THREE.SphereGeometry(r, 5, 4), MAT.bubble);
+  b.userData = { phase: Math.random(), speed: 0.55 + Math.random() * 0.55,
+                 baseX: (Math.random() - 0.5) * 0.11 };
+  b.position.set(b.userData.baseX, -0.19, (Math.random() - 0.5) * 0.11);
+  exhaust.add(b); bubbles.push(b);
+}
+
+const cpBacking = box(2.80, 0.72, 0.04, MAT.steel3);
+cpBacking.position.set(-2.30, -0.95, 0.80);
+machine.add(cpBacking);
+
+const pidRack = new THREE.Group();
+pidRack.position.set(-2.50, -0.88, 0.86);
+machine.add(pidRack);
+const pidBody = box(0.90, 0.42, 0.16, MAT.dark);
+pidRack.add(pidBody);
+
+const pidScreens = [];
+for (let i = 0; i < 4; i++) {
+  const dx = -0.315 + i * 0.21;
+  const pvStrip = box(0.14, 0.028, 0.003,
+    new THREE.MeshStandardMaterial({ color: 0x001a05, emissive: 0xff5a10, emissiveIntensity: 2.0 }));
+  pvStrip.position.set(dx, 0.09, 0.083);
+  pidRack.add(pvStrip);
+  const svStrip = box(0.14, 0.024, 0.003,
+    new THREE.MeshStandardMaterial({ color: 0x001a05, emissive: 0x36ff78, emissiveIntensity: 1.8 }));
+  svStrip.position.set(dx, 0.045, 0.083);
+  pidRack.add(svStrip);
+  pidScreens.push({ pvStrip, svStrip });
+}
+
+const scrGroup = new THREE.Group();
+scrGroup.position.set(-1.55, -0.88, 0.86);
+machine.add(scrGroup);
+const scrBody = box(0.55, 0.34, 0.20, MAT.dark);
+scrGroup.add(scrBody);
+
+const otcBox = new THREE.Group();
+otcBox.position.set(-3.35, -0.88, 0.86);
+machine.add(otcBox);
+const otcBody = box(0.28, 0.24, 0.14, MAT.dark);
+otcBox.add(otcBody);
+const otcLed = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 4), MAT.ledR);
+otcLed.position.set(0.08, 0.04, 0.071);
+otcBox.add(otcLed);
+
+/* ============ ION MILL ============ */
+const IMM = new THREE.Group();
+IMM.position.set(16, 0, 0);
+scene.add(IMM);
+
+const CH_R = 1.8, CH_H = 3.4, CH_Y = 3.4;
+
+for (const x of [-2.2, 2.2]) {
+  for (const z of [-2.2, 2.2]) {
+    const leg = box(0.14, 1.5, 0.14, MAT.steel3);
+    leg.position.set(x, 0.75, z);
+    IMM.add(leg);
+    const foot = cyl(0.19, 0.22, 0.06, MAT.dark, 12);
+    foot.position.set(x, 0.03, z);
+    IMM.add(foot);
+  }
+}
+
+const chamber = annularTube(CH_R - 0.08, CH_R, CH_H, MAT.alum, 36);
+chamber.rotation.z = Math.PI / 2;
+chamber.position.y = CH_Y;
+IMM.add(chamber);
+
+const topF = cyl(CH_R + 0.1, CH_R + 0.1, 0.08, MAT.steel2, 36);
+topF.position.y = CH_Y + CH_H / 2;
+IMM.add(topF);
+const botF = cyl(CH_R + 0.1, CH_R + 0.1, 0.08, MAT.steel2, 36);
+botF.position.y = CH_Y - CH_H / 2;
+IMM.add(botF);
+
+const SRC_Y = CH_Y + CH_H / 2 + 1.0;
+const srcBody = cyl(0.75, 0.75, 0.60, MAT.steel2, 20);
+srcBody.position.y = SRC_Y;
+IMM.add(srcBody);
+const srcTop = cyl(0.85, 0.85, 0.10, MAT.steel3, 20);
+srcTop.position.y = SRC_Y + 0.35;
+IMM.add(srcTop);
+
+for (let i = 0; i < 3; i++) {
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.02, 5, 16), MAT.steel);
+  ring.rotation.x = Math.PI / 2;
+  ring.position.y = SRC_Y - 0.32 - i * 0.03;
+  IMM.add(ring);
+}
+
+IMM.add(tubeAlong([
+  [0, SRC_Y + 0.40, 0], [0, SRC_Y + 1.2, 0],
+  [0.6, SRC_Y + 1.6, 0.3], [1.5, SRC_Y + 1.7, 0.5],
+], 0.06, MAT.rubber, 16));
+
+const arB = cyl(0.25, 0.25, 1.2, MAT.steel2, 14);
+arB.position.set(2.6, 2.2, 0.4);
+IMM.add(arB);
+const arCap = cyl(0.10, 0.10, 0.10, MAT.copper, 8);
+arCap.position.set(2.6, 2.85, 0.4);
+IMM.add(arCap);
+IMM.add(tubeAlong([
+  [0.7, SRC_Y, 0], [1.2, SRC_Y, 0], [1.6, SRC_Y - 0.2, 0],
+  [2.1, SRC_Y - 0.9, 0.15], [2.4, 2.5, 0.3], [2.6, 2.8, 0.4],
+], 0.05, MAT.steel3, 24));
+
+const STG_Y = CH_Y - 0.3;
+const stg = cyl(0.75, 0.75, 0.10, MAT.steel2, 20);
+const tiltG = new THREE.Group(); tiltG.position.y = STG_Y; IMM.add(tiltG);
+stg.position.y = 0; tiltG.add(stg);
+const shaft = cyl(0.10, 0.10, 1.5, MAT.steel3, 10);
+shaft.position.y = STG_Y - 0.75;
+IMM.add(shaft);
+const motor = cyl(0.30, 0.30, 0.35, MAT.dark, 12);
+motor.position.y = CH_Y - CH_H / 2 - 0.4;
+IMM.add(motor);
+
+const vpBody = cyl(0.35, 0.35, 0.30, MAT.steel2, 14);
+vpBody.rotation.x = Math.PI / 2;
+vpBody.position.set(0, CH_Y + 0.3, CH_R + 0.15);
+IMM.add(vpBody);
+const vpGlass = cyl(0.28, 0.28, 0.02, MAT.glass, 14);
+vpGlass.rotation.x = Math.PI / 2;
+vpGlass.position.set(0, CH_Y + 0.3, CH_R + 0.31);
+IMM.add(vpGlass);
+
+/* viewport glow — visible plasma through the window */
+const vpGlow = new THREE.Mesh(new THREE.CircleGeometry(0.24, 20), MAT.vpGlow);
+vpGlow.position.set(0, CH_Y + 0.3, CH_R + 0.32);
+IMM.add(vpGlow);
+
+const lock = cyl(0.40, 0.40, 0.60, MAT.steel2, 14);
+lock.rotation.z = Math.PI / 2;
+lock.position.set(CH_R + 0.4, CH_Y, 0);
+IMM.add(lock);
+const lkv = cyl(0.12, 0.12, 0.15, MAT.copper, 8);
+lkv.position.set(CH_R + 0.8, CH_Y, 0);
+IMM.add(lkv);
+
+const turbo = cyl(0.45, 0.45, 0.50, MAT.steel2, 16);
+turbo.position.y = CH_Y - CH_H / 2 - 0.7;
+IMM.add(turbo);
+for (let i = 0; i < 4; i++) {
+  const f = new THREE.Mesh(new THREE.TorusGeometry(0.47, 0.02, 4, 14), MAT.steel3);
+  f.rotation.x = Math.PI / 2;
+  f.position.y = CH_Y - CH_H / 2 - 0.5 - i * 0.1;
+  IMM.add(f);
+}
+const turboB = cyl(0.35, 0.30, 0.25, MAT.dark, 12);
+turboB.position.y = CH_Y - CH_H / 2 - 1.10;
+IMM.add(turboB);
+
+/* wafer — rotates with stage */
+const wafer = new THREE.Group();
+wafer.position.y = 0.06;
+tiltG.add(wafer);
+
+const wSub = box(1.0, 0.08, 0.8, MAT.substrate);
+wafer.add(wSub);
+
+const immLayers = [];
+let immCum = 0.04;
+const IMIN = 0.04, IFAC = 0.10, RW = 0.18, FW = (0.9 - RW) / 2, FX = RW / 2 + FW / 2;
+const etchL = [];      /* flanks: [left,right] meshes per layer */
+BINS.forEach((b, i) => {
+  if (b.thickness === null) { immLayers[i] = null; etchL[i] = null; return; }
+  const h = IMIN + b.thickness * IFAC;
+  const mk = () => new THREE.MeshStandardMaterial({ color: b.color, metalness: 0.8, roughness: 0.2, emissive: b.color, emissiveIntensity: 0.10 });
+  const y = 0.04 + immCum + h / 2;
+  const ridge = new THREE.Mesh(new THREE.BoxGeometry(RW, h, 0.7), mk()); ridge.position.set(0, y, 0); wafer.add(ridge);
+  const fl = [-FX, FX].map(x => { const m = new THREE.Mesh(new THREE.BoxGeometry(FW, h, 0.7), mk()); m.position.set(x, y, 0); wafer.add(m); return m; });
+  immLayers[i] = { mesh: ridge, baseY: 0.04 + immCum, h };
+  etchL[i] = { meshes: fl, baseY: 0.04 + immCum, h, t: b.thickness };
+  immCum += h;
+});
+
+/* ridge mask: ONE resist stripe over the ridge; both flanks are exposed and etched */
+const MASK_TOP = 0.04 + immCum, RES_H = 0.27;   /* 1.5 µm at the layer stack's ~0.18 u/µm, so resist loss reads on the same scale as the etch */
+const resist = box(RW, RES_H, 0.7, MAT.resist);
+resist.position.set(0, MASK_TOP + RES_H / 2, 0);
+wafer.add(resist);
+
+/* wafer clamp clips (hold the chip on the cooled stage) */
+for (const [cx, cz] of [[-0.5, -0.4], [0.5, -0.4], [-0.5, 0.4], [0.5, 0.4]]) {
+  const clip = box(0.10, 0.03, 0.10, MAT.steel3); clip.position.set(cx, 0.015, cz); wafer.add(clip);
+}
+
+/* ---- source mounting neck, neutraliser, two-leaf shutter, backing pump, gauge, tilt axle ---- */
+const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.66, 24, 1, true), MAT.glass);
+neck.position.y = CH_Y + CH_H / 2 + 0.47; IMM.add(neck);
+const neutMat = new THREE.MeshStandardMaterial({ color: 0x331a08, emissive: 0xff7a20, emissiveIntensity: 0 });
+const neut = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.012, 6, 16), neutMat);
+neut.rotation.x = Math.PI / 2; neut.position.set(0.68, CH_Y + CH_H / 2 - 0.38, 0); IMM.add(neut);
+const shutterY = STG_Y + 1.05;
+const shutterMat = new THREE.MeshStandardMaterial({ color: 0x9aa7b4, metalness: 0.9, roughness: 0.35, emissive: 0xff6a20, emissiveIntensity: 0 });
+const mkLeaf = (sg) => { const g = new THREE.Group(); g.position.set(sg * 0.78, shutterY, 0);
+  const b = box(0.78, 0.03, 1.6, shutterMat); b.position.x = -sg * 0.39; g.add(b); IMM.add(g); return g; };
+const leafL = mkLeaf(-1), leafR = mkLeaf(1);
+const bp = box(1.1, 0.5, 0.6, MAT.dark); bp.position.set(-3.0, 0.25, 0); IMM.add(bp);
+IMM.add(tubeAlong([[0, 0.45, 0], [0, 0.40, 0], [-1.5, 0.40, 0], [-2.4, 0.40, 0]], 0.07, MAT.steel3, 16));
+const ionGauge = cyl(0.13, 0.13, 0.5, MAT.steel2, 14); ionGauge.rotation.z = Math.PI / 2;
+ionGauge.position.set(-(CH_R + 0.25), CH_Y - 0.9, 0); IMM.add(ionGauge);
+const tAxle = cyl(0.05, 0.05, 2.0, MAT.steel3, 10); tAxle.rotation.z = Math.PI / 2; tAxle.position.set(0, STG_Y - 0.09, 0); IMM.add(tAxle);
+for (const x of [-1.0, 1.0]) { const tr = box(0.12, 0.3, 0.2, MAT.steel3); tr.position.set(x, STG_Y - 0.2, 0); IMM.add(tr); }
+
+/* beam + plasma */
+const BT = SRC_Y - 0.4;
+const BB = STG_Y + 0.80;
+const beamCone = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.55, 0.68, BT - BB, 20, 1, true), MAT.beam);
+beamCone.position.y = (BT + BB) / 2;
+let shutOpen = 0;
+IMM.add(beamCone);
+
+const plasma = new THREE.Mesh(new THREE.SphereGeometry(0.55, 14, 10), MAT.plasma);
+plasma.position.y = SRC_Y - 0.35;
+IMM.add(plasma);
+
+const plasmaCore = new THREE.Mesh(new THREE.SphereGeometry(0.30, 12, 8), MAT.plasmaCore);
+plasmaCore.position.y = SRC_Y - 0.35;
+IMM.add(plasmaCore);
+
+/* sputter particles as directional streaks */
+const sputters = [];
+for (let i = 0; i < 24; i++) {
+  const geo = new THREE.CylinderGeometry(0.002, 0.010, 0.10, 3);
+  const p = new THREE.Mesh(geo, MAT.sput.clone());
+  p.visible = false;
+  IMM.add(p);
+  sputters.push({ mesh: p, age: 1.0, vx: 0, vy: 0, vz: 0 });
+}
+
+const chamberLight = new THREE.PointLight(0x6fb8ff, 0, 6, 2);
+chamberLight.position.set(0, CH_Y, 0);
+IMM.add(chamberLight);
+
+/* ============ LABELS ============ */
+const lpeLabel = document.createElement('div');
+lpeLabel.className = 'label3d';
+lpeLabel.textContent = 'LPE · FURNACE';
+lpeLabel.style.color = '#ffaa66';
+lpeLabel.style.borderColor = '#ffaa66';
+document.body.appendChild(lpeLabel);
+
+const immLabel = document.createElement('div');
+immLabel.className = 'label3d';
+immLabel.textContent = 'ION BEAM ETCH · HIGH VACUUM';
+immLabel.style.color = '#7fc4ff';
+immLabel.style.borderColor = '#7fc4ff';
+immLabel.style.display = 'none';
+document.body.appendChild(immLabel);
+
+const _v3 = new THREE.Vector3();
+function placeLabel(el, wx, wy, wz) {
+  _v3.set(wx, wy, wz).project(camera);
+  const sx = (_v3.x * 0.5 + 0.5) * window.innerWidth;
+  const sy = (-_v3.y * 0.5 + 0.5) * window.innerHeight;
+  el.style.transform = `translate(-50%, -100%) translate(${sx}px, ${sy}px)`;
+  el.style.opacity = (_v3.z < 1) ? '1' : '0';
+}
+
+/* ============ SHADOWS ============ */
+machine.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+machine.traverse(o => {
+  if (o.isMesh && o.material && (o.material.transparent || o.material.isMeshBasicMaterial)) {
+    o.castShadow = false; o.receiveShadow = false;
+  }
+});
+growthLayersGroup.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
+contactRing.castShadow = false; meltBridge.castShadow = false;
+IMM.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+IMM.traverse(o => {
+  if (o.isMesh && o.material && (o.material.transparent || o.material.isMeshBasicMaterial)) {
+    o.castShadow = false; o.receiveShadow = false;
+  }
+});
+vpGlow.castShadow = false;
+
+/* ============ CUTAWAY ============ */
+const cutSlider = document.getElementById('cut');
+const cutSliderIMM = document.getElementById('cutIMM');
+function applyCut() {
+  clipPlane.constant = 1.90 - (cutSlider.value / 100) * 3.00;
+}
+function applyCutIMM() {
+  clipPlaneIMM.constant = 2.50 - (cutSliderIMM.value / 100) * 4.00;
+}
+cutSlider.addEventListener('input', applyCut);
+cutSliderIMM.addEventListener('input', applyCutIMM);
+applyCut();
+applyCutIMM();
+
+/* ============ THERMAL PROFILE ============ */
+const profileSvg = document.getElementById('tProfileContent');
+function drawProfileAtTemp(mainTemp) {
+  const W = 256, H = 42, ML = 6, MR = 6, MT = 4, MB = 8;
+  const xMin = -5.5, xMax = 5.5, yMin = 0, yMax = 820, GUARD_END = 4.675, AMBIENT = 25;
+  const N = 80;
+  const profileAt = (x) => {
+    const ax = Math.abs(x);
+    if (ax < GUARD_END - 0.10) return mainTemp;
+    const t = Math.min(1, (ax - GUARD_END + 0.10) / 1.0);
+    const sm = t * t * (3 - 2 * t);
+    return mainTemp - sm * (mainTemp - AMBIENT);
+  };
+  let d = '';
+  for (let i = 0; i <= N; i++) {
+    const t = i / N;
+    const x = xMin + t * (xMax - xMin);
+    const temp = profileAt(x);
+    const px = ML + t * (W - ML - MR);
+    const py = MT + (1 - (temp - yMin) / (yMax - yMin)) * (H - MT - MB);
+    d += (i === 0 ? 'M' : 'L') + px.toFixed(1) + ',' + py.toFixed(1) + ' ';
+  }
+  const fill = d + `L ${W - MR},${H - MB} L ${ML},${H - MB} Z`;
+  let markers = '';
+  ZONES.forEach(z => {
+    const bx = z.x - z.len / 2;
+    const t = (bx - xMin) / (xMax - xMin);
+    const px = ML + t * (W - ML - MR);
+    if (px > ML + 1 && px < W - MR - 1) {
+      markers += `<line x1="${px.toFixed(1)}" y1="${MT}" x2="${px.toFixed(1)}" y2="${H - MB}" stroke="#3d7fd6" stroke-width="0.4" opacity="0.30" stroke-dasharray="1.5,1.5"/>`;
+    }
+  });
+  profileSvg.innerHTML = `
+    <path d="${fill}" fill="url(#tGrad)"/>
+    <path d="${d}" fill="none" stroke="#3d7fd6" stroke-width="1.3" stroke-linejoin="round"/>
+    ${markers}
+    <text x="${ML}" y="${H - 1}" font-size="4.5" fill="#5f7d9e" letter-spacing="0.6">COLD</text>
+    <text x="${W / 2 - 12}" y="${H - 1}" font-size="4.5" fill="#7ee6a0" letter-spacing="0.6">BOAT</text>
+    <text x="${W - MR - 14}" y="${H - 1}" font-size="4.5" fill="#5f7d9e" letter-spacing="0.6">COLD</text>
+  `;
+}
+drawProfileAtTemp(25);
+let lastProfileTemp = 25;
+function maybeUpdateProfile(t) {
+  if (Math.abs(t - lastProfileTemp) < 1.5) return;
+  lastProfileTemp = t;
+  drawProfileAtTemp(t);
+}
+
+/* ============ LPE CYCLE ============ */
+const P0 = 0.88, P1 = 0.44, P2 = 0.00, P3 = -0.44, P4 = -0.88;
+
+const CYCLE = [
+  { name: 'Heat-up', realMin: 60, animSec: 14, temp: [25, 800], slider: PARK_X,
+    narr: 'HEATING · H₂ flowing', color: '#7fc4ff',
+    detail: '60 min ramp 25 → 800 °C under flowing H₂. Kanthal elements ramp; mullite former evens out axial gradients.' },
+  { name: 'Homogenise', realMin: 40, animSec: 10, temp: [800, 800], slider: PARK_X,
+    narr: 'HOMOGENISING · 800 °C', color: '#7fc4ff',
+    detail: '40 min at 800 °C, ±0.1 °C PID. Charged As/Al dissolves; all melts undersaturated here.' },
+  { name: 'Cool to 780', realMin: 20, animSec: 6, temp: [800, 780], slider: PARK_X,
+    narr: 'COOLING · 800 → 780 °C', color: '#7fc4ff',
+    detail: '20 min cool at 1 °C/min. Melts stay undersaturated until each reaches its liquidus.' },
+  { name: 'Slide → well 0', realMin: 0.5, animSec: 1.2, from: PARK_X, to: P0, temp: [780, 780],
+    narr: 'SLIDING · well 0', color: '#ffaa66',
+    detail: 'Push rod through bellows moves slider. Slightly undersaturated Ga–As (well 0) aligns with wafer.' },
+  { name: 'Melt-back', realMin: 2, animSec: 3, temp: [780, 780], slider: P0, meltback: true,
+    narr: 'MELT-BACK · in-situ etch', color: '#ff7050',
+    detail: 'Undersaturated melt dissolves a few µm of damaged/oxidised surface. Pure Ga would strip tens of µm.' },
+  { name: 'Slide → well 1', realMin: 0.5, animSec: 1.2, from: P0, to: P1, temp: [780, 780],
+    narr: 'SLIDING · well 1', color: '#ffaa66',
+    detail: 'Graphite wall (wider than wafer) wipes melt off. Well 1 (GaAs, liquidus 780.0 °C) slides in.' },
+  { name: 'Grow GaAs buffer', realMin: 15, animSec: 8, temp: [780.00, 777.75], slider: P1, deposit: 1, growthExp: 1.5,
+    narr: 'GROWTH · GaAs buffer', color: '#7ee6a0',
+    detail: 'Cooling 0.15 °C/min over 15 min (ΔT 2.25 °C). Solute (As) transport limits growth; growth ∝ t^1.5. Target 1.0 µm.' },
+  { name: 'Slide → well 2', realMin: 0.5, animSec: 1.2, from: P1, to: P2, temp: [777.75, 777.75],
+    narr: 'SLIDING · well 2', color: '#ffaa66',
+    detail: 'Wall wipes melt. Well 2 (AlGaAs, liquidus 777.75 °C) aligning.' },
+  { name: 'Grow AlGaAs lower', realMin: 12, animSec: 6, temp: [777.75, 775.75], slider: P2, deposit: 2, growthExp: 1.5,
+    narr: 'GROWTH · Al₀.₃Ga₀.₇As lower', color: '#7ee6a0',
+    detail: 'Cooling 0.17 °C/min over 12 min (ΔT 2.0 °C). Al partitions strongly into solid. Target 0.5 µm.' },
+  { name: 'Slide → well 3', realMin: 0.5, animSec: 1.2, from: P2, to: P3, temp: [775.75, 775.75],
+    narr: 'SLIDING · well 3', color: '#ffaa66',
+    detail: 'Wall wipes melt. Well 3 (GaAs, liquidus 775.75 °C) aligning.' },
+  { name: 'Grow GaAs active', realMin: 1, animSec: 3, temp: [775.75, 775.40], slider: P3, deposit: 3, growthExp: 1.5,
+    narr: 'GROWTH · GaAs active layer', color: '#7ee6a0',
+    detail: 'Short, small ΔT: 0.35 °C/min for 1 min. 0.1 µm GaAs active layer between claddings.' },
+  { name: 'Slide → well 4', realMin: 0.5, animSec: 1.2, from: P3, to: P4, temp: [775.40, 775.40],
+    narr: 'SLIDING · well 4', color: '#ffaa66',
+    detail: 'Wall wipes melt. Well 4 (AlGaAs) aligning.' },
+  { name: 'Grow AlGaAs upper', realMin: 8, animSec: 5, temp: [775.40, 773.90], slider: P4, deposit: 4, growthExp: 1.5,
+    narr: 'GROWTH · Al₀.₃Ga₀.₇As upper', color: '#7ee6a0',
+    detail: 'Cooling 0.19 °C/min over 8 min (ΔT 1.5 °C). Completes DH structure. Target 0.5 µm.' },
+  { name: 'Slide to unload', realMin: 0.5, animSec: 1.2, from: P4, to: UNLOAD_X, temp: [773.90, 773.90],
+    narr: 'SLIDING TO UNLOAD', color: '#ffaa66',
+    detail: 'Slider continues past last bin. Wafer never re-contacts a melt.' },
+  { name: 'Cool-down', realMin: 180, animSec: 10, temp: [773.90, 100], slider: UNLOAD_X,
+    narr: 'COOLING DOWN · furnace off', color: '#5f7d9e',
+    detail: 'Furnace off, natural cool under flowing H₂ to <100 °C. Do not open hot.' },
+];
+const CYCLE_TOTAL_ANIM = CYCLE.reduce((s, p) => s + p.animSec, 0);
+const CYCLE_TOTAL_REAL = CYCLE.reduce((s, p) => s + p.realMin, 0);
+
+function fmtMin(min) {
+  if (min >= 60) { const h = Math.floor(min / 60); const m = Math.round(min - h * 60); return `${h} h ${String(m).padStart(2, '0')} min`; }
+  if (min >= 1) return `${Math.round(min)} min`;
+  return `${Math.round(min * 60)} s`;
+}
+
+/* ============ ION MILL CYCLE ============ */
+/* Ion-beam-etch model. Etch rate = Y(θ)·J/(e·n). Parameters are illustrative, not vendor data. */
+const IBE = { J: 0.5e-3, Y0: 1.8, n: 4.42e22, f: 2.0, thOpt: 70, resistT: 1.5, sel: 1.5, tilt: 30, depth: 0.40, UPPER: 0.5, ACTIVE: 0.1 };
+function ibeRate(tiltDeg) {                       /* nm/min, GaAs/AlGaAs */
+  const th = tiltDeg * Math.PI / 180, c = Math.cos(th), co = Math.cos(IBE.thOpt * Math.PI / 180);
+  const yRatio = Math.pow(c, -IBE.f) * Math.exp(IBE.f * co * (1 - 1 / c));   /* Yamamura angular form */
+  return IBE.Y0 * yRatio * c * IBE.J / 1.602e-19 / IBE.n * 1e7 * 60;       /* cm/s → nm/min */
+}
+const millMin = () => IBE.depth * 1000 / ibeRate(IBE.tilt);
+const XS = (() => {
+  const svg = document.getElementById('xsec'), NS = 'http://www.w3.org/2000/svg', U = 20, Y0 = 80;
+  const yy = (um) => Y0 - um * U;
+  const mk = (tag, a) => { const e = document.createElementNS(NS, tag); for (const k in a) e.setAttribute(k, a[k]); svg.appendChild(e); return e; };
+  mk('rect', { x: 0, y: Y0, width: 256, height: 12, fill: '#3a5a78' });
+  const L = []; let base = 0, activeTop = 0;
+  BINS.forEach((b, i) => { if (b.thickness === null) return;
+    const c = '#' + b.color.toString(16).padStart(6, '0');
+    const l = { b0: base, b1: base + b.thickness, fl: [mk('rect', { fill: c, x: 4, width: 116 }), mk('rect', { fill: c, x: 136, width: 116 })],
+                rd: mk('rect', { fill: c, x: 120, width: 16 }) };
+    l.rd.setAttribute('y', yy(l.b1)); l.rd.setAttribute('height', b.thickness * U); L.push(l); base += b.thickness; if (i === 3) activeTop = base; });
+  const top = base;
+  const res = mk('rect', { fill: '#d04830', x: 120, width: 16 });
+  mk('line', { x1: 0, x2: 256, y1: yy(activeTop), y2: yy(activeTop), stroke: '#ffd060', 'stroke-width': 0.6, 'stroke-dasharray': '3 2' });
+  mk('text', { x: 6, y: yy(activeTop) - 2, fill: '#ffd060', 'font-size': 7 }).textContent = 'active layer top';
+  const txt = mk('text', { x: 142, y: 10, 'font-size': 8, fill: '#a6c4e0' });
+  return { update(d, resFrac) {
+    const floor = top - d;
+    L.forEach(l => { const t = Math.max(l.b0, Math.min(l.b1, floor));
+      l.fl.forEach(f => { f.setAttribute('y', yy(t)); f.setAttribute('height', Math.max(0, (t - l.b0) * U)); }); });
+    const h = IBE.resistT * resFrac; res.setAttribute('y', yy(top + h)); res.setAttribute('height', h * U);
+    const rem = floor - activeTop;
+    txt.textContent = d <= 0 ? 'unetched' : rem > 0 ? `etch floor ${rem.toFixed(2)} µm above active` : 'FLOOR BELOW ACTIVE TOP';
+    txt.setAttribute('fill', d > 0 && rem < 0.05 ? '#ff6a5a' : '#a6c4e0'); } };
+})();
+XS.update(0, 1);
+const P_BASE = 5e-6, P_WORK = 2e-4;
+const IMM_CYCLE = [
+  { dur: 3, real: 2, narr: 'LOAD · lock vented with N₂', color: '#7fc4ff', lP: [760, 760], cP: [P_BASE, P_BASE], tB: 0, tS: 25,
+    detail: 'Only the load-lock is vented; the main chamber stays at base pressure. Chip clamped on the carrier, lock closed.' },
+  { dur: 4, real: 8, narr: 'PUMPING · lock roughing → turbo', color: '#7fc4ff', pump: true, cP: [P_BASE, P_BASE], tB: 0, tS: 25,
+    detail: 'Lock roughed to ~0.1 Torr, then turbo to ~5×10⁻⁶ Torr — high vacuum (UHV is below 10⁻⁹ Torr).' },
+  { dur: 3, real: 1, narr: 'TRANSFER · gate valve open', color: '#7fc4ff', xfer: true, lP: [P_BASE, P_BASE], cP: [P_BASE, P_BASE], tB: 0, tS: 25,
+    detail: 'Gate valve opens, the chip is carried onto the water-cooled stage, the gate closes.' },
+  { dur: 2, real: 1, narr: 'Ar FLOW · 5 sccm', color: '#7fc4ff', cP: [P_BASE, P_WORK], tB: 0, tS: 25,
+    detail: 'Argon admitted to the source. Working pressure 2×10⁻⁴ Torr ≈ 3×10⁻⁷ of an atmosphere.' },
+  { dur: 3, real: 5, narr: 'SOURCE ON · shutter CLOSED', color: '#ffaa66', cP: [P_WORK, P_WORK], tB: 0.5, tS: 25, hot: true,
+    detail: 'Cathode filament and neutraliser heat, discharge ignites, beam ramps to 500 eV / 0.5 mA/cm² onto the closed shutter. The neutraliser stops the wafer charging.' },
+  { dur: 2, real: 3, narr: 'STABILISE · tilt set, shutter CLOSED', color: '#ffaa66', cP: [P_WORK, P_WORK], tB: 0.5, tS: 25, hot: true, tilt: true,
+    detail: 'Stage tilts to the set angle and the beam current settles before any ions reach the sample.' },
+  { dur: 10, real: 0, narr: 'MILLING · Ar⁺ 500 eV', color: '#7ee6a0', etch: true, cP: [P_WORK, P_WORK], tB: 0.5, tS: 40, hot: true, open: true, tilt: true,
+    detail: () => `Shutter open. Stage tilted ${IBE.tilt}° and rotating (14 rpm). Rate ≈ ${ibeRate(IBE.tilt).toFixed(0)} nm/min (Y·J/e·n model) → ${IBE.depth.toFixed(2)} µm in ≈ ${millMin().toFixed(1)} min. Resist at ${IBE.sel}:1 selectivity loses ≈ ${(IBE.depth / IBE.sel).toFixed(2)} µm.` },
+  { dur: 2, real: 1, narr: 'SHUTTER CLOSED · beam off', color: '#7fc4ff', cP: [P_WORK, P_BASE], tB: 0, tS: 30, tiltOut: true,
+    detail: 'Shutter closes first, then the beam and Ar flow stop. Tilt returns to zero.' },
+  { dur: 3, real: 4, narr: 'UNLOAD · lock vent', color: '#7fc4ff', lP: [P_BASE, 760], cP: [P_BASE, P_BASE], tB: 0, tS: 25,
+    detail: () => { const r = IBE.UPPER - IBE.depth; const st = r > 0.05 ? `${r.toFixed(2)} µm of cladding left above the active layer — good.` : r > 0 ? `Only ${r.toFixed(2)} µm left above the active layer — risk of ion damage.` : `ETCHED INTO THE ACTIVE LAYER (${(-r).toFixed(2)} µm past the cladding) — device ruined.`; return `${st} The chip stays on the stage here for inspection; a real tool returns it through the lock. Next: resist strip (acetone + O₂ plasma; ion-hardened resist is hard to remove).`; } },
+];
+const IMM_TOTAL = IMM_CYCLE.reduce((s, p) => s + p.dur, 0);
+const IMM_MILL = IMM_CYCLE.findIndex(p => p.etch), IMM_XFER = IMM_CYCLE.findIndex(p => p.xfer);
+function fmtP(p) { return p > 1 ? `${Math.round(p)} Torr` : p > 1e-3 ? `${(p * 1000).toFixed(1)} mTorr` : `${p.toExponential(1)} Torr`; }
+const imRealMin = (i) => IMM_CYCLE[i].etch ? millMin() : IMM_CYCLE[i].real;
+
+/* log-interpolate between pressures */
+function lerpLog(a, b, t) {
+  if (a <= 0 || b <= 0) return a + (b - a) * t;
+  const la = Math.log10(a), lb = Math.log10(b);
+  return Math.pow(10, la + (lb - la) * t);
+}
+
+/* two-stage pump-down: roughing (760 → 0.1 in 30% of phase) then turbo */
+function pumpCurve(t) {
+  if (t < 0.30) {
+    return lerpLog(760, 0.1, t / 0.30);
+  } else {
+    return lerpLog(0.1, 5e-6, (t - 0.30) / 0.70);
+  }
+}
+
+/* ============ STATE ============ */
+let cycleT = 0, cycleActive = false, cycleDone = false;
+let currentPhaseIdx = -1, currentPhase = null, currentLocalT = 0;
+let depositedLayers = 0, displayTemp = 25;
+let sliderTargetX = PARK_X, prevContactMeltIdx = -1, subRingPulse = 0;
+
+const S = {
+  immT: 0, immOn: false, immDone: false,
+  immIdx: -1, immLocal: 0,
+  press: 5e-6, pLock: 760, wafer: 1, tiltNow: 0, beam: 0, stage: 25, etch: 0,
+};
+
+/* ============ DOM ============ */
+const narrStatus = document.getElementById('narrStatus');
+const narrDetail = document.getElementById('narrDetail');
+const narrTime = document.getElementById('narrTime');
+const progBarEl = document.getElementById('progBar');
+const stackEl = document.getElementById('stack');
+const playBtn = document.getElementById('playBtn');
+const immBtn = document.getElementById('immBtn');
+const tabLPE = document.getElementById('tabLPE');
+const tabIMM = document.getElementById('tabIMM');
+const lpeControlsEl = document.getElementById('lpeControls');
+const immControlsEl = document.getElementById('immControls');
+
+/* ============ LPE HELPERS ============ */
+function activeLayerFraction() {
+  if (!currentActiveLayer) return 0;
+  const exp = (currentPhase && currentPhase.growthExp) || 1;
+  return Math.max(0.001, Math.pow(currentLocalT, exp));
+}
+
+function updateZoneReadouts(mainTemp) {
+  const t = Math.round(mainTemp);
+  document.getElementById('t1').textContent = t + ' °C';
+  document.getElementById('t2').textContent = t + ' °C';
+  document.getElementById('t3').textContent = t + ' °C';
+  document.getElementById('t4').textContent = t + ' °C';
+}
+
+function updateIdle() {
+  displayTemp = 25;
+  narrStatus.textContent = 'IDLE';
+  narrStatus.style.color = '#5f7d9e';
+  narrDetail.textContent = 'Two tools loaded. Each runs independently — LPE grows the DH stack; ion mill etches a ridge through photoresist (Ar⁺ ion-beam etch).';
+  narrTime.textContent = `LPE · ${fmtMin(CYCLE_TOTAL_REAL)} simulated · ~${Math.round(CYCLE_TOTAL_ANIM)} s demo`;
+  updateZoneReadouts(25);
+  maybeUpdateProfile(25);
+}
+
+function resetStack() {
+  stackEl.innerHTML = `<div class="layer sub"><span class="mat">GaAs (100) substrate</span><span class="thick">350 µm</span></div>`;
+  depositedLayers = 0;
+}
+
+function resetGrowthLayers() {
+  growthLayers.forEach(layer => {
+    if (!layer) return;
+    layer.deposited = false; layer.active = false;
+    layer.mesh.visible = false; layer.mesh.scale.y = 0.0001;
+    layer.material.emissiveIntensity = 0.12;
+  });
+  currentActiveLayer = null;
+}
+
+function depositLayer(idx) {
+  if (idx <= depositedLayers) return;
+  depositedLayers = idx;
+  const b = BINS[idx];
+  const div = document.createElement('div');
+  div.className = 'layer new';
+  div.innerHTML = `<span class="mat">${b.mat}</span><span class="thick">${b.thickness.toFixed(1)} µm</span>`;
+  stackEl.appendChild(div);
+}
+
+/* ============ TAB SWITCH ============ */
+let currentTab = 'lpe';
+const camPos = {
+  lpe: { pos: new THREE.Vector3(7.5, 11, 22), tgt: new THREE.Vector3(0, 2.6, 0) },
+  imm: { pos: new THREE.Vector3(23, 10, 12), tgt: new THREE.Vector3(16, 3.2, 0) }
+};
+let camGoal = null;
+
+function switchTab(tab) {
+  currentTab = tab;
+  tabLPE.classList.toggle('active', tab === 'lpe');
+  tabIMM.classList.toggle('active', tab === 'imm');
+  lpeControlsEl.style.display = tab === 'lpe' ? 'block' : 'none';
+  immControlsEl.style.display = tab === 'imm' ? 'block' : 'none';
+  camGoal = camPos[tab];
+  lpeLabel.style.display = tab === 'lpe' ? 'block' : 'none';
+  immLabel.style.display = tab === 'imm' ? 'block' : 'none';
+}
+tabLPE.addEventListener('click', () => switchTab('lpe'));
+tabIMM.addEventListener('click', () => switchTab('imm'));
+
+/* ============ BUTTONS ============ */
+playBtn.addEventListener('click', () => {
+  if (cycleActive) {
+    cycleActive = false;
+    playBtn.textContent = '▶ Run Growth Cycle';
+    playBtn.classList.remove('running');
+    return;
+  }
+  cycleT = 0; currentPhaseIdx = -1; currentPhase = null; currentLocalT = 0;
+  cycleDone = false; cycleActive = true;
+  resetStack(); resetGrowthLayers();
+  if (!sliderGroup.position.x || Math.abs(sliderGroup.position.x - UNLOAD_X) < 0.01) {
+    sliderGroup.position.x = PARK_X;
+  }
+  playBtn.textContent = '■ Stop Cycle';
+  playBtn.classList.add('running');
+  playBtn.classList.remove('done');
+});
+
+const tiltSl = document.getElementById('tiltIMM'), depthSl = document.getElementById('depthIMM');
+tiltSl.addEventListener('input', () => { document.getElementById('tiltVal').textContent = tiltSl.value + '°'; });
+depthSl.addEventListener('input', () => { document.getElementById('depthVal').textContent = (depthSl.value / 100).toFixed(2) + ' µm'; });
+immBtn.addEventListener('click', () => {
+  if (S.immOn) {
+    S.immOn = false; S.beam = 0; S.tiltNow = 0; S.press = P_BASE; S.stage = 25;   /* abort: beam off, shutter closes, tilt home */
+    tiltSl.disabled = depthSl.disabled = false;
+    S.hold = { s: 'ABORTED · beam off', c: '#ff8a5a', d: 'Run stopped. Beam and Ar flow off, shutter closed, tilt returned to zero. The chip may be partly etched.', t: narrTime.textContent };
+    immBtn.textContent = '▶ Run Ion Mill';
+    immBtn.classList.remove('running');
+    return;
+  }
+  S.immT = 0; S.immIdx = -1; S.immDone = false; S.immOn = true;
+  S.etch = 0; S.press = P_BASE; S.pLock = 760; S.wafer = 0; S.tiltNow = 0; S.beam = 0; S.stage = 25;
+  tiltSl.disabled = depthSl.disabled = true; S.hold = null;
+  IBE.tilt = +tiltSl.value; IBE.depth = +depthSl.value / 100;
+  etchL.forEach(l => { if (l) l.meshes.forEach(m => { m.visible = true; m.scale.y = 1; m.position.y = l.baseY + l.h / 2; }); });
+  resist.scale.y = 1; resist.position.y = MASK_TOP + RES_H / 2; shutOpen = 0; XS.update(0, 1);
+  immBtn.textContent = '■ Stop Mill';
+  immBtn.classList.add('running');
+  immBtn.classList.remove('done');
+});
+
+/* ============ INIT ============ */
+updateIdle();
+switchTab('lpe');
+
+/* ============ ANIMATION ============ */
+const clock = new THREE.Clock();
+
+function currentStackHeight() {
+  let h = 0;
+  growthLayers.forEach(l => {
+    if (!l || !l.deposited) return;
+    if (l.active) h += l.height * activeLayerFraction();
+    else h += l.height;
+  });
+  return h;
+}
+
+function updateLPEState(dt, t) {
+  zoneCoils.forEach((c, i) => {
+    const glow = 0.3 + Math.max(0, (displayTemp - 25) / 800) * 3.0;
+    c.material.emissiveIntensity = glow + Math.sin(t * 1.9 + i * 2.1) * 0.15;
+  });
+  zoneLights.forEach((l, i) => {
+    const bright = 0.4 + Math.max(0, (displayTemp - 25) / 800) * 12;
+    l.intensity = bright + Math.sin(t * 2.4 + i * 1.8) * 0.8;
+  });
+
+  melts.forEach((m, i) => {
+    let supersat = 0;
+    let underDim = 1.0;
+    if (cycleActive && currentPhase) {
+      if (currentPhase.deposit === i) supersat = currentLocalT * 0.5;
+      if (currentPhase.meltback && i === 0) underDim = 0.6;
+    }
+    m.mesh.material.emissiveIntensity =
+      (baseMeltEmissive[i] + supersat) * underDim + Math.sin(t * 3.4 + i * 1.3) * 0.06;
+  });
+
+  sliderGlow.intensity = cycleActive ? 3.4 : 1.8;
+  inletWheel.rotation.z = t * 0.35;
+
+  pidScreens.forEach((s, i) => {
+    const ratio = Math.max(0, Math.min(1, (displayTemp - 25) / 780));
+    s.pvStrip.material.emissiveIntensity = 0.3 + ratio * 2.2;
+    s.svStrip.material.emissiveIntensity = 0.3 + ratio * 2.0;
+  });
+
+  bubbles.forEach(b => {
+    const ph = (t * b.userData.speed + b.userData.phase) % 1;
+    b.position.y = -0.19 + ph * 0.18;
+    b.position.x = b.userData.baseX + Math.sin(ph * 20) * 0.006;
+    b.scale.setScalar(0.5 + ph * 0.9);
+  });
+
+  let growthLightColor = null, growthLightIntensity = 0;
+
+  if (cycleActive) {
+    cycleT += dt;
+    if (cycleT >= CYCLE_TOTAL_ANIM) {
+      cycleT = CYCLE_TOTAL_ANIM;
+      cycleActive = false; cycleDone = true;
+      playBtn.textContent = '✓ LPE Complete';
+      playBtn.classList.remove('running');
+      playBtn.classList.add('done');
+    }
+
+    let acc = 0, idx = -1, localT = 0;
+    for (let i = 0; i < CYCLE.length; i++) {
+      if (cycleT < acc + CYCLE[i].animSec || i === CYCLE.length - 1) {
+        idx = i; localT = Math.min(1, (cycleT - acc) / CYCLE[i].animSec); break;
+      }
+      acc += CYCLE[i].animSec;
+    }
+    currentLocalT = localT;
+
+    if (idx !== currentPhaseIdx) {
+      if (currentActiveLayer) {
+        currentActiveLayer.mesh.scale.y = currentActiveLayer.height;
+        currentActiveLayer.mesh.position.y = currentActiveLayer.baseY + currentActiveLayer.height / 2;
+        currentActiveLayer.material.emissiveIntensity = 0.12;
+        currentActiveLayer.active = false;
+        currentActiveLayer = null;
+      }
+      currentPhaseIdx = idx;
+      currentPhase = CYCLE[idx];
+      if (currentPhase.deposit) {
+        depositLayer(currentPhase.deposit);
+        const layer = growthLayers[currentPhase.deposit];
+        if (layer) {
+          layer.deposited = true; layer.active = true; layer.mesh.visible = true;
+          currentActiveLayer = layer;
+        }
+      }
+      if (!S.immOn) {
+        narrStatus.textContent = currentPhase.narr;
+        narrStatus.style.color = currentPhase.color;
+        narrDetail.textContent = currentPhase.detail;
+      }
+    }
+
+    const phase = currentPhase;
+    if (phase.slider !== undefined) sliderTargetX = phase.slider;
+    else if (phase.from !== undefined) sliderTargetX = phase.from + (phase.to - phase.from) * localT;
+
+    const [tA, tB] = phase.temp;
+    displayTemp = tA + (tB - tA) * localT;
+
+    if (phase.deposit) { growthLightColor = 0x7fd6ff; growthLightIntensity = 1.4 + Math.sin(t * 8) * 0.4; }
+    else if (phase.meltback) { growthLightColor = 0xff6030; growthLightIntensity = 1.6 + Math.sin(t * 9) * 0.5; }
+
+    if (!S.immOn) {
+      progBarEl.style.width = (cycleT / CYCLE_TOTAL_ANIM * 100).toFixed(1) + '%';
+      const elapsedReal = CYCLE.slice(0, idx).reduce((a, p) => a + p.realMin, 0) + localT * CYCLE[idx].realMin;
+      narrTime.textContent = `${fmtMin(elapsedReal)} / ${fmtMin(CYCLE_TOTAL_REAL)} simulated · ${Math.round(CYCLE_TOTAL_ANIM)} s demo`;
+    }
+    updateZoneReadouts(displayTemp);
+    maybeUpdateProfile(displayTemp);
+  } else {
+    sliderTargetX = cycleDone ? UNLOAD_X : PARK_X;
+    if (cycleDone) {
+      displayTemp = Math.max(25, displayTemp - 1.5);
+      if (!S.immOn) {
+        narrStatus.textContent = 'LPE COMPLETE';
+        narrStatus.style.color = '#7ee6a0';
+        narrDetail.textContent = `${depositedLayers} layers · 2.1 µm total · DH structure finished. Switch to Ion Mill to pattern a ridge.`;
+        narrTime.textContent = `${fmtMin(CYCLE_TOTAL_REAL)} simulated cycle · complete`;
+      }
+      updateZoneReadouts(displayTemp);
+      maybeUpdateProfile(displayTemp);
+    } else if (!S.immOn) {
+      updateIdle();
+    }
+  }
+
+  sliderGroup.position.x += (sliderTargetX - sliderGroup.position.x) * 0.18;
+  const sliderX = sliderGroup.position.x;
+
+  const stackH = currentStackHeight();
+  const stackTopY = SUB_TOP + stackH;
+  const bridgeBottom = stackTopY + 0.001;
+  const bridgeTop = SLIDER_BOT - 0.001;
+  const bridgeHeight = Math.max(0.001, bridgeTop - bridgeBottom);
+
+  let contactWellIdx = -1;
+  let minDist = CONTACT_THR;
+  melts.forEach((m, i) => {
+    const wx = sliderX + WELL_OFFSETS[i];
+    if (Math.abs(wx) < minDist) {
+      minDist = Math.abs(wx);
+      contactWellIdx = i;
+    }
+  });
+
+  if (contactWellIdx >= 0) {
+    const wx = sliderX + WELL_OFFSETS[contactWellIdx];
+    meltBridge.visible = true;
+    meltBridge.position.set(wx, (bridgeBottom + bridgeTop) / 2, 0);
+    meltBridge.scale.y = bridgeHeight;
+    meltBridge.material.color.setHex(BINS[contactWellIdx].color);
+    meltBridge.material.emissive.copy(meltMats[contactWellIdx].emissive);
+    meltBridge.material.emissiveIntensity = meltMats[contactWellIdx].emissiveIntensity;
+  } else {
+    meltBridge.visible = false;
+  }
+
+  contactRing.position.y = SUB_TOP + stackH + 0.002;
+
+  if (contactWellIdx >= 0) {
+    contactRing.material.color.setHex(BINS[contactWellIdx].color);
+    contactRing.material.opacity = 0.35 + Math.sin(t * 6) * 0.12;
+    if (prevContactMeltIdx !== contactWellIdx) subRingPulse = 1;
+  } else {
+    contactRing.material.color.setHex(0x7fd6ff);
+    contactRing.material.opacity *= 0.85;
+  }
+  prevContactMeltIdx = contactWellIdx;
+  subRingPulse *= 0.92;
+
+  if (currentActiveLayer) {
+    const vis = activeLayerFraction();
+    currentActiveLayer.mesh.scale.y = currentActiveLayer.height * vis;
+    currentActiveLayer.mesh.position.y = currentActiveLayer.baseY + (currentActiveLayer.height * vis) / 2;
+    currentActiveLayer.material.emissiveIntensity = 0.5 + Math.sin(t * 7) * 0.25;
+  }
+
+  if (growthLightColor !== null) {
+    growthLight.color.setHex(growthLightColor);
+    growthLight.intensity = growthLightIntensity;
+  } else {
+    growthLight.intensity = 0;
+  }
+
+  const activity = growthLight.intensity > 0 ? 0.22 : 0.05;
+  subRing.material.opacity = 0.28 + activity * Math.sin(t * 8) + subRingPulse * 0.5;
+}
+
+function updateIMMState(dt, t) {
+  /* LPE's idle branch rewrites the narrator every frame while the mill is stopped; re-assert the mill's result */
+  if (!S.immOn && S.hold && currentTab === 'imm' && !cycleActive) {
+    narrStatus.textContent = S.hold.s; narrStatus.style.color = S.hold.c; narrDetail.textContent = S.hold.d; narrTime.textContent = S.hold.t;
+  }
+  if (S.immOn) {
+    S.immT += dt;
+    if (S.immT >= IMM_TOTAL) {
+      S.immT = IMM_TOTAL;
+      S.immOn = false; S.immDone = true;
+      tiltSl.disabled = depthSl.disabled = false;
+      S.hold = { s: 'MILL COMPLETE', c: '#7ee6a0', d: narrDetail.textContent, t: narrTime.textContent };
+      immBtn.textContent = '✓ Mill Complete';
+      immBtn.classList.remove('running');
+      immBtn.classList.add('done');
+    }
+
+    let acc = 0, idx = -1, localT = 0;
+    for (let i = 0; i < IMM_CYCLE.length; i++) {
+      if (S.immT < acc + IMM_CYCLE[i].dur || i === IMM_CYCLE.length - 1) {
+        idx = i; localT = Math.min(1, (S.immT - acc) / IMM_CYCLE[i].dur); break;
+      }
+      acc += IMM_CYCLE[i].dur;
+    }
+    S.immLocal = localT;
+
+    if (idx !== S.immIdx) {
+      S.immIdx = idx;
+      const ph = IMM_CYCLE[idx];
+      narrStatus.textContent = ph.narr;
+      narrStatus.style.color = ph.color;
+      narrDetail.textContent = typeof ph.detail === 'function' ? ph.detail() : ph.detail;
+    }
+
+    const ph = IMM_CYCLE[idx];
+    const prevIdx = idx - 1;
+    const prev = prevIdx >= 0 ? IMM_CYCLE[prevIdx] : { tP: 760, tB: 0, tS: 25 };
+
+    S.pLock = ph.pump ? pumpCurve(localT) : ph.lP ? lerpLog(ph.lP[0], ph.lP[1], localT) : S.pLock;
+    S.press = ph.cP ? lerpLog(ph.cP[0], ph.cP[1], localT) : S.press;
+    S.wafer = idx < IMM_XFER ? 0 : idx === IMM_XFER ? localT : 1;
+    S.beam  = (prev.tB || 0) + (ph.tB - (prev.tB || 0)) * localT;
+    S.stage = (prev.tS || 25) + (ph.tS - (prev.tS || 25)) * localT;
+
+    S.etch = ph.etch ? localT : (idx > IMM_MILL ? 1 : 0);   /* tied to phase progress: no integration drift */
+    S.elapsedReal = IMM_CYCLE.slice(0, idx).reduce((a, p, k) => a + imRealMin(k), 0) + localT * imRealMin(idx);
+    S.tiltNow = ph.tilt ? IBE.tilt : ph.tiltOut ? IBE.tilt * (1 - localT) : 0;
+
+    progBarEl.style.width = (S.immT / IMM_TOTAL * 100).toFixed(1) + '%';
+    narrTime.textContent = `IBE · ${fmtMin(S.elapsedReal)} of ${fmtMin(IMM_CYCLE.reduce((a, p, k) => a + imRealMin(k), 0))} real · demo ${Math.round(S.immT)}s / ${IMM_TOTAL}s`;
+  }
+
+  /* readouts */
+  document.getElementById('v1').textContent = fmtP(S.press);
+  document.getElementById('v7').textContent = fmtP(S.pLock);
+  document.getElementById('v2').textContent = S.beam.toFixed(2) + ' mA/cm²';
+  document.getElementById('v3').textContent = Math.round(S.stage) + ' °C · ' + Math.round(THREE.MathUtils.radToDeg(tiltG.rotation.x)) + '° tilt';
+  const dNow = S.etch * IBE.depth, rem = IBE.UPPER - dNow;
+  document.getElementById('v4').textContent = S.etch > 0 ? Math.round(dNow * 1000) + ' nm @ ' + ibeRate(IBE.tilt).toFixed(0) + ' nm/min' : '—';
+  const v5 = document.getElementById('v5');
+  v5.textContent = S.etch > 0 ? (rem > 0 ? rem.toFixed(2) + ' µm' : 'ACTIVE HIT') : '—';
+  v5.style.color = S.etch > 0 && rem < 0.05 ? '#ff6a5a' : '';
+  document.getElementById('v6').textContent = S.etch > 0 ? Math.max(0, IBE.resistT - dNow / IBE.sel).toFixed(2) + ' µm' : '—';
+
+  /* plasma visuals — additive blend gives the characteristic blue glow */
+  MAT.plasma.opacity = S.beam * 1.2;
+  MAT.plasmaCore.opacity = S.beam * 1.8;
+  MAT.beam.opacity = S.beam * 0.8;
+  MAT.vpGlow.opacity = S.beam * 0.85;
+  plasma.scale.setScalar(1 + S.beam * 0.4);
+  plasmaCore.scale.setScalar(1 + S.beam * 0.3);
+  chamberLight.intensity = S.beam * 10;
+
+  /* rotation averages beam non-uniformity and azimuthal shadowing of the tilted beam */
+  tiltG.rotation.x = THREE.MathUtils.lerp(tiltG.rotation.x, (S.tiltNow || 0) * Math.PI / 180, 0.1);
+  { const e = S.wafer, a = Math.min(1, e / 0.7), d = Math.max(0, (e - 0.7) / 0.3);   /* slide in from the lock, then lower onto the stage */
+    wafer.position.set(2.2 * (1 - a), 0.06 + 0.24 * (1 - d), 0); }
+  const hotNow = S.immOn && IMM_CYCLE[S.immIdx] && IMM_CYCLE[S.immIdx].hot, openNow = S.immOn && IMM_CYCLE[S.immIdx] && IMM_CYCLE[S.immIdx].open;
+  shutOpen += ((openNow ? 1 : 0) - shutOpen) * Math.min(1, dt * 4);
+  leafL.rotation.z = shutOpen * 1.5; leafR.rotation.z = -shutOpen * 1.5;
+  const bBot = THREE.MathUtils.lerp(shutterY + 0.02, BB, shutOpen);
+  beamCone.scale.y = Math.max(0.02, (BT - bBot) / (BT - BB)); beamCone.position.y = (BT + bBot) / 2;
+  neutMat.emissiveIntensity += ((hotNow ? 2.2 : 0) - neutMat.emissiveIntensity) * Math.min(1, dt * 3);
+  shutterMat.emissiveIntensity = S.beam * (1 - shutOpen) * 0.9;
+  const isMilling = S.immOn && IMM_CYCLE[S.immIdx] && IMM_CYCLE[S.immIdx].etch;
+  const spinRate = isMilling ? 1.5 : 0;   /* rad/s: 1.5 ≈ 14 rpm */
+  wafer.rotation.y += spinRate * dt;
+  stg.rotation.y = wafer.rotation.y;
+
+  /* sputter particles as tapered directional streaks */
+  let surfY = 0.04;                                   /* top of the topmost still-visible flank layer */
+  for (let i = etchL.length - 1; i >= 1; i--) { const l = etchL[i]; if (l && l.meshes[0].visible) { surfY = l.baseY + l.h * l.meshes[0].scale.y; break; } }
+  if (isMilling) wafer.updateWorldMatrix(true, false);   /* matrixWorld is otherwise one render stale */
+  sputters.forEach(s => {
+    if (isMilling) {
+      s.mesh.visible = true;
+      s.age += dt * 1.4;
+      if (s.age >= 1) {
+        s.age = 0;
+        /* spawn on the etched FLANKS, in the wafer frame so it follows tilt + rotation */
+        const side = Math.random() < 0.5 ? -1 : 1;
+        const sp = new THREE.Vector3(side * (RW / 2 + Math.random() * FW * 0.9), surfY + 0.012, (Math.random() - 0.5) * 0.66);
+        wafer.localToWorld(sp); IMM.worldToLocal(sp); s.mesh.position.copy(sp);
+        s.nrm = new THREE.Vector3(0, 1, 0).transformDirection(wafer.matrixWorld);
+        /* cosine forward-peaked distribution with occasional backscatter */
+        const theta = Math.random() * Math.PI * 0.5;
+        const phi = Math.random() * Math.PI * 2;
+        const speed = 0.35 + Math.random() * 0.7;
+        const jit = new THREE.Vector3(Math.sin(theta) * Math.cos(phi), 0, Math.sin(theta) * Math.sin(phi)).multiplyScalar(0.7);
+        const vv = s.nrm.clone().multiplyScalar(Math.cos(theta)).add(jit).normalize().multiplyScalar(speed);
+        s.vx = vv.x; s.vy = vv.y; s.vz = vv.z;
+      }
+      s.mesh.position.x += s.vx * dt;
+      s.mesh.position.y += s.vy * dt;
+      s.mesh.position.z += s.vz * dt;
+      /* orient the streak along its velocity */
+      const v = new THREE.Vector3(s.vx, s.vy, s.vz).normalize();
+      s.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), v);
+      s.mesh.material.opacity = 0.85 * (1 - s.age);
+    } else {
+      s.mesh.visible = false;
+    }
+  });
+
+  /* etch both flanks top-down to the chosen depth; the ridge under the resist stays */
+  let remaining = S.etch * IBE.depth;
+  for (let i = etchL.length - 1; i >= 1; i--) {
+    const l = etchL[i]; if (!l) continue;
+    const take = Math.min(remaining, l.t), frac = take / l.t;
+    const newH = Math.max(0.0005, l.h * (1 - frac));
+    l.meshes.forEach(m => { m.visible = frac < 0.999; m.scale.y = newH / l.h; m.position.y = l.baseY + newH / 2; });
+    remaining -= take;
+  }
+  /* resist is consumed at depth / selectivity (selectivity is an assumption) */
+  const resLeft = Math.max(0.02, 1 - (S.etch * IBE.depth / IBE.sel) / IBE.resistT);
+  resist.scale.y = resLeft; resist.position.y = MASK_TOP + RES_H * resLeft / 2;
+  XS.update(S.etch * IBE.depth, resLeft);
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.1);
+  const t = clock.getElapsedTime();
+
+  updateLPEState(dt, t);
+  updateIMMState(dt, t);
+
+  if (camGoal) {
+    camera.position.lerp(camGoal.pos, 0.07);
+    controls.target.lerp(camGoal.tgt, 0.07);
+    if (camera.position.distanceTo(camGoal.pos) < 0.05) camGoal = null;
+  }
+
+  placeLabel(lpeLabel, 0, 6.5, 0);
+  placeLabel(immLabel, 16, 7.5, 0);
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+animate();
+</script>
+</body>
+</html>
