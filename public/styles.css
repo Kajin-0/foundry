@@ -136,3 +136,13 @@
 .tab{font-size:8px;padding:7px 1px}
 #hint{display:none}
 }
+
+/* MBE v2: organized technical readouts, without adding heavy graphics. */
+#mbeControls .spec-group {
+ display:block; color:#6589ab; text-transform:uppercase; letter-spacing:.19em;
+ font-size:9px; font-weight:650;
+ margin:9px 0 3px; padding-top:7px;
+ border-top:1px solid rgba(88,128,172,.22);
+}
+#mbeControls .spec-group:first-child{border:0;padding-top:0;margin-top:0}
+#leftPanel,#rightPanel{contain:layout style}

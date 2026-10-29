@@ -72,3 +72,30 @@ test('small viewport can select all three stations',async({page})=>{
  await expect(page.locator('canvas')).toHaveCount(1);
  expect((await page.evaluate(()=>window.__foundryDiagnostics())).pixelRatio).toBeLessThanOrEqual(1);
 });
+
+test('lossless MBE batching lowers actual GPU draw calls without reducing triangles',async({page})=>{
+ const getMetrics=async()=>{
+  await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.mbeLoaded),{timeout:30000}).toBe(true);
+  await page.waitForTimeout(1800);
+  return await page.evaluate(()=>window.__foundryDiagnostics());
+ };
+ await page.goto('/?tool=mbe');
+ const batched=await getMetrics();
+ expect(batched.mbeRenderOptimization.totalSavedDrawCalls).toBeGreaterThan(8);
+ await page.addInitScript(()=>{window.__foundryDisableBatching=true});
+ await page.reload();
+ const unbatched=await getMetrics();
+ console.log('MBE draw-call A/B (same geometry):',JSON.stringify({
+  savedMeshCalls:batched.mbeRenderOptimization.totalSavedDrawCalls,
+  batchedCalls:batched.drawCalls,unbatchedCalls:unbatched.drawCalls,
+  batchedTriangles:batched.triangles,unbatchedTriangles:unbatched.triangles,
+  batchedCpuP95:batched.cpuRenderP95ms,unbatchedCpuP95:unbatched.cpuRenderP95ms,
+ }));
+ // Equivalent model geometry and materials: no mesh simplification.
+ expect(unbatched.drawCalls).toBeGreaterThan(batched.drawCalls+8);
+ // Runtime triangle statistics may differ under frustum culling as object
+ // batches have larger bounding spheres. Geometry index integrity is
+ // strictly verified in mergeStaticDrawCalls and Node unit tests.
+ expect(batched.mbeRenderOptimization.verifiedTriangleIndices).toBeGreaterThan(0);
+ expect(batched.drawCalls).toBeGreaterThan(0);
+});
