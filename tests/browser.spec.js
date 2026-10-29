@@ -265,3 +265,25 @@ test('CMP panels can be minimized and restored on mobile without extra canvas',a
  await expect(page.locator('#cmpXsecSvg')).toBeVisible();
  await expect(page.locator('canvas')).toHaveCount(1);
 });
+
+test('CMP retains geometry while batching rigid parts into fewer WebGL draw calls',async({page})=>{
+ const snapshot=async()=>{
+  await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.cmpLoaded),{timeout:30000}).toBe(true);
+  await page.waitForTimeout(1250);
+  return page.evaluate(()=>window.__foundryDiagnostics());
+ };
+ await page.goto('/?tool=cmp');
+ const batched=await snapshot();
+ expect(batched.cmpRenderOptimization.savedDrawCalls).toBeGreaterThan(4);
+ await page.addInitScript(()=>{window.__foundryDisableBatching=true;});
+ await page.reload();
+ const raw=await snapshot();
+ console.log('CMP draw-call A/B',JSON.stringify({
+  batched:batched.drawCalls,unbatched:raw.drawCalls,
+  trianglesBatched:batched.triangles,trianglesRaw:raw.triangles,
+  savedGeometrySubmissions:batched.cmpRenderOptimization.savedDrawCalls
+ }));
+ expect(raw.drawCalls).toBeGreaterThan(batched.drawCalls+4);
+ expect(batched.cmpRenderOptimization.verifiedTriangleIndices).toBeGreaterThan(0);
+ expect(batched.rendererCount).toBe(1);
+});
