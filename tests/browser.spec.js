@@ -275,7 +275,7 @@ test('CMP retains geometry while batching rigid parts into fewer WebGL draw call
  await page.goto('/?tool=cmp');
  const batched=await snapshot();
  expect(batched.cmpRenderOptimization.savedDrawCalls).toBeGreaterThan(4);
- await page.addInitScript(()=>{window.__foundryDisableBatching=true;});
+ await page.addInitScript(()=>{window.__foundryDisableCmpBatching=true;});
  await page.reload();
  const raw=await snapshot();
  console.log('CMP draw-call A/B',JSON.stringify({

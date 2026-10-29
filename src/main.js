@@ -214,7 +214,7 @@ async function ensureCMP(){
  if(!cmpLoading){
   cmpLoading=Promise.all([import('./cmp/scene.js'),import('./cmp/controller.js')])
   .then(([modelModule,controllerModule])=>{
-   const model=modelModule.buildCMP({scene});
+   const model=modelModule.buildCMP({scene,batchStatic:!window.__foundryDisableCmpBatching});
    cmpController=controllerModule.createCMPController(model);
    cmpController.group.visible=currentTab==='cmp';
    room.setFocus(currentTab);
