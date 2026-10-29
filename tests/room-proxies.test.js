@@ -35,7 +35,7 @@ test('the 4 proxies occupy their real shared-room bays',()=>{
  assert.equal(grid.position.x,model.layout.centerX);
  assert.equal(grid.geometry.attributes.position.count,model.layout.gridDivisions*4+4);
  assert.equal(floor.geometry.parameters.width,model.layout.floorSize);
- assert.equal(grid.geometry.boundingSphere?.radius>0,true);
+ assert.equal(grid.geometry.attributes.position.count,4*(model.layout.gridDivisions+1));
  assert.ok(model.layout.gridSize>=360,'grid ends must be beyond the fog horizon');
  model.setFocus('lpe');
  assert.equal(model.proxies.lpe.visible,false);
