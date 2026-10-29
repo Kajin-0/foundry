@@ -4,10 +4,12 @@ import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 
 export function createSceneContext() {
 /* ============ RENDERER ============ */
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+const lowPower=window.innerWidth<900 || (window.matchMedia && window.matchMedia('(pointer:coarse)').matches);
+const renderer = new THREE.WebGLRenderer({ antialias: !lowPower, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, lowPower ? 1 : 1.25));
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.shadowMap.enabled = true;
+renderer.shadowMap.enabled = !lowPower;
+renderer.shadowMap.autoUpdate = false;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.15;
@@ -46,12 +48,13 @@ scene.add(new THREE.HemisphereLight(0x9dc4ff, 0x0a0d12, 0.55));
 const keyLight = new THREE.DirectionalLight(0xfff2e0, 2.2);
 keyLight.position.set(9, 18, 14);
 keyLight.castShadow = true;
-keyLight.shadow.mapSize.set(window.innerWidth < 900 ? 1024 : 2048, window.innerWidth < 900 ? 1024 : 2048);
+keyLight.shadow.mapSize.set(lowPower ? 512 : 1024, lowPower ? 512 : 1024);
 const sh = keyLight.shadow.camera;
-sh.left = -22; sh.right = 22; sh.top = 20; sh.bottom = -20; sh.near = 1; sh.far = 80;
+sh.left = -13; sh.right = 13; sh.top = 13; sh.bottom = -13; sh.near = 1; sh.far = 80;
 keyLight.shadow.bias = -0.0005;
 keyLight.shadow.normalBias = 0.025;
 scene.add(keyLight);
+scene.add(keyLight.target);
 
 const fill = new THREE.DirectionalLight(0x8ab8e8, 1.0);
 fill.position.set(-12, 6, -10);
@@ -119,5 +122,5 @@ const MAT = {
 };
 
 
-return {renderer,scene,camera,controls,clipPlane,clipPlaneIMM,MAT};
+return {renderer,scene,camera,controls,clipPlane,clipPlaneIMM,MAT,keyLight,rimLPE,rimIMM,lowPower};
 }

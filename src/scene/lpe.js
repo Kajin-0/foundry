@@ -11,7 +11,7 @@ const baseMeltEmissive = BINS.map(b => 0.45 + b.glow * 0.3);
 
 /* ============ FLOOR ============ */
 const floor = new THREE.Mesh(
-  new THREE.CircleGeometry(80, 40),
+  new THREE.CircleGeometry(80, 64),
   new THREE.MeshStandardMaterial({ color: 0x0b0e13, roughness: 0.6, metalness: 0.55 })
 );
 floor.rotation.x = -Math.PI / 2;
