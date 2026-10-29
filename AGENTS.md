@@ -15,3 +15,12 @@ All instruments **must live in the same Three.js scene**, reached by station tab
 
 ## Ion-mill educational UX and physical assembly
 Ion milling is a **preset illustrative recipe**, like LPE and MBE. No user-adjustable stage tilt or etch depth: defaults live in `src/process/ion-etch.js` (500 eV, 0.5 mA/cm², 30° tilt, 0.40 µm target). The sole slider is chamber cutaway. The wafer is already mounted on the stage in the chamber at idle and throughout every phase. The earlier scene's airborne "load" animation was removed intentionally; actual load-lock transfer occurs offscreen prior to the demonstration. The chamber rests on grounded posts/collar, the lower turbo stack on a pedestal, and the side load lock on a support bracket. Preserve these constraints when extending the simulation; test no motion relative to the stage and the simplified controls in Chromium.
+
+## Overlay visibility / inspection mode
+Process (#leftPanel) and Equipment (#rightPanel) are independently minimizable,
+with fixed edge restore tabs and an unobtrusive `Focus view` button in the HUD.
+Press H to toggle both; Escape restores both. When both are minimized, hide
+nonessential HUD title, 3D floating labels and navigation hint; do not pause
+or reset the current scientific process. Visibility must persist when changing
+stations, including lazy MBE loading. Logic is in `src/ui/panel-visibility.js`;
+tests cover desktop/mobile, keyboard and simulation continuity.

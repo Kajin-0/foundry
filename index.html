@@ -12,10 +12,18 @@
 <div id="hud">
   <h1>FOUNDRY</h1>
   <p>One virtual laboratory · Three fabrication tools</p>
+  <button id="focusToggle" class="focus-toggle" type="button"
+    aria-controls="leftPanel rightPanel" aria-pressed="false"
+    aria-keyshortcuts="H" title="Hide both panels to inspect the lab (H)">Focus view</button>
   
 </div>
 
 <div id="leftPanel">
+  <div class="panel-heading">
+    <span>Process</span>
+    <button id="minimizeProcess" type="button" class="panel-minimize"
+      aria-label="Minimize process panel" aria-controls="leftPanel" title="Minimize process panel">−</button>
+  </div>
   <div id="lpeLeft">
   <div class="label">Live Process</div>
   <div id="narrator">
@@ -85,6 +93,11 @@
 </div>
 
 <div id="rightPanel">
+  <div class="panel-heading">
+    <span>Equipment</span>
+    <button id="minimizeEquipment" type="button" class="panel-minimize"
+      aria-label="Minimize equipment panel" aria-controls="rightPanel" title="Minimize equipment panel">−</button>
+  </div>
   <div class="tabs" role="group" aria-label="Select fabrication station">
     <button class="tab" id="tabOverview" type="button">Room</button>
     <button class="tab active" id="tabLPE" type="button">LPE</button>
@@ -183,6 +196,11 @@
 
   </div>
 </div>
+
+<button id="restoreProcess" class="panel-edge-tab panel-edge-tab-left" type="button" hidden
+  aria-label="Restore process panel" aria-controls="leftPanel">+ Process</button>
+<button id="restoreEquipment" class="panel-edge-tab panel-edge-tab-right" type="button" hidden
+  aria-label="Restore equipment panel" aria-controls="rightPanel">+ Equipment</button>
 
 <div id="hint"><b>drag</b> orbit &nbsp;·&nbsp; <b>scroll</b> zoom &nbsp;·&nbsp; <b>right-drag</b> pan</div>
 

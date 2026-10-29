@@ -7,6 +7,7 @@ import {buildRoom,BAYS} from './scene/room.js';
 import {mergeStaticDrawCalls} from './scene/merge-static.js';
 import {createThermalProfile} from './ui/thermal-profile.js';
 import {createCrossSection} from './ui/cross-section.js';
+import {initPanelVisibility} from './ui/panel-visibility.js';
 import {BINS,PARK_X,UNLOAD_X,WELL_OFFSETS,CONTACT_THR,ZONES,BASE_TOP,SUB_TOP,MELT_H,SLIDER_BOT} from './config/geometry.js';
 import {CYCLE,CYCLE_TOTAL_ANIM,CYCLE_TOTAL_REAL,fmtMin} from './process/lpe-cycle.js';
 import {IBE,ibeRate,millMin,P_BASE,P_WORK,P_PREP,IMM_CYCLE,IMM_TOTAL,IMM_MILL,fmtP,imRealMin,lerpLog} from './process/ion-etch.js';
@@ -16,6 +17,7 @@ const {cyl,box,boltRing,tubeAlong,makeCoil,annularTube} = createGeometryHelpers(
 const {machine,zoneCoils,zoneLights,growthLayers,growthLayersGroup,contactRing,meltBridge,melts,sliderGroup,subRing,substrate,growthLight,sliderGlow,bubbles,pidScreens,otcLed,inletWheel,meltMats,baseMeltEmissive} = buildLpe({scene,MAT,clipPlane,cyl,box,boltRing,tubeAlong,makeCoil,annularTube});
 const {IMM,etchL,wafer,resist,MASK_TOP,RES_H,tiltG,beamCone,plasma,plasmaCore,sputters,chamberLight,neutMat,leafL,leafR,shutterMat,shutterY,BT,BB,stg,RW,FW,vpGlow} = buildIonMill({scene,MAT,cyl,box,annularTube,tubeAlong});
 const room=buildRoom(scene);
+const panelVisibility=initPanelVisibility();
 let mbeController=null;
 let mbeLoading=null;
 let currentActiveLayer = null;
@@ -733,7 +735,7 @@ window.addEventListener('resize',()=>{
 });
 // Exposes lightweight, read-only render diagnostics for browser tests / profiling.
 window.__foundryDiagnostics=()=>({
- view:currentTab,rendererCount:document.querySelectorAll('canvas').length,
+ view:currentTab,panels:panelVisibility.state(),rendererCount:document.querySelectorAll('canvas').length,
  mbeLoaded:!!mbeController,
  mbeRenderOptimization:mbeController?.renderOptimization??null,
  lpeRenderOptimization,immRenderOptimization,
