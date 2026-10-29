@@ -48,7 +48,10 @@ export function cmpAtTime(seconds){
  const smooth=ease(local);
  const param=(key)=>prior[key]+(phase[key]-prior[key])*smooth;
  const polish=CMP_PHASES[2],polishStart=CMP_PHASES[0].duration+CMP_PHASES[1].duration;
- const oxideRemovedNm=clamp((elapsed-polishStart)/polish.duration,0,1)*CMP_RECIPE.oxideTargetNm;
+ // First 10% of polishing is head approach. Only remove film at contact.
+ const contactFraction=.10;
+ const oxideRemovedNm=clamp((elapsed-polishStart-polish.duration*contactFraction)/
+  (polish.duration*(1-contactFraction)),0,1)*CMP_RECIPE.oxideTargetNm;
  const overStart=polishStart+polish.duration;
  const overFraction=clamp((elapsed-overStart)/CMP_PHASES[3].duration,0,1);
  const nitrideErodedNm=overFraction*CMP_PHASES[3].minutes*CMP_RECIPE.nitrideRateNmMin;
@@ -58,9 +61,11 @@ export function cmpAtTime(seconds){
   fraction:elapsed/CMP_TOTAL,
   realMinutes:realStart+phase.minutes*local,
   platenRPM:param('platenRPM'),carrierRPM:param('carrierRPM'),
-  pressurePsi:param('pressurePsi'),waferLift:param('lift'),
+  pressurePsi:phase.key==='polish'?
+   CMP_RECIPE.pressurePsi*ease(clamp((local-.10)/.10,0,1)):param('pressurePsi'),
+  waferLift:phase.key==='polish'?1-ease(clamp(local/.10,0,1)):param('lift'),
   slurryMlMin:param('slurry'),conditioning:phase.condition,
   oxideRemovedNm,nitrideErodedNm,endpoint,
-  removalRateNmMin:phase.key==='polish'?CMP_RECIPE.oxideRateNmMin:0
+  removalRateNmMin:phase.key==='polish'&&local>.10?CMP_RECIPE.oxideRateNmMin:0
  };
 }

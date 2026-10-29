@@ -35,7 +35,10 @@ export function createCMPController(model){
   // independent of the shared WebGL render cadence.
   uiTime+=dt;
   if(visible){
-   model.setVisual({...value,_dt:dt},time,true);
+   const visual=running?value:{
+    ...value,platenRPM:0,carrierRPM:0,slurryMlMin:0,conditioning:false
+   };
+   model.setVisual({...visual,_dt:running?dt:0},time,true);
    if(uiTime>=.10||done){ui.update(value);uiTime=0;}
   }
  }

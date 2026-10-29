@@ -7,8 +7,8 @@ test('single room hosts LPE and ion mill with one WebGL canvas',async({page})=>{
  await expect(page.locator('#tabOverview')).toHaveClass(/active/);
  await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics?.().rendererCount)).toBe(1);
  const overview=await page.evaluate(()=>window.__foundryDiagnostics());
- expect(overview.detailed).toEqual({lpe:false,imm:false,mbe:false});
- expect(overview.proxies).toEqual({lpe:true,imm:true,mbe:true});
+ expect(overview.detailed).toEqual({lpe:false,imm:false,mbe:false,cmp:false});
+ expect(overview.proxies).toEqual({lpe:true,imm:true,mbe:true,cmp:true});
  expect(overview.mbeLoaded).toBe(false);
  expect(overview.pixelRatio).toBeLessThanOrEqual(1.25);
  await page.locator('#tabLPE').click();
@@ -25,7 +25,7 @@ test('single room hosts LPE and ion mill with one WebGL canvas',async({page})=>{
  await page.locator('#immBtn').click();
  await expect(page.locator('#immBtn')).toContainText('Run');
  await page.locator('#tabOverview').click();
- expect((await page.evaluate(()=>window.__foundryDiagnostics())).proxies).toEqual({lpe:true,imm:true,mbe:true});
+ expect((await page.evaluate(()=>window.__foundryDiagnostics())).proxies).toEqual({lpe:true,imm:true,mbe:true,cmp:true});
  expect(errors).toEqual([]);
 });
 test('MBE loads lazily into same room with no extra WebGL renderer',async({page})=>{
@@ -39,8 +39,8 @@ test('MBE loads lazily into same room with no extra WebGL renderer',async({page}
  await expect(page.locator('#mbeV1')).not.toHaveText('—');
  await expect(page.locator('canvas')).toHaveCount(1);
  const d=await page.evaluate(()=>window.__foundryDiagnostics());
- expect(d.detailed).toEqual({lpe:false,imm:false,mbe:true});
- expect(d.proxies).toEqual({lpe:true,imm:true,mbe:false});
+ expect(d.detailed).toEqual({lpe:false,imm:false,mbe:true,cmp:false});
+ expect(d.proxies).toEqual({lpe:true,imm:true,mbe:false,cmp:true});
  expect(d.rendererCount).toBe(1);
  await page.locator('#mbePlayBtn').click();
  await expect(page.locator('#mbePlayBtn')).toContainText('Stop');
@@ -212,5 +212,56 @@ test('narrow mobile layout leaves tiny restore controls for panels',async({page}
  await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.mbeLoaded),{timeout:30000}).toBe(true);
  await page.locator('#restoreProcess').click();
  await expect(page.locator('#mbeRheedSvg')).toBeVisible();
+ await expect(page.locator('canvas')).toHaveCount(1);
+});
+
+test('CMP is a lazily loaded fourth machine inside the same renderer',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/');
+ const initial=await page.evaluate(()=>window.__foundryDiagnostics());
+ expect(initial.cmpLoaded).toBe(false);
+ expect(initial.proxies.cmp).toBe(true);
+ await expect(page.locator('#tabCMP')).toBeVisible();
+ await page.locator('#tabCMP').click();
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.cmpLoaded),{timeout:30000}).toBe(true);
+ await expect(page.locator('#cmpControls')).toBeVisible();
+ await expect(page.locator('#cmpLeft')).toBeVisible();
+ await expect(page.locator('#cmpXsecSvg')).toBeVisible();
+ await expect(page.locator('#cmpV1')).toHaveText('0 rpm');
+ const d=await page.evaluate(()=>window.__foundryDiagnostics());
+ expect(d.view).toBe('cmp');
+ expect(d.rendererCount).toBe(1);
+ expect(d.detailed).toEqual({lpe:false,imm:false,mbe:false,cmp:true});
+ expect(d.proxies.cmp).toBe(false);
+ expect(d.cmpGeometry.headContactY-d.cmpGeometry.padTopY).toBeCloseTo(.2375,6);
+ await page.locator('#cmpPlayBtn').click();
+ await expect(page.locator('#cmpPlayBtn')).toContainText('Stop');
+ await page.waitForTimeout(350);
+ const elapsed=await page.evaluate(()=>window.__foundryDiagnostics().cmpState.elapsed);
+ expect(elapsed).toBeGreaterThan(0);
+ await page.locator('#tabLPE').click();
+ await expect(page.locator('#lpeControls')).toBeVisible();
+ await page.waitForTimeout(250);
+ await page.locator('#tabCMP').click();
+ const resumed=await page.evaluate(()=>window.__foundryDiagnostics().cmpState.elapsed);
+ expect(resumed).toBeGreaterThanOrEqual(elapsed);
+ await page.locator('#cmpPlayBtn').click();
+ await expect(page.locator('#cmpPlayBtn')).toContainText('Restart');
+ expect(errors).toEqual([]);
+});
+
+test('CMP panels can be minimized and restored on mobile without extra canvas',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto('/?tool=cmp');
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.cmpLoaded),{timeout:30000}).toBe(true);
+ await expect(page.locator('#tabCMP')).toHaveClass(/active/);
+ await expect(page.locator('#cmpPlayBtn')).toBeVisible();
+ await page.locator('#focusToggle').click();
+ await expect(page.locator('#leftPanel')).toBeHidden();
+ await expect(page.locator('#rightPanel')).toBeHidden();
+ await page.locator('#restoreEquipment').click();
+ await expect(page.locator('#cmpControls')).toBeVisible();
+ await page.locator('#restoreProcess').click();
+ await expect(page.locator('#cmpXsecSvg')).toBeVisible();
  await expect(page.locator('canvas')).toHaveCount(1);
 });
