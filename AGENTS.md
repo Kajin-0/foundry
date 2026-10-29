@@ -9,3 +9,6 @@ Never silently promote illustrative kinetics/temperatures/pressure readouts into
 Run `npm install`, `npm run dev`, `npm run check`, `npm test`, and `npm run build`. Verify both independent cycles, restart/abort, tab switching, camera and cutaways.
 
 MBE is a standalone route (`mbe.html`). Its scene/UI/process are in `src/mbe/`; see `docs/MBE_MODEL.md`. Do not duplicate physical thickness logic: `layerThicknessUmAt()` governs the SVG, 3D layers and ML readout. Do not treat source BEP as chamber pressure. Run MBE numerical and Chromium tests before merging.
+
+## Shared-room invariant (late October 2026)
+All instruments **must live in the same Three.js scene**, reached by station tabs and shared camera: LPE x=0, Ion Mill x=16, MBE x=30. Never add a second WebGLRenderer, stand-alone MBE canvas or separate simulation page. `mbe.html` is a redirect-only compatibility path. The overview displays low-polygon representations; selected station shows full equipment; hidden machine processes can continue but GPU and DOM work should be throttled. MBE loads lazily. Profile performance with `window.__foundryDiagnostics()`; keep visual quality competitive on modest GPUs. Test overview, both legacy stations, MBE lazy selection, route compatibility and mobile, and verify one canvas across navigation.

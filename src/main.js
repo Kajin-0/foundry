@@ -222,6 +222,7 @@ function switchTab(tab){
  }
  showProcessPanel(tab);
  camGoal=camPos[tab];
+ controls.maxPolarAngle=tab==='mbe'?Math.PI*.73:Math.PI*.495;
  // One physically shared key light; its shadow frustum follows the chosen station.
  const x=tab==='overview'?14:BAYS[tab].x;
  keyLight.position.set(x+9,18,14);

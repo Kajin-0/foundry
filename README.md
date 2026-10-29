@@ -1,6 +1,6 @@
 # Foundry — Interactive Photodetector Process Lab
 
-A modular browser-based 3D teaching and process-visualization application for GaAs/AlGaAs liquid-phase epitaxy and Ar⁺ ion-beam milling, migrated from v11.6 without changing the underlying timeline/physics constants.
+A **single shared 3D semiconductor fabrication laboratory** containing LPE, Ar⁺ ion milling, and MBE equipment. All stations share one Three.js scene, camera, WebGL renderer and navigation controls. The physics are illustrative, with tested layer/rate calculations where applicable.
 
 ## Run locally
 
@@ -16,28 +16,38 @@ Deploy `dist/` to a static host or embed its production assets in a website.
 
 ## Hosted GitHub Pages site
 
-GitHub Pages uses **Settings → Pages → Source: GitHub Actions**. The workflow at
-`.github/workflows/deploy-pages.yml` builds the Vite multi-page application,
-checks syntax and process-model tests, uploads only the generated `dist/`
-directory and publishes automatically after each push to `main`.
-It can also be launched manually from **Actions → Deploy Foundry to GitHub Pages → Run workflow**.
+GitHub Pages deployment is automatic from `main` via
+`.github/workflows/deploy-pages.yml`. Source setting: **GitHub Actions**.
 
-- LPE / ion-mill: https://kajin-0.github.io/foundry/
-- MBE: https://kajin-0.github.io/foundry/mbe.html
+- **Entire laboratory:** https://kajin-0.github.io/foundry/
+- **Direct MBE station link:** https://kajin-0.github.io/foundry/?tool=mbe
+- Older `/mbe.html` links redirect to that station in the same room.
 
-`vite.config.js` specifies relative asset paths (`base: './'`) so both pages
-work under the repository's `/foundry/` URL prefix. There is no server
-component. The deploy job requests the minimum GitHub Pages publishing token
-permissions (`contents: read`, `pages: write`, `id-token: write`).
+The shared lab initially displays three equipment stations in overview.
+Selecting **LPE**, **Ion Mill** or **MBE** focuses the camera and opens the
+chosen machine's full detailed geometry and controls.
 
-## Labs
+## Performance architecture
 
-- [LPE + ion mill](./index.html) — furnace growth and Ar⁺ etch.
-- [MBE](./mbe.html) — GaAs/AlGaAs UHV molecular-beam epitaxy, flux calibration, oxide desorption, RHEED and layer growth. See [MBE model notes](docs/MBE_MODEL.md).
+- Exactly **one** WebGL renderer, camera and shared light/environment.
+- High-detail equipment only for the selected bay; other tools remain present
+  as lightweight 3D room representations (LOD).
+- MBE geometry and its module are loaded on first selection, not at initial visit.
+- Pixel ratio capped at 1.25 desktop / 1 on low-power or mobile screens.
+- Shadows disabled on low-power devices; selected equipment shadows use a
+  reduced atlas refreshed at most a few times per second.
+- Process animations and readouts update independently of rendering; hidden
+  machine state advances at reduced CPU frequency, and SVG updates are throttled.
+- Read-only browser performance snapshot: `window.__foundryDiagnostics()`
+  reports active room/station, one renderer, detail visibility, draw calls,
+  triangles and DPR. Actual FPS varies by device; no universal FPS guarantee.
+- Future GPU profiling should compare desktop and mobile p50/p95 frame time.
 
 ## Project structure
 
-- `src/main.js`: state machines, controls, orchestration, render loop
+- `src/main.js`: shared room and station navigation, LPE/ion state, shared render loop
+- `src/scene/room.js`: common laboratory with three stations and lightweight LOD stand-ins
+- `src/mbe/scene.js`, `src/mbe/controller.js`, `src/mbe/ui.js`: lazily loaded MBE equipment and process interface
 - `src/config/geometry.js`: common geometry/epitaxial stack inputs
 - `src/scene/context.js`: WebGL, shared materials, camera, lighting
 - `src/scene/helpers.js`: reusable geometry and GPU-instanced bolt rings
