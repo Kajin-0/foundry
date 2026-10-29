@@ -13,6 +13,7 @@ test('room envelope is computed from the real outer machine footprints',()=>{
  assert.ok(l.floorSize>=360);
  assert.equal(l.gridSize,l.floorSize);
  assert.equal(l.gridDivisions,l.gridSize/LAB_GRID_PITCH);
+ assert.equal(l.gridDivisions%2,0,'preserve an exact central grid axis');
  assert.ok(l.wallMinX<l.minX&&l.wallMaxX>l.maxX);
  assert.ok(l.floorSize/2>LAB_FOG_FAR+35);
 });

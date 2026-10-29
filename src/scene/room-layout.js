@@ -25,7 +25,7 @@ export function calculateRoomLayout(bays){
  // The floor is still two triangles and the grid still one draw call,
  // so extending it adds only a few line vertices, never more polygons
  // to the machines. Preserve the established 2-unit grid-line pitch.
- const floorSize=Math.ceil(Math.max(400,span*4+200)/LAB_GRID_PITCH)*LAB_GRID_PITCH;
+ const floorSize=Math.ceil(Math.max(400,span*4+200)/(2*LAB_GRID_PITCH))*(2*LAB_GRID_PITCH);
  return Object.freeze({
   minX,maxX,centerX,span,wallMinX,wallMaxX,wallWidth,
   floorSize,gridSize:floorSize,gridDivisions:floorSize/LAB_GRID_PITCH,
