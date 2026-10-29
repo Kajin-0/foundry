@@ -11,7 +11,7 @@
 
 <div id="hud">
   <h1>FOUNDRY</h1>
-  <p>One virtual laboratory · Three fabrication tools</p>
+  <p>One virtual laboratory · Four fabrication tools</p>
   <button id="focusToggle" class="focus-toggle" type="button"
     aria-controls="leftPanel rightPanel" aria-pressed="false"
     aria-keyshortcuts="H" title="Hide both panels to inspect the lab (H)">Focus view</button>
@@ -28,7 +28,7 @@
   <div class="label">Live Process</div>
   <div id="narrator">
     <div id="narrStatus">IDLE</div>
-    <div id="narrDetail">One virtual lab with three independent tools: LPE and MBE grow GaAs/AlGaAs layers; ion milling patterns a ridge using Ar⁺.</div>
+    <div id="narrDetail">Four separate fabrication demonstrations: LPE and MBE deposit layers, ion milling removes material, and CMP planarizes silicon STI oxide.</div>
     <div id="narrTime">—</div>
   </div>
   <div id="lpeOnlyIllustrations">
@@ -82,12 +82,26 @@
   <div id="mbeProgWrap"><div id="mbeProgBar"></div></div>
 
   </div>
+  <div id="cmpLeft" hidden>
+    <div class="label">Live CMP Process</div>
+    <div id="cmpNarrator">
+      <div id="cmpNarrStatus">IDLE</div>
+      <div id="cmpNarrDetail">Press Run to planarize an illustrative silicon STI oxide stack down to the SiN stop layer.</div>
+      <div id="cmpNarrTime">—</div>
+    </div>
+    <div class="label">Wafer Cross-Section <span class="section-note">(schematic)</span></div>
+    <svg id="cmpXsecSvg" viewBox="0 0 300 100" aria-label="CMP silicon STI and oxide cross-section"><g id="cmpXsecContent"></g></svg>
+    <div class="label">Progress</div>
+    <div id="cmpProgWrap"><div id="cmpProgBar"></div></div>
+    <p class="room-note">Silicon STI reference process; separate from the GaAs/AlGaAs wafer demonstrations.</p>
+  </div>
   <div id="overviewLeft" hidden>
     <div class="label">Virtual fabrication room</div>
-    <div class="room-note">Three instruments, one shared 3D laboratory. Select a station to inspect its equipment and run its independent process animation.</div>
+    <div class="room-note">Four instruments, one shared 3D laboratory. Select a station to inspect its equipment and run its independent process animation.</div>
     <div class="lab-description"><b>LPE</b><span>Liquid-phase growth</span></div>
     <div class="lab-description"><b>Ion Mill</b><span>Ar⁺ subtractive patterning</span></div>
     <div class="lab-description"><b>MBE</b><span>UHV epitaxial deposition</span></div>
+    <div class="lab-description"><b>CMP</b><span>Oxide planarization</span></div>
     <div class="room-note">Overview uses lightweight station representations for fast rendering. Select a tool to see its full detailed model.</div>
   </div>
 </div>
@@ -103,6 +117,7 @@
     <button class="tab active" id="tabLPE" type="button">LPE</button>
     <button class="tab" id="tabIMM" type="button">Ion Mill</button>
     <button class="tab" id="tabMBE" type="button">MBE</button>
+    <button class="tab" id="tabCMP" type="button">CMP</button>
   </div>
 
   <div id="lpeControls">
@@ -150,9 +165,38 @@
     </div>
     <button id="immBtn">▶ Run Ion Mill</button>
   </div>
+  <div id="cmpControls" hidden>
+    <div class="label">Preset CMP Conditions</div>
+    <div class="specs">
+      <div class="spec-group">Mechanical</div>
+      <div><span>Down-force</span><span>3.0 psi</span></div>
+      <div><span>Platen / carrier</span><span>80 / 75 rpm</span></div>
+      <div><span>Wafer offset</span><span>0.5 platen radius</span></div>
+      <div class="spec-group">Slurry and Film</div>
+      <div><span>Slurry</span><span>Colloidal SiO₂ · alkaline</span></div>
+      <div><span>pH / flow</span><span>10.5 / 200 mL/min</span></div>
+      <div><span>Particle diameter</span><span>~120 nm</span></div>
+      <div><span>STI film</span><span>SiO₂ over SiN</span></div>
+      <div><span>Target removal</span><span>500 nm</span></div>
+      <div><span>Oxide rate</span><span>100 nm/min</span></div>
+      <div><span>SiN rate</span><span>5 nm/min (20:1)</span></div>
+    </div>
+    <div class="label">Live Readouts</div>
+    <div class="temps">
+      <div class="trow"><span>Platen</span><span id="cmpV1">—</span></div>
+      <div class="trow"><span>Carrier</span><span id="cmpV2">—</span></div>
+      <div class="trow"><span>Down-force</span><span id="cmpV3">—</span></div>
+      <div class="trow"><span>Removal rate</span><span id="cmpV4">—</span></div>
+      <div class="trow"><span>Oxide removed</span><span id="cmpV5">—</span></div>
+      <div class="trow"><span>SiN exposed</span><span id="cmpV6">—</span></div>
+      <div class="trow"><span>Endpoint</span><span id="cmpV7">—</span></div>
+    </div>
+    <p class="room-note">Illustrative recipe, not calibrated process data.</p>
+    <button id="cmpPlayBtn" type="button" disabled>▶ Run CMP Cycle</button>
+  </div>
   <div id="overviewControls" hidden>
     <div class="label">Foundry · One shared room</div>
-    <p class="room-note">Move between LPE, ion milling, and MBE without loading another page or starting a second WebGL renderer.</p>
+    <p class="room-note">Move between LPE, ion milling, MBE and CMP in the same 3D room without starting another renderer.</p>
     <p class="room-note">Rotate to explore the three equipment bays. Select a station above for a detailed cutaway and dedicated controls.</p>
   </div>
   <div id="mbeControls" hidden>
