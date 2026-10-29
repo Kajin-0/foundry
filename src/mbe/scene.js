@@ -211,6 +211,7 @@ const CELL_DATA = [
 ];
 const cells = [];
 const cellBeams = [];
+let cellStaticDrawsSaved=0;
 const SUB_TARGET = new THREE.Vector3(0, SUB_Y - 0.02, 0);
 
 CELL_DATA.forEach(cd => {
@@ -295,7 +296,7 @@ CELL_DATA.forEach(cd => {
   // Three K-cells each have a rigid crucible/jacket/shaft assembly.
   // Merge only their static direct children; the hinged shutter and glowing
   // heater coil remain separate so the process animation is unchanged.
-  mergeStaticDrawCalls(g,{exclude:new Set([heaterCoil])});
+  cellStaticDrawsSaved+=mergeStaticDrawCalls(g,{exclude:new Set([heaterCoil])}).savedDrawCalls;
 });
 
 const RHEED_GUN = new THREE.Vector3(1.6, SUB_Y - 0.15, 0);
@@ -406,8 +407,12 @@ MBE.traverse(object => {
 // Combine only rigid meshes with exactly identical material and vertex
 // signatures; preserve every source vertex, normal, UV, clipping plane, and
 // the independently animated wafer/beam/effusion shutter objects.
-const renderOptimization=mergeStaticDrawCalls(MBE,{
+const rigidStats=mergeStaticDrawCalls(MBE,{
   exclude:new Set([body,cone,holder,heater,beamIn,beamOut])
+});
+const renderOptimization=Object.freeze({
+  ...rigidStats,cellStaticDrawsSaved,
+  totalSavedDrawCalls:rigidStats.savedDrawCalls+cellStaticDrawsSaved
 });
 body.castShadow=true;
 cone.castShadow=true;
