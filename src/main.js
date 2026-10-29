@@ -163,7 +163,7 @@ const camPos={
  overview:{pos:new THREE.Vector3(14,17,46),tgt:new THREE.Vector3(14,3.25,0)},
  lpe:{pos:new THREE.Vector3(7.5,11,22),tgt:new THREE.Vector3(0,2.6,0)},
  imm:{pos:new THREE.Vector3(23,10,12),tgt:new THREE.Vector3(16,3.2,0)},
- mbe:{pos:new THREE.Vector3(37,9,13),tgt:new THREE.Vector3(30,4.25,0)}
+ mbe:{pos:new THREE.Vector3(36.8,3.8,12.5),tgt:new THREE.Vector3(30,4.4,0)}
 };
 let camGoal=null;
 const tabEls={
@@ -662,7 +662,8 @@ function animate(now=0){
  if(document.hidden){clock.getDelta();return;}
  const focusActive=currentTab==='lpe'&&cycleActive||currentTab==='imm'&&S.immOn||currentTab==='mbe'&&mbeController?.isRunning();
  const moving=!!camGoal||now-lastInteractionMs<750;
- const targetFps=lowPower?(focusActive||moving?30:10):(focusActive||moving?45:12);
+ // Do not artificially restrict interaction to 30/45 Hz on capable GPUs.
+ const targetFps=lowPower?(focusActive||moving?45:18):(focusActive||moving?60:24);
  if(now-lastFrameMs<1000/targetFps)return;
  if(Number.isFinite(lastFrameMs))recordSample(presentIntervalsMs,now-lastFrameMs);
  lastFrameMs=now;
@@ -709,6 +710,7 @@ window.addEventListener('resize',()=>{
 window.__foundryDiagnostics=()=>({
  view:currentTab,rendererCount:document.querySelectorAll('canvas').length,
  mbeLoaded:!!mbeController,
+ mbeRenderOptimization:mbeController?.renderOptimization??null,
  detailed:{lpe:machine.visible,imm:IMM.visible,mbe:mbeController?.MBE.visible??false},
  proxies:Object.fromEntries(Object.entries(room.proxies).map(([k,p])=>[k,p.visible])),
  drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,
