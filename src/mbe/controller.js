@@ -3,7 +3,7 @@ import {createMBEUI} from './ui.js';
 import {CYCLE,TOTAL,P_BASE,P_GROWTH,ROTATION_RPM,ML_NM,phaseAt,lerpLog,layerThicknessUmAt,rateMLs,previousSetpoint,LAYER_INFO} from './process.js';
 // MBE shares the one room renderer, camera, and render clock.
 export function createMBEController(model) {
-const {MBE,clipPlane,MAT,CH_TOP,cells,cellBeams,growthLayers,waferGroup,holder,heaterLight,beamIn,beamOut,bfmPivot}=model;
+const {MBE,clipPlane,MAT,CH_TOP,cells,cellBeams,growthLayers,waferGroup,holder,heaterLight,beamIn,beamOut,bfmPivot,renderOptimization}=model;
 function freshState(){
  return {t:0,on:false,done:false,idx:-1,press:P_BASE,pLock:760,subT:25,
   gaOpen:0,alOpen:0,asOpen:0,gaT:200,alT:200,asT:200,
@@ -146,5 +146,5 @@ function refresh() {
  UI.updateReadouts();
  UI.updateXsec();
 }
-return {MBE, update, refresh, isRunning:()=>S.on, state:S};
+return {MBE, update, refresh, isRunning:()=>S.on, state:S,renderOptimization};
 }
