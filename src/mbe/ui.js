@@ -1,7 +1,7 @@
 import {LAYER_INFO,ML_NM,rateUmH,TOTAL,TOTAL_REAL} from './process.js';
 
 export function createMBEUI(S){
- const $=id=>document.getElementById(id);
+ const $=id=>document.getElementById('mbe'+id[0].toUpperCase()+id.slice(1));
  const narrator={status:$('narrStatus'),detail:$('narrDetail'),time:$('narrTime')};
  const rheedPath=$('rheedPath'), rheedVal=$('rheedVal'), xsec=$('xsecContent');
  const histMax=220;
