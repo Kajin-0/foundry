@@ -13,6 +13,10 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 export function mergeStaticDrawCalls(group,{exclude=new Set()}={}){
  if(!group?.isGroup)throw new TypeError('Expected a THREE.Group');
  const before=group.children.filter(o=>o.isMesh||o.isInstancedMesh).length;
+ // Browser regression tests may disable only this optimization for a
+ // controlled A/B draw-call measurement using identical scene geometry.
+ if(typeof window!=='undefined' && window.__foundryDisableBatching)
+   return Object.freeze({before,after:before,mergedGroups:0,mergedMeshes:0,savedDrawCalls:0});
  const buckets=new Map();
  for(const object of [...group.children]){
   if(!object.isMesh||object.isInstancedMesh||object.isSkinnedMesh)continue;
