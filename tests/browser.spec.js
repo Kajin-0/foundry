@@ -322,6 +322,12 @@ test('expanded room grid stays beyond the equipment bays, portrait overview fits
  expect(cmp.rendererCount).toBe(1);
  await page.locator('#tabOverview').click();
  await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics().viewGeometry.fov)).toBe(72);
+ await page.setViewportSize({width:1440,height:900});
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics().shadowResolution)).toBe(1024);
+ const restored=await page.evaluate(()=>window.__foundryDiagnostics());
+ expect(restored.viewGeometry.fov).toBe(40);
+ expect(restored.viewGeometry.fogFar).toBe(110);
+ expect(restored.shadowMap).toBe(true);
  expect(errors).toEqual([]);
 });
 
