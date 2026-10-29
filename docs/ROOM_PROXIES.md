@@ -1,6 +1,6 @@
 # Room silhouette proxies
 
-The Room view uses static **outer-silhouette representations** of the three
+The Room view uses static **outer-silhouette representations** of the four
 existing detailed tools. Each occupies the same world location as its detailed
 counterpart, uses the same major dimensions and support logic, and switches
 off when the user selects its detailed station. This is intentionally not a
@@ -13,6 +13,7 @@ second interactive model or a separate renderer.
 | LPE | `src/scene/lpe.js`, `config/geometry.js` | Four heater shells at x=−3.525, −1.175, +1.175, +3.525; shell radius 1.65 and center y=2.65; quartz tube length 12.60; two rails and four posts at x=±4.55, z=±0.70; end fittings |
 | Ion mill | `src/scene/ion-mill.js` | Chamber radius 1.8, vertical y=1.7–5.1; four legs at x,z=±2.2 meeting the lower flange; skids, collar, source connection, supported load lock and turbo pedestal |
 | MBE | `src/mbe/scene.js` | Chamber radius 1.5, y=2.0–5.3, tapered top and manipulator; four legs at ±2.0/±1.9 supporting the lower flange; external service ports |
+| CMP | `src/cmp/scene.js` | Grounded 6.5-wide bench at y=1.10; platen radius 2.02; wafer carrier offset by 1.0; attached overhead carrier gantry at y≈4.9; slurry and conditioner arms |
 
 ## Deliberately omitted
 
