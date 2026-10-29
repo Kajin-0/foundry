@@ -6,7 +6,7 @@ import {mergeStaticDrawCalls} from '../scene/merge-static.js';
 export const CMP_BAY_X=46;
 export const CMP_GEOM=Object.freeze({
  tableTop:1.10,tableWidth:6.50,platenY:1.50,padTopY:1.68,
- headX:1.0,headContactY:1.9175,headLiftY:2.5675,bridgeY:4.90
+ headX:1.0,headContactY:1.9075,headLiftY:2.5675,bridgeY:4.90
 });
 export function buildCMP({scene,batchStatic=true}){
  const group=new THREE.Group();group.name='CMP · chemical mechanical planarization';

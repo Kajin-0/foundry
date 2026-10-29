@@ -233,7 +233,7 @@ test('CMP is a lazily loaded fourth machine inside the same renderer',async({pag
  expect(d.rendererCount).toBe(1);
  expect(d.detailed).toEqual({lpe:false,imm:false,mbe:false,cmp:true});
  expect(d.proxies.cmp).toBe(false);
- expect(d.cmpGeometry.headContactY-d.cmpGeometry.padTopY).toBeCloseTo(.2375,6);
+ expect(d.cmpGeometry.headContactY-d.cmpGeometry.padTopY).toBeCloseTo(.2275,6);
  await page.locator('#cmpPlayBtn').click();
  await expect(page.locator('#cmpPlayBtn')).toContainText('Stop');
  await page.waitForTimeout(350);
