@@ -21,10 +21,11 @@ export function calculateRoomLayout(bays){
  // The wall has 16 units of breathing room at both ends.
  const wallMinX=minX-16,wallMaxX=maxX+16;
  const wallWidth=wallMaxX-wallMinX;
- // 360 units by default: both edges are safely outside the 110-unit
- // fog horizon, including at the end equipment. As the lab grows, extend
- // automatically but preserve the established 2-unit grid-line pitch.
- const floorSize=Math.ceil(Math.max(360,span+2*LAB_FOG_FAR+40)/LAB_GRID_PITCH)*LAB_GRID_PITCH;
+ // Keep every border beyond even a wide mobile overview's fog horizon.
+ // The floor is still two triangles and the grid still one draw call,
+ // so extending it adds only a few line vertices, never more polygons
+ // to the machines. Preserve the established 2-unit grid-line pitch.
+ const floorSize=Math.ceil(Math.max(400,span*4+200)/LAB_GRID_PITCH)*LAB_GRID_PITCH;
  return Object.freeze({
   minX,maxX,centerX,span,wallMinX,wallMaxX,wallWidth,
   floorSize,gridSize:floorSize,gridDivisions:floorSize/LAB_GRID_PITCH,

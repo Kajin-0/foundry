@@ -75,8 +75,11 @@ export function buildRoom(scene,{batchProxies=true}={}){
 
  // Single fog-dissolved rear wall. Width, center and the framing rails are
  // derived from the real bays; the fourth station no longer overhangs it.
- box(room,'room-rear-wall',layout.wallWidth,11,.18,dark,
+ const wall=box(room,'room-rear-wall',layout.wallWidth,11,.18,dark,
   (layout.wallMinX+layout.wallMaxX)/2,5.5,-9.8);
+ // An opaque wall approximates the previous 72%-opacity composition while
+ // avoiding a screen-sized transparent draw/overdraw on modest GPUs.
+ wall.material=new THREE.MeshBasicMaterial({color:0x0e1720,fog:true,side:THREE.DoubleSide});
  for(let x=layout.wallMinX+12;x<layout.wallMaxX-3;x+=15)
   box(room,'room-wall-support',.15,10.5,.22,steel,x,5.25,-9.4);
 
