@@ -24,3 +24,16 @@ nonessential HUD title, 3D floating labels and navigation hint; do not pause
 or reset the current scientific process. Visibility must persist when changing
 stations, including lazy MBE loading. Logic is in `src/ui/panel-visibility.js`;
 tests cover desktop/mobile, keyboard and simulation continuity.
+
+## CMP integration (October 2026)
+Original source: `archive/cmp_standalone_v1.html`. Working fourth station:
+`src/cmp/`; lazy-mounted by `src/main.js` at **world x=46** in the
+existing Three.js scene. Room uses a static, grounded CMP silhouette.
+Do not create another renderer, camera, light rig, floor or RAF loop.
+The wafer is a separate **silicon STI reference**, not the GaAs laser wafer.
+`cmpAtTime` is the deterministic authority for oxide/SiN removals, endpoint,
+cross-section and readouts; it is not a measured Preston-law model.
+At 3 psi the wafer must touch the pad; the gantry must support the head.
+Keep the instanced droplets, rigid-mesh batching, lazy load, 10 Hz SVG UI,
+and Run/Stop-only preset controls. Browser tests cover the fourth station,
+one renderer, minimization and mobile controls.

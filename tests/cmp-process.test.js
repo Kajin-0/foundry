@@ -40,3 +40,11 @@ test('CMP wafer approaches pad before film removal and withdraws after endpoint'
  assert.equal(end.endpoint,true);
  assert.equal(cmpAtTime(CMP_TOTAL).waferLift,1);
 });
+
+test('CMP wafer seats exactly on pad and fits inside polishing disk',async()=>{
+ const {CMP_GEOM}=await import('../src/cmp/scene.js');
+ assert.ok(Math.abs((CMP_GEOM.headContactY-.215-.025/2)-CMP_GEOM.padTopY)<1e-9);
+ assert.ok(CMP_GEOM.headX+.5<2.02);
+ assert.ok(CMP_GEOM.bridgeY>CMP_GEOM.headLiftY+1.75);
+ assert.equal(CMP_GEOM.tableTop,1.10);
+});
