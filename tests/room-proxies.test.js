@@ -28,7 +28,7 @@ test('the 4 proxies occupy their real shared-room bays',()=>{
  const floor=model.room.getObjectByName('room-ground-plane');
  const grid=model.room.getObjectByName('room-continuous-grid');
  assert.ok(floor?.isMesh);
- assert.ok(grid?.isGridHelper);
+ assert.ok(grid?.isLineSegments);
  assert.equal(floor.geometry.type,'PlaneGeometry');
  assert.equal(floor.geometry.index.count,6,'floor is a 2-triangle plane');
  assert.equal(floor.position.x,model.layout.centerX);
