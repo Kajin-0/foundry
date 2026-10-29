@@ -166,7 +166,7 @@
 .panel-minimize{
  appearance:none;width:27px;height:25px;padding:0;border-radius:6px;
  border:1px solid rgba(110,154,197,.20);background:rgba(52,81,110,.16);
- color:#a3bfda;font:500 18px/20px inherit;cursor:pointer;
+ color:#a3bfda;font-family:inherit;font-size:18px;font-weight:500;line-height:20px;cursor:pointer;
  display:grid;place-items:center;flex:none;
  transition:background-color .15s,border-color .15s,color .15s;
 }
