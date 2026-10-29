@@ -30,7 +30,7 @@ test('MBE page boots and starts/stops with valid live readouts', async ({page}) 
   await expect(page.locator('#rheedSvg')).toBeVisible();
   await page.locator('#playBtn').click();
   await expect(page.locator('#playBtn')).toContainText('Stop');
-  await page.locator('#cut').fill('75');
+  await page.locator('#cut').evaluate(el=>{el.value='75';el.dispatchEvent(new Event('input',{bubbles:true}));});
   await page.waitForTimeout(200);
   await page.locator('#playBtn').click();
   await expect(page.locator('#playBtn')).toContainText('Run');
