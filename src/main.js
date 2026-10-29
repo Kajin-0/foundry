@@ -704,8 +704,11 @@ function animate(now=0){
    mbeController.update(dt,t,currentTab==='mbe');
  }
  if(camGoal){
-   camera.position.lerp(camGoal.pos,.11);
-   controls.target.lerp(camGoal.tgt,.11);
+   // Wall-clock interpolation: a slow GPU no longer stretches a room-to-room
+   // camera transition over many seconds just because it renders fewer frames.
+   const cameraBlend=1-Math.exp(-9*dt);
+   camera.position.lerp(camGoal.pos,cameraBlend);
+   controls.target.lerp(camGoal.tgt,cameraBlend);
    if(camera.position.distanceTo(camGoal.pos)<.04&&controls.target.distanceTo(camGoal.tgt)<.04)camGoal=null;
  }
  if(lpeLabel.style.display!=='none')placeLabel(lpeLabel,0,6.5,0);
@@ -738,6 +741,7 @@ window.__foundryDiagnostics=()=>({
  pixelRatio:renderer.getPixelRatio(),shadowMap:renderer.shadowMap.enabled,
  cpuRenderP95ms:p95(cpuRenderMs),
  // Observed frame cadence, including intentional idle throttling; not GPU FPS.
- frameIntervalP95ms:p95(presentIntervalsMs)
+ frameIntervalP95ms:p95(presentIntervalsMs),
+ cameraPosition:camera.position.toArray(),cameraTarget:controls.target.toArray()
 });
 requestAnimationFrame(animate);

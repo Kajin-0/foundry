@@ -16,7 +16,7 @@ export function mergeStaticDrawCalls(group,{exclude=new Set()}={}){
  // Browser regression tests may disable only this optimization for a
  // controlled A/B draw-call measurement using identical scene geometry.
  if(typeof window!=='undefined' && window.__foundryDisableBatching)
-   return Object.freeze({before,after:before,mergedGroups:0,mergedMeshes:0,savedDrawCalls:0});
+   return Object.freeze({before,after:before,mergedGroups:0,mergedMeshes:0,savedDrawCalls:0,verifiedTriangleIndices:0});
  const buckets=new Map();
  for(const object of [...group.children]){
   if(!object.isMesh||object.isInstancedMesh||object.isSkinnedMesh)continue;
@@ -32,7 +32,7 @@ export function mergeStaticDrawCalls(group,{exclude=new Set()}={}){
   if(!buckets.has(key))buckets.set(key,[]);
   buckets.get(key).push(object);
  }
- let savedDrawCalls=0,mergedGroups=0,mergedMeshes=0;
+ let savedDrawCalls=0,mergedGroups=0,mergedMeshes=0,verifiedTriangleIndices=0;
  for(const objects of buckets.values()){
   if(objects.length<2)continue;
   const copies=[];
@@ -45,6 +45,11 @@ export function mergeStaticDrawCalls(group,{exclude=new Set()}={}){
    }
    const mergedGeometry=mergeGeometries(copies,false);
    if(!mergedGeometry)continue; // Unsupported input: leave objects intact.
+   // A draw-call reduction is not permitted to silently drop any triangles.
+   const sourceIndices=copies.reduce((n,g)=>n+(g.index?.count??g.attributes.position.count),0);
+   const outputIndices=mergedGeometry.index?.count??mergedGeometry.attributes.position.count;
+   if(sourceIndices!==outputIndices)throw new Error('Static batch changed triangle topology');
+   verifiedTriangleIndices+=sourceIndices;
    const mergedMesh=new THREE.Mesh(mergedGeometry,objects[0].material);
    mergedMesh.name='Static detail batch ('+objects.length+' identical-material meshes)';
    mergedMesh.castShadow=objects.some(o=>o.castShadow);
@@ -58,5 +63,5 @@ export function mergeStaticDrawCalls(group,{exclude=new Set()}={}){
   }finally{for(const copy of copies)copy.dispose();}
  }
  const after=group.children.filter(o=>o.isMesh||o.isInstancedMesh).length;
- return Object.freeze({before,after,mergedGroups,mergedMeshes,savedDrawCalls});
+ return Object.freeze({before,after,mergedGroups,mergedMeshes,savedDrawCalls,verifiedTriangleIndices});
 }

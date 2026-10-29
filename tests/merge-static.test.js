@@ -18,6 +18,8 @@ test('batches static co-material geometry without changing vertices or normals',
  assert.equal(parent.children[0].material,mat);
  assert.equal(parent.children[0].geometry.attributes.position.count,
   originals.reduce((a,b)=>a+b));
+ assert.equal(stats.verifiedTriangleIndices,3*36);
+ assert.equal(parent.children[0].geometry.index.count,3*36);
  assert.equal(parent.children[0].geometry.attributes.normal.count,
   originals.reduce((a,b)=>a+b));
 });
