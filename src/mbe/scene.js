@@ -1,59 +1,18 @@
 import * as THREE from 'three';
-import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
-import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {LAYER_INFO} from './process.js';
 
-export function createMBEScene(){
-const renderer = new THREE.WebGLRenderer({ antialias:true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
-renderer.setSize(innerWidth, innerHeight);
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.12;
-renderer.localClippingEnabled = true;
-document.body.appendChild(renderer.domElement);
+// A station inside Foundry's shared room: no second WebGL renderer or camera.
+export function buildMbe({scene, clipPlane}) {
+const MBE = new THREE.Group();
+MBE.name = 'MBE · Molecular Beam Epitaxy';
+MBE.position.set(30,0,0);
+scene.add(MBE);
+const CLIP = {clippingPlanes:[clipPlane], clipShadows:false};
 
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x06070a);
-scene.fog = new THREE.Fog(0x06070a, 30, 85);
-
-/* Camera below wafer so the growth face (bottom of stack) is visible */
-const camera = new THREE.PerspectiveCamera(38, innerWidth/innerHeight, 0.1, 280);
-camera.position.set(6.5, 3.8, 10.0);
-
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.set(0, 4.4, 0);
-controls.enableDamping = true;
-controls.dampingFactor = 0.06;
-controls.minDistance = 4;
-controls.maxDistance = 42;
-// Allow the orbit camera below the wafer so the growth face is actually visible.
-controls.maxPolarAngle = Math.PI * 0.73;
-
-const pmrem = new THREE.PMREMGenerator(renderer);
-scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-pmrem.dispose();
-
-const clipPlane = new THREE.Plane(new THREE.Vector3(0,0,-1), 0);
-const CLIP = { clippingPlanes:[clipPlane], clipShadows:true };
-
-scene.add(new THREE.AmbientLight(0xffffff, 0.22));
-scene.add(new THREE.HemisphereLight(0x9dc4ff, 0x0a0d12, 0.5));
-const key = new THREE.DirectionalLight(0xfff2e0, 2.1);
-key.position.set(9,16,13); key.castShadow = true;
-key.shadow.mapSize.set(innerWidth < 900 ? 1024 : 2048, innerWidth < 900 ? 1024 : 2048);
-const sc = key.shadow.camera;
-sc.left=-15; sc.right=15; sc.top=15; sc.bottom=-15; sc.near=1; sc.far=60;
-key.shadow.bias=-0.0005; key.shadow.normalBias=0.025;
-scene.add(key);
-const fill = new THREE.DirectionalLight(0x5b8fd6, 0.85);
-fill.position.set(-12,5,-10); scene.add(fill);
-const rim = new THREE.PointLight(0x4da3ff, 42, 32, 2);
-rim.position.set(-12,8,-10); scene.add(rim);
-const heaterLight = new THREE.PointLight(0xff4a10, 0, 3.5, 2);
-heaterLight.position.set(0, 4.55, 0);
-scene.add(heaterLight);
+// Room environment and primary lighting are shared with the other stations.
+const heaterLight = new THREE.PointLight(0xff4a10,0,3.5,2);
+heaterLight.position.set(0,4.55,0);
+MBE.add(heaterLight);
 
 const MAT = {
   chamber:  new THREE.MeshStandardMaterial({ color:0xb0bcc8, metalness:.92, roughness:.30, envMapIntensity:1.5, side:THREE.DoubleSide, ...CLIP }),
@@ -129,46 +88,40 @@ function tubeAlong(pts, r, m, seg=20, rad=6){
   return new THREE.Mesh(new THREE.TubeGeometry(c, seg, r, rad, false), m);
 }
 
-const floor = new THREE.Mesh(new THREE.CircleGeometry(50,48),
-  new THREE.MeshStandardMaterial({ color:0x0b0e13, roughness:.6, metalness:.55 }));
-floor.rotation.x = -Math.PI/2; floor.receiveShadow = true; scene.add(floor);
-const grid = new THREE.GridHelper(80, 40, 0x1d3348, 0x111a23);
-grid.position.y = 0.003; grid.material.transparent = true; grid.material.opacity = 0.45; scene.add(grid);
-
 const CH_R = 1.5, CH_BOT = 2.0, CH_MID = 5.3, CH_TOP = 5.9, SUB_Y = 4.7;
 
 [[-2.0,-1.9],[-2.0,1.9],[2.0,-1.9],[2.0,1.9]].forEach(([x,z]) => {
   const leg = box(0.14, 1.5, 0.14, MAT.steel3);
-  leg.position.set(x, 0.75, z); leg.castShadow = true; scene.add(leg);
+  leg.position.set(x, 0.75, z); leg.castShadow = true; MBE.add(leg);
   const foot = cyl(0.19, 0.22, 0.06, MAT.dark, 12);
-  foot.position.set(x, 0.03, z); scene.add(foot);
+  foot.position.set(x, 0.03, z); MBE.add(foot);
 });
 for (const z of [-1.9, 1.9]) {
   const rail = box(4.14, 0.10, 0.10, MAT.steel3);
-  rail.position.set(0, 1.45, z); scene.add(rail);
+  rail.position.set(0, 1.45, z); MBE.add(rail);
 }
 
 const body = ring(CH_R - 0.08, CH_R, CH_MID - CH_BOT, MAT.chamber, 40);
 body.rotation.z = Math.PI/2;
 body.position.y = (CH_BOT + CH_MID) / 2;
-body.castShadow = true; body.receiveShadow = true; scene.add(body);
+body.castShadow = true; body.receiveShadow = true; MBE.add(body);
 
 const cone = cyl(0.75, CH_R, CH_TOP - CH_MID, MAT.cone, 40, true);
 cone.position.y = (CH_MID + CH_TOP) / 2;
-cone.castShadow = true; cone.receiveShadow = true; scene.add(cone);
+cone.castShadow = true; cone.receiveShadow = true; MBE.add(cone);
 
 const cryo = ring(CH_R - 0.22, CH_R - 0.10, CH_MID - CH_BOT - 0.30, MAT.cryo, 32);
 cryo.rotation.z = Math.PI/2;
 cryo.position.y = (CH_BOT + CH_MID) / 2;
-cryo.castShadow = true; cryo.receiveShadow = true; scene.add(cryo);
+cryo.castShadow = true; cryo.receiveShadow = true; MBE.add(cryo);
 
 const botF = cyl(CH_R + 0.15, CH_R + 0.15, 0.10, MAT.flange, 40);
-botF.position.y = CH_BOT; botF.castShadow = true; botF.receiveShadow = true; scene.add(botF);
-const botB = boltRing(CH_R + 0.06, 28, MAT.steel3); botB.position.y = CH_BOT - 0.07; scene.add(botB);
+botF.position.y = CH_BOT; botF.castShadow = true; botF.receiveShadow = true; MBE.add(botF);
+const botB = boltRing(CH_R + 0.06, 28, MAT.steel3); botB.position.y = CH_BOT - 0.07; MBE.add(botB);
 
 const topF = cyl(0.85, 0.85, 0.12, MAT.flange, 32);
-topF.position.y = CH_TOP + 0.02; topF.castShadow = true; topF.receiveShadow = true; scene.add(topF);
-const topB = boltRing(0.72, 20, MAT.steel3); topB.position.y = CH_TOP + 0.09; scene.add(topB);
+topF.position.y = CH_TOP + 0.02; topF.castShadow = true; topF.receiveShadow = true; MBE.add(topF);
+const topB = boltRing(0.72, 20, MAT.steel3); topB.position.y = CH_TOP + 0.09; MBE.add(topB);
 
 for (let i = 0; i < 8; i++) {
   if (i === 2 || i === 6) continue;
@@ -177,35 +130,35 @@ for (let i = 0; i < 8; i++) {
   port.rotation.z = Math.PI/2;
   port.rotation.y = -a;
   port.position.set(Math.cos(a)*(CH_R+0.14), CH_MID-0.6, Math.sin(a)*(CH_R+0.14));
-  port.castShadow = true; scene.add(port);
+  port.castShadow = true; MBE.add(port);
 }
 
 for (let i = 0; i < 8; i++) {
   const t = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.055, 6, 16), MAT.steel3);
   t.rotation.x = Math.PI/2;
   t.position.y = CH_TOP + 0.20 + i * 0.08;
-  t.castShadow = true; scene.add(t);
+  t.castShadow = true; MBE.add(t);
 }
 const motorBase = cyl(0.30, 0.30, 0.12, MAT.flange, 20);
-motorBase.position.y = CH_TOP + 0.90; motorBase.castShadow = true; scene.add(motorBase);
+motorBase.position.y = CH_TOP + 0.90; motorBase.castShadow = true; MBE.add(motorBase);
 const motor = cyl(0.34, 0.34, 0.40, MAT.dark, 20);
-motor.position.y = CH_TOP + 1.15; motor.castShadow = true; scene.add(motor);
+motor.position.y = CH_TOP + 1.15; motor.castShadow = true; MBE.add(motor);
 const motorCap = cyl(0.26, 0.34, 0.10, MAT.steel2, 20);
-motorCap.position.y = CH_TOP + 1.42; motorCap.castShadow = true; scene.add(motorCap);
+motorCap.position.y = CH_TOP + 1.42; motorCap.castShadow = true; MBE.add(motorCap);
 
 const shaftIn = cyl(0.09, 0.09, CH_TOP - SUB_Y - 0.15, MAT.steel2, 12);
 shaftIn.position.y = (CH_TOP + SUB_Y) / 2 + 0.03;
-shaftIn.castShadow = true; scene.add(shaftIn);
+shaftIn.castShadow = true; MBE.add(shaftIn);
 
 const holder = cyl(0.55, 0.55, 0.10, MAT.steel2, 24);
-holder.position.y = SUB_Y + 0.06; holder.castShadow = true; holder.receiveShadow = true; scene.add(holder);
+holder.position.y = SUB_Y + 0.06; holder.castShadow = true; holder.receiveShadow = true; MBE.add(holder);
 
 const heater = cyl(0.50, 0.50, 0.06, MAT.moly, 24);
-heater.position.y = SUB_Y + 0.13; scene.add(heater);
+heater.position.y = SUB_Y + 0.13; MBE.add(heater);
 
 const waferGroup = new THREE.Group();
 waferGroup.position.y = SUB_Y;
-scene.add(waferGroup);
+MBE.add(waferGroup);
 
 // The UI specifies a 2-inch wafer, so represent the substrate and film as circular discs.
 const wafer = cyl(0.275, 0.275, 0.02, MAT.waBase, 40);
@@ -251,7 +204,7 @@ CELL_DATA.forEach(cd => {
   const g = new THREE.Group();
   g.position.copy(basePos);
   g.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir.clone().normalize());
-  scene.add(g);
+  MBE.add(g);
 
   const jacket = cyl(0.13, 0.13, len * 0.85, MAT.waterJack, 16);
   jacket.position.y = len * 0.42;
@@ -306,7 +259,7 @@ CELL_DATA.forEach(cd => {
   const beam = new THREE.Mesh(beamGeo, beamMat);
   beam.position.copy(tipWorld).add(SUB_TARGET).multiplyScalar(0.5);
   beam.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), beamVec.clone().normalize());
-  scene.add(beam);
+  MBE.add(beam);
   cellBeams.push(beam);
 });
 
@@ -315,22 +268,22 @@ const RHEED_SCR = new THREE.Vector3(-1.6, SUB_Y - 0.15, 0);
 
 const gun = cyl(0.16, 0.22, 0.55, MAT.rheedGun, 16);
 gun.rotation.z = Math.PI/2; gun.position.copy(RHEED_GUN);
-gun.castShadow = true; gun.receiveShadow = true; scene.add(gun);
+gun.castShadow = true; gun.receiveShadow = true; MBE.add(gun);
 
 const gunTip = cyl(0.05, 0.10, 0.10, MAT.steel2, 12);
 gunTip.rotation.z = Math.PI/2;
 gunTip.position.set(RHEED_GUN.x - 0.32, RHEED_GUN.y, RHEED_GUN.z);
-scene.add(gunTip);
+MBE.add(gunTip);
 
 const screenFrame = box(0.55, 0.45, 0.05, MAT.steel3);
 screenFrame.position.copy(RHEED_SCR);
 screenFrame.rotation.y = Math.PI/2;
-screenFrame.castShadow = true; screenFrame.receiveShadow = true; scene.add(screenFrame);
+screenFrame.castShadow = true; screenFrame.receiveShadow = true; MBE.add(screenFrame);
 
 const screenFace = box(0.48, 0.38, 0.008, MAT.rheedScr);
 screenFace.position.set(RHEED_SCR.x + 0.03, RHEED_SCR.y, RHEED_SCR.z);
 screenFace.rotation.y = Math.PI/2;
-scene.add(screenFace);
+MBE.add(screenFace);
 
 const beamInMat = MAT.beamI.clone();
 const beamIn = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 1.6, 6, 1, true), beamInMat);
@@ -339,7 +292,7 @@ const beamIn = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 1.6, 6, 1
   const b = new THREE.Vector3(0, SUB_Y - 0.02, 0);
   beamIn.position.copy(a).add(b).multiplyScalar(0.5);
   beamIn.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), b.clone().sub(a).normalize());
-  scene.add(beamIn);
+  MBE.add(beamIn);
 }
 
 const beamOutMat = MAT.beamR.clone();
@@ -349,12 +302,12 @@ const beamOut = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, 1.6, 6, 
   const b = new THREE.Vector3(RHEED_SCR.x + 0.03, RHEED_SCR.y, 0);
   beamOut.position.copy(a).add(b).multiplyScalar(0.5);
   beamOut.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), b.clone().sub(a).normalize());
-  scene.add(beamOut);
+  MBE.add(beamOut);
 }
 
 const bfmPivot = new THREE.Group();
 bfmPivot.position.set(0.70, SUB_Y - 0.45, 0);
-scene.add(bfmPivot);
+MBE.add(bfmPivot);
 const bfmBody = cyl(0.14, 0.14, 0.18, MAT.bfmBody, 14);
 bfmBody.position.x = 0.70;
 bfmPivot.add(bfmBody);
@@ -365,53 +318,60 @@ bfmPivot.add(bfmFace);
 const ionPumpBody = cyl(0.42, 0.42, 0.65, MAT.ionPump, 20);
 ionPumpBody.rotation.z = Math.PI/2;
 ionPumpBody.position.set(-(CH_R + 0.55), CH_MID - 1.2, 0);
-ionPumpBody.castShadow = true; ionPumpBody.receiveShadow = true; scene.add(ionPumpBody);
+ionPumpBody.castShadow = true; ionPumpBody.receiveShadow = true; MBE.add(ionPumpBody);
 for (let i = 0; i < 5; i++) {
   const fin = new THREE.Mesh(new THREE.TorusGeometry(0.44, 0.022, 5, 18), MAT.steel3);
   fin.rotation.y = Math.PI/2;
   fin.position.set(-(CH_R + 0.32) - i * 0.12, CH_MID - 1.2, 0);
-  scene.add(fin);
+  MBE.add(fin);
 }
-scene.add(tubeAlong([ [-(CH_R + 0.02), CH_MID-1.2, 0], [-(CH_R + 0.25), CH_MID-1.2, 0] ], 0.10, MAT.steel2, 12));
+MBE.add(tubeAlong([ [-(CH_R + 0.02), CH_MID-1.2, 0], [-(CH_R + 0.25), CH_MID-1.2, 0] ], 0.10, MAT.steel2, 12));
 
 const rgaBody = cyl(0.10, 0.10, 0.55, MAT.rga, 12);
 rgaBody.rotation.z = Math.PI/2;
 rgaBody.position.set(0, CH_MID - 1.0, -(CH_R + 0.30));
-scene.add(rgaBody);
+MBE.add(rgaBody);
 
 const vpBody = cyl(0.36, 0.36, 0.32, MAT.steel2, 20);
 vpBody.rotation.x = Math.PI/2;
 vpBody.position.set(0, CH_MID - 1.0, CH_R + 0.16);
-vpBody.castShadow = true; scene.add(vpBody);
+vpBody.castShadow = true; MBE.add(vpBody);
 const vpGlass = cyl(0.28, 0.28, 0.02, MAT.glass, 20);
 vpGlass.rotation.x = Math.PI/2;
 vpGlass.position.set(0, CH_MID - 1.0, CH_R + 0.33);
-scene.add(vpGlass);
+MBE.add(vpGlass);
 
 const lock = cyl(0.38, 0.38, 0.65, MAT.steel2, 16);
 lock.rotation.x = Math.PI/2;
 lock.position.set(0, CH_MID - 1.0, -(CH_R + 0.42));
-lock.castShadow = true; lock.receiveShadow = true; scene.add(lock);
+lock.castShadow = true; lock.receiveShadow = true; MBE.add(lock);
 const lockEnd = cyl(0.46, 0.46, 0.08, MAT.flange, 16);
 lockEnd.rotation.x = Math.PI/2;
 lockEnd.position.set(0, CH_MID - 1.0, -(CH_R + 0.78));
-lockEnd.castShadow = true; scene.add(lockEnd);
+lockEnd.castShadow = true; MBE.add(lockEnd);
 
 const turbo = cyl(0.30, 0.30, 0.55, MAT.steel2, 16);
 turbo.position.set(-0.9, CH_BOT - 0.35, 0);
-turbo.castShadow = true; turbo.receiveShadow = true; scene.add(turbo);
+turbo.castShadow = true; turbo.receiveShadow = true; MBE.add(turbo);
 
 const gauge = cyl(0.10, 0.10, 0.28, MAT.steel2, 10);
 gauge.rotation.z = Math.PI/2;
 gauge.position.set(-(CH_R + 0.20), CH_MID - 0.55, 0);
-scene.add(gauge);
+MBE.add(gauge);
 const gaugeTip = cyl(0.08, 0.08, 0.03, MAT.gauge, 10);
 gaugeTip.rotation.z = Math.PI/2;
 gaugeTip.position.set(-(CH_R + 0.36), CH_MID - 0.55, 0);
-scene.add(gaugeTip);
+MBE.add(gaugeTip);
 
 
-return {renderer,scene,camera,controls,clipPlane,MAT,CH_TOP,
+// Expensive per-triangle shadow passes were a major performance cost.
+MBE.traverse(object => {
+ if(object.isMesh){object.castShadow=false;object.receiveShadow=false;}
+});
+body.castShadow=true;
+cone.castShadow=true;
+holder.castShadow=true;
+return {MBE,clipPlane,MAT,CH_TOP,
   cells,cellBeams,growthLayers,waferGroup,holder,heaterLight,
   beamIn,beamOut,bfmPivot,RHEED_MAX:220};
 }
