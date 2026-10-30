@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Photolithography — ArF Immersion Stepper</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#06070a;
+    font-family:ui-sans-serif,system-ui,sans-serif;color:#cfe4ff}
+  canvas{display:block}
+  #hud{position:fixed;left:26px;top:22px;pointer-events:none;letter-spacing:.04em}
+  #hud h1{margin:0;font-size:28px;font-weight:700;letter-spacing:.22em;
+    background:linear-gradient(90deg,#eaf4ff,#b088ff 60%,#6a3fd6);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  #hud p{margin:6px 0 0;font-size:10.5px;text-transform:uppercase;
+    letter-spacing:.24em;color:#5f7d9e}
+  #leftPanel{position:fixed;left:22px;bottom:22px;width:316px;
+    background:rgba(11,15,21,.82);border:1px solid rgba(120,88,172,.22);
+    border-radius:12px;padding:14px 16px;backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);font-size:11px;user-select:none;
+    box-shadow:0 18px 48px rgba(0,0,0,.55)}
+  .lbl{font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;
+    color:#5f7d9e;margin:0 0 6px}
+  .lbl + .lbl{margin-top:10px}
+  #narrator{background:rgba(40,30,75,.35);border-left:2px solid #8866cc;
+    border-radius:4px;padding:9px 11px 8px;margin-bottom:10px;min-height:88px;
+    display:flex;flex-direction:column;justify-content:space-between}
+  #narrStatus{font-size:11px;letter-spacing:.14em;font-weight:700;color:#b088ff;transition:color .3s}
+  #narrDetail{font-size:10.5px;color:#a6b0e0;line-height:1.5;margin-top:4px}
+  #narrTime{font-size:9px;color:#5f7d9e;letter-spacing:.14em;margin-top:7px;
+    font-variant-numeric:tabular-nums}
+  #xsecSvg{width:100%;height:100px;display:block;margin-bottom:4px;
+    background:rgba(8,10,26,.4);border-radius:4px}
+  #progWrap{height:3px;background:rgba(120,88,172,.18);border-radius:2px;
+    overflow:hidden;margin-bottom:8px}
+  #progBar{height:100%;width:0%;background:linear-gradient(90deg,#6a3fd6,#b088ff);
+    box-shadow:0 0 8px rgba(150,100,255,.7);transition:width .1s linear}
+  #rightPanel{position:fixed;right:22px;top:22px;width:256px;
+    background:rgba(11,15,21,.78);border:1px solid rgba(120,88,172,.22);
+    border-radius:12px;padding:14px 16px;backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);user-select:none;
+    box-shadow:0 18px 48px rgba(0,0,0,.55)}
+  #rightPanel .lbl{font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;
+    color:#5f7d9e;margin-bottom:8px}
+  #rightPanel .lbl + .lbl{margin-top:12px}
+  .specs{font-size:9.5px;display:flex;flex-direction:column;gap:3px;margin-bottom:4px}
+  .specs div{display:flex;justify-content:space-between;gap:6px}
+  .specs span:first-child{color:#5f7d9e;letter-spacing:.1em}
+  .specs span:last-child{color:#a6c4e0;font-variant-numeric:tabular-nums;text-align:right}
+  .spec-group{font-size:8px;letter-spacing:.24em;text-transform:uppercase;
+    color:#3f5872;margin:6px 0 2px;padding-top:4px;
+    border-top:1px solid rgba(120,88,172,0.15)}
+  .spec-group:first-child{margin-top:0;border-top:none;padding-top:0}
+  .temps{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}
+  .trow{display:flex;justify-content:space-between;align-items:center;
+    font-size:10.5px;letter-spacing:.1em;font-variant-numeric:tabular-nums}
+  .trow span:first-child{color:#5f7d9e;letter-spacing:.18em}
+  .trow span:last-child{color:#b088ff}
+  .trow .v-green{color:#7ee6a0 !important}
+  .trow .v-violet{color:#b088ff !important}
+  .dot{display:inline-block;width:6px;height:6px;border-radius:50%;
+    margin-right:7px;vertical-align:middle;background:var(--c,#8866cc);
+    box-shadow:0 0 8px var(--c,#8866cc)}
+  #playBtn{width:100%;padding:9px 12px;margin-top:4px;
+    background:linear-gradient(180deg,#3d2c86,#251b5c);border:1px solid #8866cc;
+    border-radius:7px;color:#dbeaff;font-size:10.5px;letter-spacing:.2em;
+    text-transform:uppercase;font-weight:600;cursor:pointer;
+    transition:all .15s ease;font-family:inherit}
+  #playBtn:hover{background:linear-gradient(180deg,#4d3aa8,#302272);
+    box-shadow:0 0 16px rgba(140,100,220,.35)}
+  #playBtn:active{transform:scale(.98)}
+  #playBtn.running{background:linear-gradient(180deg,#6a3a1a,#4a2610);
+    border-color:#ff7a2a;color:#ffd4a8}
+  #playBtn.done{background:linear-gradient(180deg,#1a5a30,#0f3a1e);
+    border-color:#4dbb7a;color:#a8e8c0}
+  .label3d{position:fixed;top:0;left:0;padding:3px 8px;
+    background:rgba(10,10,22,.9);border:1px solid #8866cc;border-radius:4px;
+    font-size:9px;letter-spacing:.14em;color:#b088ff;white-space:nowrap;
+    pointer-events:none;will-change:transform,opacity;
+    box-shadow:0 4px 12px rgba(0,0,0,.5);transition:opacity .25s;
+    font-variant-numeric:tabular-nums;text-transform:uppercase}
+  #hint{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);
+    font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:#3f5872;pointer-events:none;white-space:nowrap}
+  #hint b{color:#7fa8cf;font-weight:600}
+</style>
+</head>
+<body>
+
+<div id="hud"><h1>LITHO</h1><p>Photolithography · ArF Immersion Step-and-Scan</p></div>
+
+<div id="leftPanel">
+  <div class="lbl">Live Process</div>
+  <div id="narrator">
+    <div id="narrStatus">IDLE</div>
+    <div id="narrDetail">Press Run to expose the 193 nm resist through the 4× reticle.</div>
+    <div id="narrTime">—</div>
+  </div>
+  <div class="lbl">Wafer Cross-Section <span style="color:#3f5872;font-size:9px">(live)</span></div>
+  <svg id="xsecSvg" viewBox="0 0 300 100" preserveAspectRatio="none">
+    <g id="xsecContent"></g>
+  </svg>
+  <div class="lbl">Progress</div>
+  <div id="progWrap"><div id="progBar"></div></div>
+</div>
+
+<div id="rightPanel">
+  <div class="lbl">Process Conditions</div>
+  <div class="specs">
+    <div class="spec-group">Optics</div>
+    <div><span>Source</span><span>193 nm ArF excimer</span></div>
+    <div><span>Projection NA</span><span>1.35 · water immersion</span></div>
+    <div><span>Reduction</span><span>4×</span></div>
+    <div class="spec-group">Exposure</div>
+    <div><span>Field</span><span>26 × 33 mm</span></div>
+    <div><span>Slit at wafer</span><span>26 × 8 mm</span></div>
+    <div><span>Resolution</span><span>k₁ 0.30 → 43 nm</span></div>
+    <div><span>Dose</span><span>30 mJ/cm²</span></div>
+    <div><span>Overlay</span><span>&lt; 2 nm</span></div>
+    <div class="spec-group">Wafer</div>
+    <div><span>Diameter</span><span>300 mm</span></div>
+    <div><span>Stack</span><span>100 nm CAR / BARC</span></div>
+  </div>
+  <div class="lbl">Live Readouts</div>
+  <div class="temps">
+    <div class="trow"><span><i class="dot" style="--c:#b088ff"></i>Beam</span><span id="v1">—</span></div>
+    <div class="trow"><span><i class="dot" style="--c:#7fc4ff"></i>Stage Z</span><span class="v-violet" id="v2">—</span></div>
+    <div class="trow"><span><i class="dot" style="--c:#5f9fd6"></i>Reticle Z</span><span class="v-violet" id="v3">—</span></div>
+    <div class="trow"><span><i class="dot" style="--c:#7ee6a0"></i>Scan</span><span class="v-green" id="v4">—</span></div>
+    <div class="trow"><span><i class="dot" style="--c:#c8a0b0"></i>Fields</span><span id="v5">—</span></div>
+    <div class="trow"><span><i class="dot" style="--c:#ffb066"></i>Dose</span><span id="v6">—</span></div>
+    <div class="trow"><span><i class="dot" style="--c:#7ee6a0"></i>Align</span><span id="v7">—</span></div>
+  </div>
+  <button id="playBtn">▶ Run Exposure</button>
+</div>
+
+<div id="hint"><b>drag</b> orbit &nbsp;·&nbsp; <b>scroll</b> zoom &nbsp;·&nbsp; <b>right-drag</b> pan</div>
+
+<script type="importmap">
+{ "imports": {
+  "three":"https://unpkg.com/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls }   from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+/* ============ RENDERER / SCENE / CAMERA ============ */
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.10;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x06070a);
+scene.fog = new THREE.Fog(0x06070a, 28, 70);
+
+const camera = new THREE.PerspectiveCamera(38, innerWidth/innerHeight, 0.1, 200);
+camera.position.set(6.4, 5.0, 8.0);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 1.95, 0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.minDistance = 3.5;
+controls.maxDistance = 35;
+controls.maxPolarAngle = Math.PI * 0.495;
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+/* ============ LIGHTS ============ */
+scene.add(new THREE.AmbientLight(0xffffff, 0.28));
+scene.add(new THREE.HemisphereLight(0xa8b8ff, 0x0a0d12, 0.55));
+
+const key = new THREE.DirectionalLight(0xfff2e0, 2.0);
+key.position.set(7, 12, 7);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+const sc = key.shadow.camera;
+sc.left=-9; sc.right=9; sc.top=9; sc.bottom=-9; sc.near=1; sc.far=35;
+key.shadow.bias = -0.0005;
+key.shadow.normalBias = 0.02;
+scene.add(key);
+
+const fill = new THREE.DirectionalLight(0x7a8fd6, 0.85);
+fill.position.set(-7, 6, -6); scene.add(fill);
+
+const rim = new THREE.PointLight(0x7a55ff, 35, 26, 2);
+rim.position.set(-6, 6, -6); scene.add(rim);
+
+/* ============ MATERIALS ============ */
+const MAT = {
+  frame:    new THREE.MeshStandardMaterial({ color:0x2a2e38, metalness:0.85, roughness:0.5 }),
+  frame2:   new THREE.MeshStandardMaterial({ color:0x1a1e26, metalness:0.7, roughness:0.55 }),
+  frame3:   new THREE.MeshStandardMaterial({ color:0x22262e, metalness:0.8, roughness:0.55 }),
+  granite:  new THREE.MeshStandardMaterial({ color:0x1e2028, metalness:0.3, roughness:0.85 }),
+  stageTop: new THREE.MeshStandardMaterial({ color:0xa8b0bc, metalness:0.9, roughness:0.3 }),
+  stageMid: new THREE.MeshStandardMaterial({ color:0x8a929c, metalness:0.9, roughness:0.4 }),
+  chuck:    new THREE.MeshStandardMaterial({ color:0x3a4048, metalness:0.6, roughness:0.5 }),
+  wafer:    new THREE.MeshStandardMaterial({ color:0x4a5a72, metalness:0.85, roughness:0.15, envMapIntensity:1.4 }),
+  lensGlass:new THREE.MeshPhysicalMaterial({
+    color:0xb8c8e0, metalness:0, roughness:0.05,
+    transparent:true, opacity:0.30, clearcoat:1,
+    depthWrite:false, side:THREE.DoubleSide
+  }),
+  lensRing: new THREE.MeshStandardMaterial({ color:0x1a1d24, metalness:0.9, roughness:0.4 }),
+  lensBarrel: new THREE.MeshStandardMaterial({
+    color:0x14161c, metalness:0.85, roughness:0.5,
+    transparent:true, opacity:0.30, depthWrite:false
+  }),
+  water:    new THREE.MeshPhysicalMaterial({
+    color:0x9ad0e8, metalness:0, roughness:0.03,
+    transparent:true, opacity:0.42, clearcoat:1, clearcoatRoughness:0.02,
+    depthWrite:false, side:THREE.DoubleSide
+  }),
+  reticleGlass: new THREE.MeshPhysicalMaterial({
+    color:0xdce0ff, metalness:0, roughness:0.1,
+    transparent:true, opacity:0.28, clearcoat:1, depthWrite:false,
+    side:THREE.DoubleSide
+  }),
+  reticleFrame: new THREE.MeshStandardMaterial({ color:0x1a1c22, metalness:0.85, roughness:0.4 }),
+  mirror:   new THREE.MeshStandardMaterial({ color:0xe8eef8, metalness:1.0, roughness:0.05, envMapIntensity:1.5 }),
+  laserBox: new THREE.MeshStandardMaterial({ color:0x14161c, metalness:0.7, roughness:0.55 }),
+  /* ◆ BDU duct is now semi-transparent so the beam inside is visible.
+   *   Physically a real BDU is opaque metal, but for teaching we let the
+   *   beam path be seen — and it also eliminates the "dead" beam meshes. */
+  bduDuct:  new THREE.MeshStandardMaterial({
+    color:0x1a1d24, metalness:0.8, roughness:0.5,
+    transparent:true, opacity:0.65, depthWrite:false
+  }),
+  slitBeam: new THREE.MeshBasicMaterial({
+    color:0xc0a0ff, transparent:true, opacity:0,
+    blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide
+  }),
+  slitBeamCore: new THREE.MeshBasicMaterial({
+    color:0xe8daff, transparent:true, opacity:0,
+    blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide
+  }),
+  /* ◆ alignMark depthWrite disabled — was causing sort instability against
+   *   field planes and water layer when opacity was mid-pulse */
+  alignMark: new THREE.MeshBasicMaterial({
+    color:0x40ff78, transparent:true, opacity:0, depthWrite:false
+  }),
+  indicatorR: new THREE.MeshStandardMaterial({ color:0xd04030, metalness:0.5, roughness:0.5, emissive:0x401008, emissiveIntensity:0.6 }),
+  steel2: new THREE.MeshStandardMaterial({ color:0x939da8, metalness:1.0, roughness:0.38 }),
+  dark:   new THREE.MeshStandardMaterial({ color:0x14161a, metalness:0.55, roughness:0.62 }),
+  hose:   new THREE.MeshStandardMaterial({ color:0x1a2a3a, metalness:0.2, roughness:0.7 }),
+  slitGlow: new THREE.MeshBasicMaterial({
+    color:0xd0b0ff, transparent:true, opacity:0,
+    blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide
+  }),
+};
+
+/* ============ HELPERS ============ */
+const cyl = (rt,rb,h,m,s=32,o=false) => new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,s,1,o),m);
+const box = (w,h,d,m) => new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);
+
+function taperedBox(wTop, hTop, wBot, hBot, height) {
+  const geo = new THREE.BufferGeometry();
+  const tw = wTop/2, th = hTop/2, bw = wBot/2, bh = hBot/2;
+  const y0 = -height/2, y1 = height/2;
+  const verts = new Float32Array([
+    -bw, y0, -bh,   bw, y0, -bh,   bw, y0,  bh,  -bw, y0,  bh,
+    -tw, y1, -th,   tw, y1, -th,   tw, y1,  th,  -tw, y1,  th,
+  ]);
+  const idx = new Uint16Array([
+    0,2,1, 0,3,2,  4,5,6, 4,6,7,
+    0,1,5, 0,5,4,  2,3,7, 2,7,6,
+    1,2,6, 1,6,5,  3,0,4, 3,4,7,
+  ]);
+  geo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+  geo.setIndex(new THREE.BufferAttribute(idx, 1));
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function strutBetween(a, b, thickness, mat) {
+  const mid = a.clone().add(b).multiplyScalar(0.5);
+  const len = a.distanceTo(b);
+  const strut = box(len, thickness, thickness, mat);
+  strut.position.copy(mid);
+  const dir = b.clone().sub(a).normalize();
+  const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(1,0,0), dir);
+  strut.quaternion.copy(quat);
+  return strut;
+}
+
+/* ============ FLOOR ============ */
+const floor = new THREE.Mesh(new THREE.CircleGeometry(45, 48),
+  new THREE.MeshStandardMaterial({ color:0x0a0c12, roughness:0.7, metalness:0.5 }));
+floor.rotation.x = -Math.PI/2; floor.receiveShadow = true;
+scene.add(floor);
+
+const grid = new THREE.GridHelper(80, 40, 0x1d2838, 0x111820);
+grid.position.y = 0.003;
+grid.material.transparent = true;
+grid.material.opacity = 0.4;
+scene.add(grid);
+
+/* ============================================================
+   FRAME
+   ============================================================ */
+const FRAME_TOP = 3.40;
+const POST = 0.12;
+
+[[-2.0,-2.0],[2.0,-2.0],[-2.0,2.0],[2.0,2.0]].forEach(([x,z]) => {
+  const post = box(POST, FRAME_TOP, POST, MAT.frame);
+  post.position.set(x, FRAME_TOP/2, z);
+  post.castShadow = true; post.receiveShadow = true;
+  scene.add(post);
+  const foot = cyl(0.16, 0.20, 0.06, MAT.frame2, 12);
+  foot.position.set(x, 0.03, z);
+  scene.add(foot);
+});
+
+for (const z of [-2.0, 2.0]) {
+  const brace = box(4.0, 0.10, 0.10, MAT.frame);
+  brace.position.set(0, FRAME_TOP - 0.05, z);
+  scene.add(brace);
+}
+
+/* ============================================================
+   GRANITE + SUPPORT
+   Granite top = GRANITE_Y + 0.10 = 1.05.
+   ============================================================ */
+const GRANITE_Y = 0.95;
+const granite = box(3.0, 0.20, 3.0, MAT.granite);
+granite.position.y = GRANITE_Y;
+granite.castShadow = true; granite.receiveShadow = true;
+scene.add(granite);
+
+for (const [sx, sz] of [[-1,-1],[1,-1],[-1,1],[1,1]]) {
+  const postPt    = new THREE.Vector3(sx * 2.0, GRANITE_Y, sz * 2.0);
+  const granitePt = new THREE.Vector3(sx * 1.4, GRANITE_Y, sz * 1.4);
+  scene.add(strutBetween(postPt, granitePt, 0.07, MAT.frame));
+}
+
+/* ◆ basePlate raised so its bottom clears the granite top by 5 mm.
+ *   Previously bottom was exactly at granite top (1.05), causing
+ *   z-fighting across the entire 3×3 m granite surface. */
+const basePlate = box(1.4, 0.06, 1.4, MAT.frame2);
+basePlate.position.y = GRANITE_Y + 0.135;   // center 1.085, spans 1.055 → 1.115
+basePlate.castShadow = true; basePlate.receiveShadow = true;
+scene.add(basePlate);
+
+/* ============================================================
+   STAGE
+   ◆ Every stacked element has been re-spaced so no two surfaces are coplanar.
+   Y stack (world):
+     base plate:      1.055 → 1.115   (top = STAGE_Y)
+     xStage:          1.118 → 1.168   (3 mm clear of base plate)
+     zStage:          1.170 → 1.220   (2 mm clear of xStage)
+     chuck:           1.2175 → 1.2625 (2.5 mm overlap hidden inside zStage)
+     wafer:           1.263 → 1.271   (touching chuck — 0.5 mm clearance
+                                       from chuck top because wafer bottom
+                                       is 1.263 vs chuck top 1.2625)
+   WAFER_TOP (local Y in stageGroup) = 1.271 - 1.115 = 0.156
+   ============================================================ */
+const STAGE_Y = GRANITE_Y + 0.165;   // 1.115 = base plate top
+
+const stageGroup = new THREE.Group();
+stageGroup.position.set(0, STAGE_Y, 0);
+scene.add(stageGroup);
+
+const xStage = box(0.70, 0.05, 0.70, MAT.stageMid);
+xStage.position.y = 0.028;
+xStage.castShadow = true; xStage.receiveShadow = true;
+stageGroup.add(xStage);
+
+const zStage = box(0.50, 0.05, 0.50, MAT.stageTop);
+zStage.position.y = 0.080;
+zStage.castShadow = true; zStage.receiveShadow = true;
+stageGroup.add(zStage);
+
+const chuck = cyl(0.36, 0.36, 0.045, MAT.chuck, 48);
+chuck.position.y = 0.125;
+chuck.castShadow = true; chuck.receiveShadow = true;
+stageGroup.add(chuck);
+
+const WAFER_TOP = 0.156;
+const wafer = cyl(0.30, 0.30, 0.008, MAT.wafer, 64);
+wafer.position.y = 0.152;
+wafer.castShadow = true; wafer.receiveShadow = true;
+stageGroup.add(wafer);
+
+/* ============================================================
+   FIELDS
+   ◆ Field 26 × 33 mm → scene 0.052 × 0.066 (ratio 1.269, correct).
+   ◆ Field array spacing 1.18× → outer edge 0.179 in X, 0.228 in Z.
+   ============================================================ */
+const FIELD_W = 0.052;
+const FIELD_H = 0.066;
+const COLS = 6, ROWS = 6;
+const FIELD_SPACING_X = FIELD_W * 1.18;
+const FIELD_SPACING_Z = FIELD_H * 1.18;
+
+const fieldShaderVert = `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+const fieldShaderFrag = `
+  varying vec2 vUv;
+  uniform float uScan;
+  uniform vec3 uUnexposed;
+  uniform vec3 uExposed;
+  void main() {
+    float exposed = step(vUv.y, uScan);
+    vec3 col = mix(uUnexposed, uExposed, exposed);
+    gl_FragColor = vec4(col, 1.0);
+  }
+`;
+
+const FIELDS = [];
+const fieldGeo = new THREE.PlaneGeometry(FIELD_W, FIELD_H);
+
+for (let row = 0; row < ROWS; row++) {
+  for (let col = 0; col < COLS; col++) {
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uScan:     { value: 0 },
+        uUnexposed:{ value: new THREE.Color(0x7a8aaa) },
+        uExposed:  { value: new THREE.Color(0x8855cc) },
+      },
+      vertexShader: fieldShaderVert,
+      fragmentShader: fieldShaderFrag,
+      side: THREE.DoubleSide,
+    });
+    const mesh = new THREE.Mesh(fieldGeo, mat);
+    mesh.rotation.x = -Math.PI / 2;
+    const fx = (col - (COLS-1)/2) * FIELD_SPACING_X;
+    const fz = (row - (ROWS-1)/2) * FIELD_SPACING_Z;
+    /* ◆ Field plane at WAFER_TOP + 0.0005 (0.5 mm above wafer top) */
+    mesh.position.set(fx, WAFER_TOP + 0.0005, fz);
+    stageGroup.add(mesh);
+
+    FIELDS.push({ row, col, x: fx, z: fz, mesh, exposed: false });
+  }
+}
+
+const FIELD_ORDER = [];
+for (let row = 0; row < ROWS; row++) {
+  if (row % 2 === 0) {
+    for (let col = 0; col < COLS; col++) FIELD_ORDER.push({ row, col });
+  } else {
+    for (let col = COLS - 1; col >= 0; col--) FIELD_ORDER.push({ row, col });
+  }
+}
+
+/* ============================================================
+   ALIGNMENT MARKS
+   ◆ Moved to (±0.20, ±0.22) — scribe lane outside field array
+   ◆ Size reduced 0.032 → 0.025 to keep mark on wafer (distance 0.297)
+   ◆ Lifted to WAFER_TOP + 0.005 (5 mm above fields → no z-fight)
+   ============================================================ */
+const ALIGN_MARKS = [];
+const ALIGN_MARK_POS = [
+  { x: -0.20, z: -0.22 },
+  { x:  0.20, z: -0.22 },
+  { x: -0.20, z:  0.22 },
+  { x:  0.20, z:  0.22 },
+];
+for (const p of ALIGN_MARK_POS) {
+  const group = new THREE.Group();
+  group.position.set(p.x, WAFER_TOP + 0.005, p.z);
+  stageGroup.add(group);
+  const armH = box(0.025, 0.0008, 0.005, MAT.alignMark.clone());
+  const armV = box(0.005, 0.0008, 0.025, MAT.alignMark.clone());
+  group.add(armH);
+  group.add(armV);
+  ALIGN_MARKS.push(armH, armV);
+}
+
+/* ============================================================
+   REFERENCE FRAME
+   ============================================================ */
+const REF_X = 0.28;
+const REF_Z = 0.28;
+const REF_BOT = GRANITE_Y + 0.10;
+const REF_TOP = 3.28;
+
+for (const [sx, sz] of [[-1,-1],[1,-1],[-1,1],[1,1]]) {
+  const rail = box(0.035, REF_TOP - REF_BOT, 0.035, MAT.frame3);
+  rail.position.set(sx * REF_X, (REF_BOT + REF_TOP) / 2, sz * REF_Z);
+  rail.castShadow = true;
+  scene.add(rail);
+
+  const pad = cyl(0.05, 0.05, 0.02, MAT.frame2, 12);
+  pad.position.set(sx * REF_X, REF_BOT + 0.01, sz * REF_Z);
+  scene.add(pad);
+}
+
+function radialBracket(y, innerR, outerR, mat) {
+  for (const [sx, sz] of [[-1,-1],[1,-1],[-1,1],[1,1]]) {
+    const start = new THREE.Vector3(sx * innerR, y, sz * innerR);
+    const end   = new THREE.Vector3(sx * REF_X, y, sz * REF_Z);
+    scene.add(strutBetween(start, end, 0.025, mat));
+  }
+}
+
+/* ============================================================
+   LENS COLUMN + BARREL
+   ============================================================ */
+const LENS_BOT_W = WAFER_TOP + STAGE_Y + 0.02;   // 0.156 + 1.115 + 0.02 = 1.291
+
+const lensElements = [
+  { y0: 0.00, y1: 0.12, r: 0.080 },
+  { y0: 0.16, y1: 0.36, r: 0.110 },
+  { y0: 0.40, y1: 0.62, r: 0.135 },
+  { y0: 0.66, y1: 0.86, r: 0.120 },
+  { y0: 0.90, y1: 1.00, r: 0.100 },
+];
+
+const barrelH = 1.02;
+const barrel = cyl(0.155, 0.155, barrelH, MAT.lensBarrel, 40, true);
+barrel.position.y = LENS_BOT_W + 0.50;
+barrel.renderOrder = 0;
+scene.add(barrel);
+
+for (const e of lensElements) {
+  const h = e.y1 - e.y0;
+  const glass = cyl(e.r, e.r, h, MAT.lensGlass, 32);
+  glass.position.y = LENS_BOT_W + (e.y0 + e.y1) / 2;
+  glass.renderOrder = 1;
+  scene.add(glass);
+
+  const ringT = cyl(e.r + 0.02, e.r + 0.02, 0.02, MAT.lensRing, 32);
+  ringT.position.y = LENS_BOT_W + e.y1 - 0.01;
+  scene.add(ringT);
+  const ringB = cyl(e.r + 0.02, e.r + 0.02, 0.02, MAT.lensRing, 32);
+  ringB.position.y = LENS_BOT_W + e.y0 + 0.01;
+  scene.add(ringB);
+}
+
+const LENS_TOP_W = LENS_BOT_W + 1.00;
+
+radialBracket(LENS_BOT_W + 0.06, 0.10, REF_X, MAT.frame3);
+radialBracket(LENS_TOP_W - 0.06, 0.10, REF_X, MAT.frame3);
+
+/* Water immersion layer — sits between wafer top (1.271) and lens bottom (1.291) */
+const waterLayer = cyl(0.10, 0.10, 0.02, MAT.water, 32);
+waterLayer.position.y = WAFER_TOP + STAGE_Y + 0.01;   // 1.281
+waterLayer.renderOrder = 3;
+scene.add(waterLayer);
+
+/* ============================================================
+   RETICLE + RAILS
+   ◆ PATTERN_H = 4 × FIELD_H = 0.264; RETICLE_SCAN_AMP = PATTERN_H/2 = 0.132
+   ============================================================ */
+const RETICLE_Y = LENS_TOP_W + 0.04;
+const RETICLE_W = 0.30;
+const RETICLE_H = 0.30;
+const PATTERN_W = 4 * FIELD_W;     // 0.208
+const PATTERN_H = 4 * FIELD_H;     // 0.264
+const RETICLE_SCAN_AMP = PATTERN_H / 2;   // 0.132
+
+const reticleGroup = new THREE.Group();
+reticleGroup.position.set(0, RETICLE_Y, 0);
+scene.add(reticleGroup);
+
+const reticleGlass = box(RETICLE_W, 0.008, RETICLE_H, MAT.reticleGlass);
+reticleGlass.renderOrder = 2;
+reticleGroup.add(reticleGlass);
+
+for (const [cx, cz] of [[-1,-1],[1,-1],[-1,1],[1,1]]) {
+  const corner = box(0.03, 0.02, 0.03, MAT.reticleFrame);
+  corner.position.set(cx * (RETICLE_W/2), 0, cz * (RETICLE_H/2));
+  reticleGroup.add(corner);
+}
+
+for (let i = 0; i < 10; i++) {
+  const line = box(0.005, 0.002, PATTERN_H * 0.95, MAT.dark);
+  line.position.set(-PATTERN_W * 0.45 + i * PATTERN_W * 0.10, 0.005, 0);
+  reticleGroup.add(line);
+}
+
+for (const sx of [-1, 1]) {
+  const rail = box(0.025, 0.025, REF_Z * 2 + 0.06, MAT.frame3);
+  rail.position.set(sx * REF_X, RETICLE_Y - 0.025, 0);
+  scene.add(rail);
+}
+
+/* ============================================================
+   ILLUMINATOR
+   ============================================================ */
+const ILLUM_BOT_W = 2.65;
+const ILLUM_TOP_W = 2.99;
+for (const y of [ILLUM_BOT_W, (ILLUM_BOT_W + ILLUM_TOP_W) / 2, ILLUM_TOP_W]) {
+  const ring = cyl(0.16, 0.16, 0.012, MAT.lensRing, 24);
+  ring.position.set(0, y, 0);
+  scene.add(ring);
+  const ringGlass = cyl(0.14, 0.14, 0.010, MAT.lensGlass, 24);
+  ringGlass.position.set(0, y, 0);
+  ringGlass.renderOrder = 1;
+  scene.add(ringGlass);
+}
+
+radialBracket(ILLUM_BOT_W, 0.14, REF_X, MAT.frame3);
+
+/* ============================================================
+   CROWN + MIRROR
+   ============================================================ */
+const CROWN_Y = REF_TOP - 0.04;
+for (const [sx, sz] of [[-1,-1],[1,-1],[-1,1],[1,1]]) {
+  const start = new THREE.Vector3(sx * REF_X, REF_TOP, sz * REF_Z);
+  const end   = new THREE.Vector3(0, CROWN_Y, 0);
+  scene.add(strutBetween(start, end, 0.025, MAT.frame3));
+}
+const crownBracket = box(0.10, 0.06, 0.10, MAT.frame3);
+crownBracket.position.set(0, CROWN_Y, 0);
+scene.add(crownBracket);
+
+const MIRROR_Y = 3.22;
+const mirror = box(0.30, 0.02, 0.20, MAT.mirror);
+mirror.position.set(0, MIRROR_Y, 0);
+mirror.rotation.x = -Math.PI / 4;
+scene.add(mirror);
+
+const mirrorMount = box(0.06, 0.03, 0.06, MAT.frame3);
+mirrorMount.position.set(0, MIRROR_Y + 0.03, 0);
+scene.add(mirrorMount);
+
+/* ============================================================
+   LASER + BDU
+   ◆ laserPos.y raised to 1.202 — box bottom was coplanar with granite top
+   ============================================================ */
+const laserPos = new THREE.Vector3(-1.2, 1.202, 0);
+const laserBox = box(0.50, 0.30, 0.35, MAT.laserBox);
+laserBox.position.copy(laserPos);
+laserBox.castShadow = true; laserBox.receiveShadow = true;
+scene.add(laserBox);
+
+const laserWindow = cyl(0.05, 0.05, 0.012, MAT.slitGlow.clone(), 16);
+laserWindow.rotation.x = Math.PI / 2;
+laserWindow.position.set(laserPos.x, laserPos.y, laserPos.z + 0.18);
+scene.add(laserWindow);
+
+const bduTopY = MIRROR_Y;
+const bduBotY = laserPos.y + 0.15;
+const bduVertH = bduTopY - bduBotY;
+const bduVert = cyl(0.04, 0.04, bduVertH, MAT.bduDuct, 12);
+bduVert.position.set(laserPos.x, (bduBotY + bduTopY) / 2, 0);
+bduVert.renderOrder = 4;
+scene.add(bduVert);
+
+const bduCurve = new THREE.CatmullRomCurve3([
+  new THREE.Vector3(laserPos.x, bduTopY, 0),
+  new THREE.Vector3(-0.9, bduTopY, 0),
+  new THREE.Vector3(-0.5, bduTopY, 0),
+  new THREE.Vector3(-0.1, bduTopY, 0),
+  new THREE.Vector3(0, bduTopY, 0),
+]);
+const bduHoriz = new THREE.Mesh(
+  new THREE.TubeGeometry(bduCurve, 24, 0.04, 8, false),
+  MAT.bduDuct
+);
+bduHoriz.renderOrder = 4;
+scene.add(bduHoriz);
+
+const bduBeamVert = cyl(0.015, 0.015, bduVertH - 0.10, MAT.slitBeam.clone(), 8);
+bduBeamVert.position.set(laserPos.x, (bduBotY + bduTopY) / 2, 0);
+bduBeamVert.renderOrder = 5;
+scene.add(bduBeamVert);
+
+const bduBeamHoriz = new THREE.Mesh(
+  new THREE.TubeGeometry(bduCurve, 24, 0.018, 8, false),
+  MAT.slitBeam.clone()
+);
+bduBeamHoriz.renderOrder = 5;
+scene.add(bduBeamHoriz);
+
+const bduClamp = strutBetween(
+  new THREE.Vector3(laserPos.x, 2.80, 0),
+  new THREE.Vector3(-2.0, 2.80, 2.0),
+  0.030, MAT.frame3
+);
+scene.add(bduClamp);
+
+/* ============================================================
+   SLIT BEAMS
+   ============================================================ */
+const ILLUM_TOP = MIRROR_Y;
+const ILLUM_BOT = RETICLE_Y + 0.01;
+const ILLUM_H = ILLUM_TOP - ILLUM_BOT;
+const illumSlit = new THREE.Mesh(
+  taperedBox(0.20, 0.06, 0.20, 0.06, ILLUM_H),
+  MAT.slitBeam.clone()
+);
+illumSlit.position.y = (ILLUM_TOP + ILLUM_BOT) / 2;
+illumSlit.renderOrder = 10;
+scene.add(illumSlit);
+
+const PROJECT_TOP = RETICLE_Y - 0.006;
+const PROJECT_BOT = WAFER_TOP + STAGE_Y + 0.005;
+const PROJECT_H = PROJECT_TOP - PROJECT_BOT;
+const projSlit = new THREE.Mesh(
+  taperedBox(0.20, 0.06, 0.05, 0.015, PROJECT_H),
+  MAT.slitBeam.clone()
+);
+projSlit.position.y = (PROJECT_TOP + PROJECT_BOT) / 2;
+projSlit.renderOrder = 10;
+scene.add(projSlit);
+
+const projSlitCore = new THREE.Mesh(
+  taperedBox(0.13, 0.038, 0.030, 0.009, PROJECT_H),
+  MAT.slitBeamCore.clone()
+);
+projSlitCore.position.y = (PROJECT_TOP + PROJECT_BOT) / 2;
+projSlitCore.renderOrder = 11;
+scene.add(projSlitCore);
+
+/* ◆ Exposure spot at world Y 1.274 (3 mm above field plane at 1.2715) */
+const exposureSpot = new THREE.Mesh(
+  new THREE.PlaneGeometry(0.05, 0.015),
+  MAT.slitGlow.clone()
+);
+exposureSpot.rotation.x = -Math.PI / 2;
+exposureSpot.position.set(0, WAFER_TOP + STAGE_Y + 0.003, 0);
+exposureSpot.renderOrder = 12;
+scene.add(exposureSpot);
+
+/* ============================================================
+   LABELS
+   ============================================================ */
+function makeLabel(text) {
+  const el = document.createElement('div');
+  el.className = 'label3d';
+  el.textContent = text;
+  document.body.appendChild(el);
+  return el;
+}
+const labelLaser   = makeLabel('ArF laser · 193 nm');
+const labelReticle = makeLabel('Reticle · 4×');
+const labelLens    = makeLabel('NA 1.35 · immersion');
+const labelStage   = makeLabel('300 mm wafer stage');
+
+const _pv = new THREE.Vector3();
+function placeLabel(el, x, y, z) {
+  _pv.set(x, y, z).project(camera);
+  const sx = (_pv.x * 0.5 + 0.5) * innerWidth;
+  const sy = (-_pv.y * 0.5 + 0.5) * innerHeight;
+  el.style.transform = `translate(-50%,-100%) translate(${sx}px,${sy}px)`;
+  el.style.opacity = (_pv.z < 1) ? '1' : '0';
+}
+
+/* ============================================================
+   STATE
+   ============================================================ */
+const S = {
+  t: 0, on: false, done: false, idx: -1,
+  stageX: 0, stageZ: 0,
+  stageTargetX: 0, stageTargetZ: 0,
+  reticleZ: 0,
+  beamOn: 0,
+  alignProgress: 0,
+  aligned: false,
+  alignMarkIdx: -1,
+  fieldIdx: -1,
+  scanProgress: 0,
+  fieldsExposed: 0,
+  currentFieldMesh: null,
+  doseAccumulated: 0,
+};
+
+/* ============ DOM ============ */
+const nStat = document.getElementById('narrStatus');
+const nDet = document.getElementById('narrDetail');
+const nTime = document.getElementById('narrTime');
+const progBar = document.getElementById('progBar');
+const playBtn = document.getElementById('playBtn');
+const xsecContent = document.getElementById('xsecContent');
+
+function setLiveReadouts() {
+  const v1 = document.getElementById('v1');
+  v1.textContent = S.beamOn > 0.3 ? 'ON · 26×8 mm' : 'off';
+  v1.className = S.beamOn > 0.3 ? 'v-violet' : '';
+
+  /* ◆ 500 mm per scene unit (wafer radius 0.30 = 150 mm) */
+  document.getElementById('v2').textContent = (S.stageZ * 500).toFixed(1) + ' mm';
+  document.getElementById('v3').textContent = (S.reticleZ * 500).toFixed(1) + ' mm';
+
+  const v4 = document.getElementById('v4');
+  v4.textContent = S.beamOn > 0.3 ? (S.scanProgress * 100).toFixed(0) + '%' : '—';
+
+  document.getElementById('v5').textContent = S.fieldsExposed + ' / ' + (COLS * ROWS);
+  document.getElementById('v6').textContent = S.doseAccumulated.toFixed(0) + ' / 30 mJ/cm²';
+
+  const v7 = document.getElementById('v7');
+  if (S.aligned) { v7.textContent = 'LOCKED'; v7.className = 'v-green'; }
+  else if (S.alignProgress > 0) { v7.textContent = 'searching'; v7.className = ''; }
+  else { v7.textContent = '—'; v7.className = ''; }
+}
+
+function setIdle() {
+  if (S.done) {
+    nStat.textContent = 'EXPOSURE COMPLETE';
+    nStat.style.color = '#7ee6a0';
+    nDet.textContent = 'All ' + (COLS*ROWS) + ' fields printed. Latent image is in the resist; the wafer moves to post-exposure bake and development.';
+    nTime.textContent = 'Cycle complete';
+  } else {
+    nStat.textContent = 'IDLE';
+    nStat.style.color = '#5f7d9e';
+    nDet.textContent = 'Press Run to load, align, and expose the wafer through the reticle.';
+    nTime.textContent = '—';
+  }
+}
+
+/* ============ CYCLE ============ */
+const CYCLE = [
+  { dur: 1.8, real: 1.5, narr: 'LOAD · wafer onto chuck',
+    color:'#b088ff',
+    detail: 'Robot hands off a 300 mm wafer; vacuum chuck pulls it flat. The resist is a uniform 100 nm chemically-amplified film over BARC and oxide. Nothing is exposed yet.' },
+  { dur: 2.2, real: 2.0, narr: 'ALIGN · find alignment marks',
+    color:'#7fc4ff',
+    detail: 'The stage brings each of four scribe-lane marks under the alignment sensor in turn. Marks turn solid green once detected. The scanner solves the wafer transform so every field lands within the < 2 nm overlay spec.' },
+  { dur: 14.0, real: 12.0, narr: 'EXPOSE · step-and-scan',
+    color:'#7ee6a0',
+    detail: 'The illuminator projects a narrow slit (~26×8 mm at the wafer). For each field: stage steps to the scan-start position, then wafer stage and reticle stage scan together through the fixed slit — reticle moving 4× faster, in the opposite direction, so the 4× reduction keeps the image stationary on the wafer. k₁ = 0.30 at 43 nm half-pitch, right at the single-exposure limit.' },
+  { dur: 1.8, real: 1.5, narr: 'UNLOAD · wafer off chuck',
+    color:'#5f7d9e',
+    detail: 'Vacuum released, robot removes wafer. Post-exposure bake and development turn the latent image into the final resist pattern.' },
+];
+
+const TOTAL = CYCLE.reduce((s, p) => s + p.dur, 0);
+const TOTAL_REAL = CYCLE.reduce((s, p) => s + p.real, 0);
+
+const EXPOSE_IDX = 2;
+const EXPOSE_DUR = CYCLE[EXPOSE_IDX].dur;
+const FIELD_TIME = EXPOSE_DUR / (COLS * ROWS);
+const STEP_FRAC = 0.28;
+
+/* ============ CROSS-SECTION ============ */
+function updateXsec() {
+  const yResistTop = 12;
+  const yResistBot = 42;
+  const yBarcBot = 45;
+  const yOxBot = 68;
+  const ySiBot = 100;
+
+  let html = '';
+
+  html += `<rect x="0" y="${yOxBot}" width="300" height="${ySiBot - yOxBot}" fill="#3a4a5a"/>`;
+  html += `<text x="4" y="${yOxBot + 9}" font-size="5.5" fill="#8aa8c8">Si substrate</text>`;
+
+  html += `<rect x="0" y="${yBarcBot}" width="300" height="${yOxBot - yBarcBot}" fill="#7a8aa8"/>`;
+  html += `<text x="4" y="${yBarcBot + 8}" font-size="5.5" fill="#2a3040">oxide</text>`;
+
+  html += `<rect x="0" y="${yResistBot}" width="300" height="${yBarcBot - yResistBot}" fill="#2a3040"/>`;
+
+  let displayExposure = 0;
+  let displayScanX = 0;
+  if (S.idx === EXPOSE_IDX && S.beamOn > 0.3) {
+    displayExposure = 1;
+    displayScanX = S.scanProgress * 300;
+  } else if (S.idx > EXPOSE_IDX || S.done) {
+    displayExposure = 1;
+    displayScanX = 300;
+  }
+
+  const period = 40;
+  for (let i = 0; i < 60; i++) {
+    const x0 = i * 5;
+    const xC = x0 + 2.5;
+    const aerial = 0.5 + 0.5 * Math.cos(2 * Math.PI * xC / period);
+    const scannedHere = xC < displayScanX ? 1 : 0;
+    const localExp = aerial * scannedHere * displayExposure;
+
+    const r = Math.round(0x7a * (1 - localExp) + 0x88 * localExp);
+    const g = Math.round(0x8a * (1 - localExp) + 0x55 * localExp);
+    const b = Math.round(0xaa * (1 - localExp) + 0xcc * localExp);
+    html += `<rect x="${x0}" y="${yResistTop}" width="5.1" height="${yResistBot - yResistTop}" fill="rgb(${r},${g},${b})"/>`;
+  }
+
+  let path = `M 0 ${yResistTop - 2}`;
+  for (let x = 1; x <= 300; x += 1) {
+    const I = 0.5 + 0.5 * Math.cos(2 * Math.PI * x / period);
+    const y = yResistTop - 2 - I * 8;
+    path += ` L ${x} ${y.toFixed(1)}`;
+  }
+  html += `<path d="${path}" stroke="#b088ff" stroke-width="1.1" fill="none" opacity="0.85"/>`;
+
+  const I_thresh = 0.35;
+  const yThresh = yResistTop - 2 - I_thresh * 8;
+  html += `<line x1="0" y1="${yThresh.toFixed(1)}" x2="300" y2="${yThresh.toFixed(1)}"
+    stroke="#7ee6a0" stroke-width="0.4" stroke-dasharray="2 1.5" opacity="0.7"/>`;
+  html += `<text x="242" y="${(yThresh - 0.5).toFixed(1)}" font-size="4"
+    fill="#7ee6a0" opacity="0.85">threshold</text>`;
+
+  if (displayExposure > 0 && displayScanX < 300 && displayScanX > 0) {
+    html += `<line x1="${displayScanX.toFixed(1)}" y1="${yResistTop}" x2="${displayScanX.toFixed(1)}" y2="${yResistBot}" stroke="#e0d0ff" stroke-width="1.5" opacity="0.9"/>`;
+    html += `<polygon points="${(displayScanX+3).toFixed(1)},${yResistTop+2} ${(displayScanX+8).toFixed(1)},${yResistTop+5} ${(displayScanX+3).toFixed(1)},${yResistTop+8}" fill="#e0d0ff" opacity="0.9"/>`;
+  }
+
+  html += `<text x="4" y="${yResistTop + 8}" font-size="5.5" fill="#2a3040">resist</text>`;
+  if (displayExposure > 0) {
+    html += `<text x="200" y="8" font-size="6" fill="#b088ff">AERIAL IMAGE · 86 nm pitch</text>`;
+  } else {
+    html += `<text x="200" y="8" font-size="6" fill="#5f7d9e">RESIST · unexposed</text>`;
+  }
+
+  xsecContent.innerHTML = html;
+}
+
+/* ============ RUN ============ */
+playBtn.addEventListener('click', () => {
+  if (S.on) {
+    S.on = false;
+    playBtn.textContent = '▶ Run Exposure';
+    playBtn.classList.remove('running');
+    return;
+  }
+  S.t = 0; S.idx = -1; S.on = true; S.done = false;
+  S.stageX = 0; S.stageZ = 0;
+  S.stageTargetX = 0; S.stageTargetZ = 0;
+  S.reticleZ = 0;
+  S.beamOn = 0;
+  S.alignProgress = 0; S.aligned = false; S.alignMarkIdx = -1;
+  S.fieldIdx = -1; S.scanProgress = 0;
+  S.fieldsExposed = 0;
+  S.currentFieldMesh = null;
+  S.doseAccumulated = 0;
+  FIELDS.forEach(f => { f.exposed = false; f.mesh.material.uniforms.uScan.value = 0; });
+  ALIGN_MARKS.forEach(m => m.material.opacity = 0);
+  updateXsec();
+  playBtn.textContent = '■ Stop';
+  playBtn.classList.add('running');
+  playBtn.classList.remove('done');
+});
+
+setIdle();
+setLiveReadouts();
+updateXsec();
+
+/* ============ ANIMATION ============ */
+const clock = new THREE.Clock();
+let xsecTick = 0;
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.1);
+  const t = clock.getElapsedTime();
+
+  if (S.on) {
+    S.t += dt;
+    if (S.t >= TOTAL) {
+      S.t = TOTAL; S.on = false; S.done = true;
+      playBtn.textContent = '✓ Complete';
+      playBtn.classList.remove('running');
+      playBtn.classList.add('done');
+      setIdle();
+    }
+
+    let acc = 0, idx = -1, local = 0;
+    for (let i = 0; i < CYCLE.length; i++) {
+      if (S.t < acc + CYCLE[i].dur || i === CYCLE.length - 1) {
+        idx = i; local = Math.min(1, (S.t - acc) / CYCLE[i].dur); break;
+      }
+      acc += CYCLE[i].dur;
+    }
+
+    if (idx !== S.idx && S.on) {
+      S.idx = idx;
+      const ph = CYCLE[idx];
+      nStat.textContent = ph.narr;
+      nStat.style.color = ph.color;
+      nDet.textContent = ph.detail;
+    }
+
+    if (idx === 0) {
+      S.beamOn = 0;
+      S.stageTargetX = 0; S.stageTargetZ = 0;
+      S.reticleZ = 0;
+    }
+    else if (idx === 1) {
+      S.alignProgress = Math.min(1, local);
+      const markPhase = local * 4;
+      const markIdx = Math.min(3, Math.floor(markPhase));
+      const withinMark = markPhase - markIdx;
+
+      if (markIdx !== S.alignMarkIdx) S.alignMarkIdx = markIdx;
+
+      const p = ALIGN_MARK_POS[markIdx];
+      S.stageTargetX = -p.x;
+      S.stageTargetZ = -p.z;
+      S.reticleZ = 0;
+      S.beamOn = 0;
+
+      ALIGN_MARKS.forEach((mesh, i) => {
+        const mIdx = Math.floor(i / 2);
+        if (mIdx < markIdx) {
+          mesh.material.opacity = 0.85;
+        } else if (mIdx === markIdx) {
+          mesh.material.opacity = 0.4 + 0.5 * Math.abs(Math.sin(withinMark * Math.PI * 6));
+        } else {
+          mesh.material.opacity = 0.12;
+        }
+      });
+
+      if (local >= 1) S.aligned = true;
+    }
+    else if (idx === EXPOSE_IDX) {
+      S.aligned = true;
+      ALIGN_MARKS.forEach(m => m.material.opacity = 0.85);
+
+      const totalProg = local * (COLS * ROWS);
+      const currentIdx = Math.min(COLS*ROWS - 1, Math.floor(totalProg));
+      const withinField = totalProg - currentIdx;
+
+      if (currentIdx !== S.fieldIdx) {
+        if (S.fieldIdx >= 0 && S.fieldIdx < COLS*ROWS) {
+          const prev = FIELD_ORDER[S.fieldIdx];
+          const prevField = FIELDS.find(f => f.row === prev.row && f.col === prev.col);
+          if (prevField) {
+            prevField.exposed = true;
+            prevField.mesh.material.uniforms.uScan.value = 1.0;
+            S.fieldsExposed = S.fieldIdx + 1;
+          }
+        }
+        S.fieldIdx = currentIdx;
+        const order = FIELD_ORDER[currentIdx];
+        S.currentFieldMesh = FIELDS.find(f => f.row === order.row && f.col === order.col);
+      }
+
+      const f = S.currentFieldMesh;
+
+      if (withinField < STEP_FRAC) {
+        S.scanProgress = 0;
+        S.beamOn *= Math.max(0, 1 - dt * 12);
+        S.doseAccumulated = 0;
+        S.stageTargetX = -f.x;
+        S.stageTargetZ = -(f.z + FIELD_H / 2);
+        const sp = withinField / STEP_FRAC;
+        S.reticleZ = -RETICLE_SCAN_AMP + sp * 2 * RETICLE_SCAN_AMP;
+      } else {
+        const sp = (withinField - STEP_FRAC) / (1 - STEP_FRAC);
+        S.scanProgress = sp;
+        S.beamOn += (1 - S.beamOn) * Math.min(1, dt * 15);
+
+        S.stageTargetX = -f.x;
+        S.stageTargetZ = -(f.z + FIELD_H / 2) + sp * FIELD_H;
+
+        S.reticleZ = RETICLE_SCAN_AMP - sp * 2 * RETICLE_SCAN_AMP;
+
+        f.mesh.material.uniforms.uScan.value = sp;
+
+        S.doseAccumulated = sp * 30;
+      }
+    }
+    else if (idx === 3) {
+      S.beamOn *= Math.max(0, 1 - dt * 6);
+      S.stageTargetX = 0; S.stageTargetZ = 0;
+      S.reticleZ *= Math.max(0, 1 - dt * 4);
+      ALIGN_MARKS.forEach(m => m.material.opacity = Math.max(0, m.material.opacity - dt * 2));
+    }
+
+    S.stageX += (S.stageTargetX - S.stageX) * Math.min(1, dt * 20);
+    S.stageZ += (S.stageTargetZ - S.stageZ) * Math.min(1, dt * 30);
+    stageGroup.position.x = S.stageX;
+    stageGroup.position.z = S.stageZ;
+
+    reticleGroup.position.z += (S.reticleZ - reticleGroup.position.z) * Math.min(1, dt * 20);
+
+    progBar.style.width = (S.t / TOTAL * 100).toFixed(1) + '%';
+    if (S.on) {
+      const elapsedReal = CYCLE.slice(0, idx).reduce((a, p) => a + p.real, 0) + local * CYCLE[idx].real;
+      nTime.textContent = `${Math.round(S.t)}s / ${Math.round(TOTAL)}s demo · ~${elapsedReal.toFixed(1)} of ${TOTAL_REAL.toFixed(1)} min real`;
+    }
+    setLiveReadouts();
+  } else {
+    S.beamOn *= Math.max(0, 1 - dt * 3);
+  }
+
+  const b = S.beamOn;
+  const pulse = 0.85 + Math.sin(t * 8) * 0.10;
+  bduBeamVert.material.opacity     = b * 0.85;
+  bduBeamHoriz.material.opacity    = b * 0.85;
+  illumSlit.material.opacity       = b * 0.55;
+  projSlit.material.opacity        = b * 0.40;
+  projSlitCore.material.opacity    = b * 0.85 * pulse;
+  exposureSpot.material.opacity    = b * 0.90 * pulse;
+  laserWindow.material.opacity     = b * 0.9;
+
+  exposureSpot.scale.setScalar(1 + Math.sin(t * 6) * 0.05);
+
+  placeLabel(labelLaser,   laserPos.x, laserPos.y + 0.30, laserPos.z);
+  placeLabel(labelReticle, 0, RETICLE_Y + 0.24, 0);
+  placeLabel(labelLens,    0.22, LENS_BOT_W + 0.50, 0);
+  placeLabel(labelStage,   0.58, STAGE_Y + 0.25, 0);
+
+  if ((xsecTick++ % 3) === 0) updateXsec();
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+animate();
+</script>
+</body>
+</html>

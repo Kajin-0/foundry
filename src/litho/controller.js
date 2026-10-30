@@ -36,7 +36,7 @@ export function createLithoController(model){
   if(running){seconds=Math.min(LITHO_TOTAL,seconds+Math.max(0,dt));current=lithoAtTime(seconds);
    if(current.done){running=false;play.textContent='✓ Exposure Complete';play.classList.remove('running');play.classList.add('done');}}
   if(visible){
-   model.setVisual(running?current:{...current,beamOn:false},running?dt:0);
+   model.setVisual(running?current:{...current,beamOn:false},running?dt:0,time);
    uiAccumulator+=dt;
    if(uiAccumulator>=.1||current.done){updateUI();uiAccumulator=0;}
   }
