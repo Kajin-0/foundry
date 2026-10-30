@@ -205,7 +205,7 @@ const camPos={
  imm:{pos:new THREE.Vector3(23,10,12),tgt:new THREE.Vector3(16,3.2,0)},
  mbe:{pos:new THREE.Vector3(36.8,3.8,12.5),tgt:new THREE.Vector3(30,4.4,0)},
  cmp:{pos:new THREE.Vector3(52,7.6,13),tgt:new THREE.Vector3(46,2.2,0)},
- litho:{pos:new THREE.Vector3(67.7,6.7,11.8),tgt:new THREE.Vector3(62,2.2,0)}
+ litho:{pos:new THREE.Vector3(68.4,5.0,8.0),tgt:new THREE.Vector3(62,1.95,0)}
 };
 let camGoal=null;
 const tabEls={
