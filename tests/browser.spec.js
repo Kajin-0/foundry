@@ -388,7 +388,8 @@ test('ArF immersion scanner loads only on selection and shares one WebGL context
  // Lithography is inspected through the fixed side panels only. Floating
  // scene labels used to remain on screen during orbit/focus/simulation.
  await expect(page.locator('.litho-sub-label')).toHaveCount(0);
- await expect(page.locator('.label3d')).toHaveCount(4);
+ await expect(page.locator('.label3d')).toHaveCount(5);
+ await expect(page.locator('.label3d:visible')).toHaveCount(0);
 
  await expect(page.locator('#mbePlayBtn')).toBeHidden();
  await expect(page.locator('#mbeCut')).toBeHidden();
@@ -433,4 +434,20 @@ test('lithography runs in minimized mobile UI and preserves renderer',async({pag
  await page.locator('#restoreProcess').click();
  await expect(page.locator('#lithoCrossSection')).toBeVisible();
  await expect(page.locator('canvas')).toHaveCount(1);
+});
+
+
+test('overview displays five consistent labels and detailed stations show none',async({page})=>{
+ await page.goto('/');
+ await expect(page.locator('.label3d')).toHaveCount(5);
+ await expect(page.locator('.label3d:visible')).toHaveCount(5);
+ const palette=await page.locator('.label3d').evaluateAll(nodes=>nodes.map(n=>getComputedStyle(n).borderColor));
+ expect(new Set(palette).size).toBe(1);
+ await expect(page.locator('.label3d')).toContainText(['LPE · FURNACE','ION BEAM ETCH · HIGH VACUUM','MBE · UHV CHAMBER','CMP · OXIDE POLISH','LITHO · ArF SCANNER']);
+ for(const tool of ['LPE','IMM','MBE','CMP','Litho']){
+  await page.locator('#tab'+tool).click();
+  await expect(page.locator('.label3d:visible')).toHaveCount(0);
+ }
+ await page.locator('#tabOverview').click();
+ await expect(page.locator('.label3d:visible')).toHaveCount(5);
 });
