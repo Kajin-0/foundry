@@ -331,32 +331,50 @@ test('expanded room grid stays beyond the equipment bays, portrait overview fits
  expect(errors).toEqual([]);
 });
 
-test('equipment navigation stays legible and scrollable when more bays are added',async({page})=>{
+test('equipment navigation keeps every tool visible and expands to future rows',async({page})=>{
  await page.setViewportSize({width:390,height:844});
  await page.goto('/');
- const m=await page.locator('.tabs').evaluate(node=>{
-  const added=document.createElement('button');
-  added.type='button';added.className='tab';added.textContent='Future Tool';
-  node.appendChild(added);
-  const rectBefore=node.getBoundingClientRect();
-  const button=added;
-  button.scrollIntoView({block:'nearest',inline:'nearest'});
-  return {
-   scrollWidth:node.scrollWidth,clientWidth:node.clientWidth,
-   navWidthBefore:rectBefore.width,navWidthAfter:node.getBoundingClientRect().width,
-   overflow:getComputedStyle(node).overflowX,
-   tabFontSize:getComputedStyle(button).fontSize,
-   scrollLeft:node.scrollLeft
-  };
+ const dimensions=await page.locator('.tabs').evaluate(node=>{
+  const original=[...node.querySelectorAll('.tab')];
+  const added=document.createElement('button');added.className='tab';added.type='button';added.textContent='Future Tool';node.appendChild(added);
+  const base=node.getBoundingClientRect();
+  const rect=added.getBoundingClientRect();
+  return {columns:getComputedStyle(node).gridTemplateColumns.split(' ').length,
+   within:original.every(t=>{const r=t.getBoundingClientRect();return r.left>=base.left-2&&r.right<=base.right+2&&r.top>=base.top-2;}),
+   futureWithin:rect.left>=base.left-2&&rect.right<=base.right+2,
+   futureBelow:rect.top>original.at(-1).getBoundingClientRect().top,
+   font:parseFloat(getComputedStyle(added).fontSize),widthBefore:base.width,widthAfter:node.getBoundingClientRect().width};
  });
- expect(m.overflow).toBe('auto');
- expect(m.scrollWidth).toBeGreaterThan(m.clientWidth);
- expect(m.navWidthAfter).toBe(m.navWidthBefore);
- expect(parseFloat(m.tabFontSize)).toBeGreaterThanOrEqual(9);
- expect(m.scrollLeft).toBeGreaterThan(0);
+ expect(dimensions.columns).toBe(3);
+ expect(dimensions.within).toBe(true);
+ expect(dimensions.futureWithin).toBe(true);
+ expect(dimensions.futureBelow).toBe(true);
+ expect(dimensions.font).toBeGreaterThanOrEqual(9);
+ expect(dimensions.widthAfter).toBe(dimensions.widthBefore);
  await page.locator('#tabLPE').click();
  await expect(page.locator('#lpeControls')).toBeVisible();
  await expect(page.locator('canvas')).toHaveCount(1);
+});
+
+test('mobile shows one panel at a time with a visible run action, including landscape',async({page})=>{
+ for(const [width,height] of [[390,844],[844,390]]){
+  await page.setViewportSize({width,height});
+  await page.goto('/?tool=litho');
+  await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.lithoLoaded),{timeout:30000}).toBe(true);
+  await expect(page.locator('#rightPanel')).toBeVisible();
+  await expect(page.locator('#leftPanel')).toBeHidden();
+  await expect(page.locator('#mobilePanelSwitch')).toBeVisible();
+  const visibleRun=await page.locator('#lithoPlayBtn').evaluate(el=>{
+   const r=el.getBoundingClientRect();return r.y>=0&&r.bottom<=innerHeight&&r.left>=0&&r.right<=innerWidth;
+  });
+  expect(visibleRun).toBe(true);
+  await page.locator('#mobileProcess').click();
+  await expect(page.locator('#leftPanel')).toBeVisible();
+  await expect(page.locator('#rightPanel')).toBeHidden();
+  await page.locator('#mobileEquipment').click();
+  await expect(page.locator('#rightPanel')).toBeVisible();
+  await expect(page.locator('#leftPanel')).toBeHidden();
+ }
 });
 
 test('ArF immersion scanner loads only on selection and shares one WebGL context',async({page})=>{

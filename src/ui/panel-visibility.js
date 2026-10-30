@@ -16,7 +16,23 @@ export function initPanelVisibility(){
   }
  };
  const focusToggle=document.getElementById('focusToggle');
- const state={process:false,equipment:false};
+ const mobileQuery=window.matchMedia('(max-width:760px), (max-width:900px) and (max-height:520px)');
+ const mobileEquipment=document.getElementById('mobileEquipment');
+ const mobileProcess=document.getElementById('mobileProcess');
+ const state={process:mobileQuery.matches,equipment:false};
+ function mobileSelect(key){
+  if(!mobileQuery.matches)return;
+  state.process=key!=='process';
+  state.equipment=key!=='equipment';
+  update();
+ }
+ mobileEquipment.addEventListener('click',()=>mobileSelect('equipment'));
+ mobileProcess.addEventListener('click',()=>mobileSelect('process'));
+ mobileQuery.addEventListener('change',event=>{
+  state.process=event.matches;
+  state.equipment=false;
+  update();
+ });
 
  function update(){
   for(const [key,{panel,minimize,restore}] of Object.entries(nodes)){
@@ -26,6 +42,8 @@ export function initPanelVisibility(){
    restore.setAttribute('aria-expanded',String(!state[key]));
   }
   const bothHidden=state.process&&state.equipment;
+  mobileEquipment.setAttribute('aria-pressed',String(!state.equipment));
+  mobileProcess.setAttribute('aria-pressed',String(!state.process));
   document.body.classList.toggle('focus-view',bothHidden);
   focusToggle.setAttribute('aria-pressed',String(bothHidden));
   focusToggle.textContent=bothHidden?'Show panels':'Focus view';
@@ -33,12 +51,14 @@ export function initPanelVisibility(){
  }
  function setPanel(key,hidden,{focus=false}={}){
   state[key]=hidden;
+  if(!hidden&&mobileQuery.matches)state[key==='process'?'equipment':'process']=true;
   update();
   if(focus)(hidden?nodes[key].restore:nodes[key].minimize).focus();
  }
  function toggleBoth(){
   const hide=!(state.process&&state.equipment);
   state.process=hide;state.equipment=hide;
+  if(!hide&&mobileQuery.matches)state.process=true;
   update();
  }
  for(const key of Object.keys(nodes)){
@@ -56,13 +76,13 @@ export function initPanelVisibility(){
    toggleBoth();
   }else if(event.key==='Escape'&&(state.process||state.equipment)){
    event.preventDefault();
-   state.process=false;state.equipment=false;
+   state.process=mobileQuery.matches;state.equipment=false;
    update();
    focusToggle.focus();
   }
  });
  update();
  return {state:()=>({...state}),showBoth:()=>{
-  state.process=false;state.equipment=false;update();
+  state.process=mobileQuery.matches;state.equipment=false;update();
  }};
 }
