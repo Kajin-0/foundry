@@ -307,6 +307,8 @@ function switchTab(tab){
    button.setAttribute('aria-pressed',String(id===tab));
  }
  showProcessPanel(tab);
+ // Keep the active tool visible even when a sixth or later station is added.
+ tabEls[tab].scrollIntoView({block:'nearest',inline:'nearest'});
  camGoal=camPos[tab];
  // Portrait overview uses a wider lens; station details retain 40 degrees.
  camera.fov=tab==='overview'?overviewView.fov:40;
