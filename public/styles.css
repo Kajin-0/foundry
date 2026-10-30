@@ -253,3 +253,6 @@ body.focus-view #hud .focus-toggle{margin-top:0}
 #lithoPlayBtn.running{background:#633c22;border-color:#bd814d}
 #lithoPlayBtn.done{background:#1e5637;border-color:#4dbb7a}
 #lithoPlayBtn:disabled{opacity:.6}
+/* Explicitly suppress inactive equipment controls, including old MBE Run. */
+#rightPanel #mbeControls[hidden],#rightPanel #lithoControls[hidden],
+#rightPanel #cmpControls[hidden],#rightPanel #overviewControls[hidden]{display:none!important}

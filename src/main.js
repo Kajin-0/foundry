@@ -227,7 +227,7 @@ async function ensureLitho(){
  if(lithoController)return lithoController;
  if(!lithoLoading)lithoLoading=Promise.all([import('./litho/scene.js'),import('./litho/controller.js')])
   .then(([modelModule,controllerModule])=>{
-   const model=modelModule.buildLitho({scene});
+   const model=modelModule.buildLitho({scene,camera});
    lithoController=controllerModule.createLithoController(model);
    lithoController.group.visible=currentTab==='litho';
    room.setFocus(currentTab);

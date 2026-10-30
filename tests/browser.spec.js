@@ -367,6 +367,11 @@ test('ArF immersion scanner loads only on selection and shares one WebGL context
  await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.lithoLoaded),{timeout:30000}).toBe(true);
  await expect(page.locator('#lithoLeft')).toBeVisible();
  await expect(page.locator('#lithoControls')).toBeVisible();
+ await expect(page.locator('#mbePlayBtn')).toBeHidden();
+ await expect(page.locator('#mbeCut')).toBeHidden();
+ await expect(page.locator('#cmpPlayBtn')).toBeHidden();
+ await expect(page.locator('#playBtn')).toBeHidden();
+ await expect(page.locator('#immBtn')).toBeHidden();
  await expect(page.locator('#lithoControls input')).toHaveCount(0);
  await expect(page.locator('canvas')).toHaveCount(1);
  let d=await page.evaluate(()=>window.__foundryDiagnostics());
@@ -395,6 +400,11 @@ test('lithography runs in minimized mobile UI and preserves renderer',async({pag
  await expect(page.locator('#rightPanel')).toBeHidden();
  await page.locator('#restoreEquipment').click();
  await expect(page.locator('#lithoControls')).toBeVisible();
+ await expect(page.locator('#mbePlayBtn')).toBeHidden();
+ await expect(page.locator('#mbeCut')).toBeHidden();
+ await expect(page.locator('#cmpPlayBtn')).toBeHidden();
+ await expect(page.locator('#playBtn')).toBeHidden();
+ await expect(page.locator('#immBtn')).toBeHidden();
  await page.locator('#restoreProcess').click();
  await expect(page.locator('#lithoCrossSection')).toBeVisible();
  await expect(page.locator('canvas')).toHaveCount(1);
