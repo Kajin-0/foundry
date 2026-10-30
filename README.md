@@ -106,3 +106,7 @@ loaded on demand; repeated rigid parts are batched and slurry droplets use
 one instanced pool. Controls stay minimal: **Run/Stop** plus read-only
 process conditions and live readouts. Existing focus/minimize tools work.
 See `docs/CMP_MODEL.md` for exact assumptions and limitations.
+
+## ArF lithography (fifth station)
+
+Open `?tool=litho` to explore a separate illustrative 300 mm silicon wafer exposure using 193 nm ArF immersion, 1.35 NA, 4x reduction, 26 x 33 mm field and 30 mJ/cm2 dose. The 6 x 6 field map and resist cross section are schematic, not calibrated lithography predictions. One instanced field mesh replaces 36 shader draws; shared renderer, room, lights, controls and presets are reused.

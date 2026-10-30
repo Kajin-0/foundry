@@ -15,16 +15,16 @@ const totalTriangles=group=>{
  group.traverse(o=>{if(o.isMesh)tris+=(o.geometry.index?.count??o.geometry.attributes.position.count)/3;});
  return tris;
 };
-test('the 4 proxies occupy their real shared-room bays',()=>{
+test('the 5 proxies occupy their real shared-room bays',()=>{
  const model=makeRoom();
- assert.deepEqual(Object.keys(model.proxies),['lpe','imm','mbe','cmp']);
+ assert.deepEqual(Object.keys(model.proxies),['lpe','imm','mbe','cmp','litho']);
  for(const [key,{x}] of Object.entries(BAYS)){
   assert.equal(model.proxies[key].position.x,x);
   const box=new THREE.Box3().setFromObject(model.proxies[key]);
   assert.ok(box.min.y>=-1e-5,key+' sits below floor');
   assert.ok(box.max.y>4,key+' is too small for detailed outer shape');
  }
- assert.equal(model.room.children.filter(c=>c.name.endsWith('bay-floor')).length,4);
+ assert.equal(model.room.children.filter(c=>c.name.endsWith('bay-floor')).length,5);
  const floor=model.room.getObjectByName('room-ground-plane');
  const grid=model.room.getObjectByName('room-continuous-grid');
  assert.ok(floor?.isMesh);
@@ -42,6 +42,7 @@ test('the 4 proxies occupy their real shared-room bays',()=>{
  assert.equal(model.proxies.imm.visible,true);
  assert.equal(model.proxies.mbe.visible,true);
  assert.equal(model.proxies.cmp.visible,true);
+ assert.equal(model.proxies.litho.visible,true);
 });
 test('LPE matches four detailed furnace zones, tube length and four grounded frame posts',()=>{
  const {proxies}=makeRoom();
@@ -123,4 +124,13 @@ test('CMP proxy has grounded bench, offset polishing head and anchored overhead 
  for(const leg of byName(p,'cmp-table-leg'))
   assert.ok(Math.abs(leg.position.y-leg.geometry.parameters.height/2)<1e-9);
  assert.equal(p.userData.silhouette.overheadAnchored,true);
+});
+
+test('lithography proxy matches supported four-post granite stage and upper optics',()=>{
+ const {proxies}=makeRoom(false),p=proxies.litho;
+ assert.equal(byName(p,'litho-floor-leg').length,4);
+ assert.equal(byName(p,'litho-upper-post').length,4);
+ assert.equal(byName(p,'litho-optics').length,1);
+ assert.equal(byName(p,'litho-laser').length,1);
+ assert.equal(p.userData.silhouette.grounded,true);
 });

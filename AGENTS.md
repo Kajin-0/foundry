@@ -53,3 +53,7 @@ Room labels should not render beyond the camera clip volume.
 Tests cover a hypothetical fifth station, ground mesh count and original
 four-bay envelope without modifying any process physics. This project
 does not claim measured real-device FPS from headless Chromium.
+
+## LITHO fifth bay
+
+`src/litho` owns a lazy-loaded, illustrative 193 nm step-and-scan lithography station at world x=62. It is a separate silicon 300 mm wafer reference, not the GaAs laser wafer. The grounded room proxy lives in `src/scene/room.js`. One instanced mesh displays 36 exposure fields; do not batch the dynamic stage/reticle/beam. No extra scene, renderer, frame loop or adjustable recipe knobs. Keep existing process calculations unchanged. Tests in `tests/litho-process.test.js` and `tests/browser.spec.js` verify navigation and process state.

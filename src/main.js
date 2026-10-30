@@ -21,6 +21,7 @@ const {IMM,etchL,wafer,resist,MASK_TOP,RES_H,tiltG,beamCone,plasma,plasmaCore,sp
 const room=buildRoom(scene);
 let overviewView=calculateOverviewView(room.layout,window.innerWidth,window.innerHeight);
 let cmpController=null,cmpLoading=null;
+let lithoController=null,lithoLoading=null;
 const panelVisibility=initPanelVisibility();
 let mbeController=null;
 let mbeLoading=null;
@@ -55,6 +56,10 @@ cmpLabel.className='label3d';
 cmpLabel.textContent='CMP · OXIDE POLISH';
 cmpLabel.style.color='#9ed0f8';cmpLabel.style.borderColor='#7fc4ff';
 document.body.appendChild(cmpLabel);
+const lithoLabel=document.createElement('div');
+lithoLabel.className='label3d';lithoLabel.textContent='LITHO · 193 NM ArF';
+lithoLabel.style.color='#bca9ff';lithoLabel.style.borderColor='#9c86ef';
+document.body.appendChild(lithoLabel);
 
 const _v3 = new THREE.Vector3();
 function placeLabel(el, wx, wy, wz) {
@@ -199,7 +204,8 @@ const camPos={
  lpe:{pos:new THREE.Vector3(7.5,11,22),tgt:new THREE.Vector3(0,2.6,0)},
  imm:{pos:new THREE.Vector3(23,10,12),tgt:new THREE.Vector3(16,3.2,0)},
  mbe:{pos:new THREE.Vector3(36.8,3.8,12.5),tgt:new THREE.Vector3(30,4.4,0)},
- cmp:{pos:new THREE.Vector3(52,7.6,13),tgt:new THREE.Vector3(46,2.2,0)}
+ cmp:{pos:new THREE.Vector3(52,7.6,13),tgt:new THREE.Vector3(46,2.2,0)},
+ litho:{pos:new THREE.Vector3(67.7,6.7,11.8),tgt:new THREE.Vector3(62,2.2,0)}
 };
 let camGoal=null;
 const tabEls={
@@ -207,7 +213,8 @@ const tabEls={
  lpe:document.getElementById('tabLPE'),
  imm:document.getElementById('tabIMM'),
  mbe:document.getElementById('tabMBE'),
- cmp:document.getElementById('tabCMP')
+ cmp:document.getElementById('tabCMP'),
+ litho:document.getElementById('tabLitho')
 };
 const leftLPE=document.getElementById('lpeLeft'),leftMBE=document.getElementById('mbeLeft');
 const leftOverview=document.getElementById('overviewLeft');
@@ -215,6 +222,21 @@ const rightMBE=document.getElementById('mbeControls');
 const rightOverview=document.getElementById('overviewControls');
 const mbeButton=document.getElementById('mbePlayBtn');
 const cmpButton=document.getElementById('cmpPlayBtn');
+const lithoButton=document.getElementById('lithoPlayBtn');
+async function ensureLitho(){
+ if(lithoController)return lithoController;
+ if(!lithoLoading)lithoLoading=Promise.all([import('./litho/scene.js'),import('./litho/controller.js')])
+  .then(([modelModule,controllerModule])=>{
+   const model=modelModule.buildLitho({scene});
+   lithoController=controllerModule.createLithoController(model);
+   lithoController.group.visible=currentTab==='litho';
+   room.setFocus(currentTab);
+   lithoButton.disabled=false;lithoController.refresh();renderer.shadowMap.needsUpdate=true;
+   return lithoController;
+  }).catch(error=>{lithoLoading=null;document.getElementById('lithoDetail').textContent='Lithography loading failed; reload to retry.';console.error(error);throw error;});
+ return lithoLoading;
+}
+
 async function ensureCMP(){
  if(cmpController)return cmpController;
  if(!cmpLoading){
@@ -267,11 +289,13 @@ function showProcessPanel(tab){
  document.getElementById('ionOnlyIllustrations').hidden=tab!=='imm';
  leftMBE.hidden=tab!=='mbe';
  document.getElementById('cmpLeft').hidden=tab!=='cmp';
+ document.getElementById('lithoLeft').hidden=tab!=='litho';
  leftOverview.hidden=tab!=='overview';
  lpeControlsEl.style.display=tab==='lpe'?'block':'none';
  immControlsEl.style.display=tab==='imm'?'block':'none';
  rightMBE.hidden=tab!=='mbe';
  document.getElementById('cmpControls').hidden=tab!=='cmp';
+ document.getElementById('lithoControls').hidden=tab!=='litho';
  rightOverview.hidden=tab!=='overview';
 }
 function switchTab(tab){
@@ -281,7 +305,8 @@ function switchTab(tab){
  IMM.visible=tab==='imm';
  if(mbeController)mbeController.MBE.visible=tab==='mbe';
  if(cmpController)cmpController.group.visible=tab==='cmp';
- room.setFocus((tab==='mbe'&&!mbeController)||(tab==='cmp'&&!cmpController)?'overview':tab);
+ if(lithoController)lithoController.group.visible=tab==='litho';
+ room.setFocus((tab==='mbe'&&!mbeController)||(tab==='cmp'&&!cmpController)||(tab==='litho'&&!lithoController)?'overview':tab);
  for(const [id,button] of Object.entries(tabEls)){
    button.classList.toggle('active',id===tab);
    button.setAttribute('aria-pressed',String(id===tab));
@@ -307,6 +332,7 @@ function switchTab(tab){
  immLabel.style.display=tab==='overview'||tab==='imm'?'block':'none';
  mbeLabel.style.display=tab==='overview'||tab==='mbe'?'block':'none';
  cmpLabel.style.display=tab==='overview'||tab==='cmp'?'block':'none';
+ lithoLabel.style.display=tab==='overview'||tab==='litho'?'block':'none';
  if(tab==='lpe'){
    if(currentPhase){narrStatus.textContent=currentPhase.narr;narrStatus.style.color=currentPhase.color;narrDetail.textContent=currentPhase.detail;}
    else updateIdle();
@@ -338,6 +364,10 @@ function switchTab(tab){
      document.getElementById('cmpNarrDetail').textContent='Loading CMP equipment into the shared lab…';
      void ensureCMP();
    } else cmpController.refresh();
+ }
+ if(tab==='litho'){
+   if(!lithoController){lithoButton.disabled=true;void ensureLitho();}
+   else lithoController.refresh();
  }
 }
 for(const [id,button] of Object.entries(tabEls))button.addEventListener('click',()=>switchTab(id));
@@ -739,7 +769,7 @@ for(const ev of ['pointerdown','pointermove','wheel']){
 function animate(now=0){
  requestAnimationFrame(animate);
  if(document.hidden){clock.getDelta();return;}
- const focusActive=currentTab==='lpe'&&cycleActive||currentTab==='imm'&&S.immOn||currentTab==='mbe'&&mbeController?.isRunning()||currentTab==='cmp'&&cmpController?.isRunning();
+ const focusActive=currentTab==='lpe'&&cycleActive||currentTab==='imm'&&S.immOn||currentTab==='mbe'&&mbeController?.isRunning()||currentTab==='cmp'&&cmpController?.isRunning()||currentTab==='litho'&&lithoController?.isRunning();
  const moving=!!camGoal||now-lastInteractionMs<750;
  // Do not artificially restrict interaction to 30/45 Hz on capable GPUs.
  const targetFps=lowPower?(focusActive||moving?45:18):(focusActive||moving?60:24);
@@ -765,6 +795,9 @@ function animate(now=0){
  if(cmpController && (currentTab==='cmp'||cmpController.isRunning())){
    cmpController.update(dt,t,currentTab==='cmp');
  }
+ if(lithoController&&(currentTab==='litho'||lithoController.isRunning())){
+   lithoController.update(dt,t,currentTab==='litho');
+ }
  if(camGoal){
    // Wall-clock interpolation: a slow GPU no longer stretches a room-to-room
    // camera transition over many seconds just because it renders fewer frames.
@@ -777,6 +810,7 @@ function animate(now=0){
  if(immLabel.style.display!=='none')placeLabel(immLabel,BAYS.imm.x,7.5,0);
  if(mbeLabel.style.display!=='none')placeLabel(mbeLabel,BAYS.mbe.x,8.2,0);
  if(cmpLabel.style.display!=='none')placeLabel(cmpLabel,BAYS.cmp.x,5.3,0);
+ if(lithoLabel.style.display!=='none')placeLabel(lithoLabel,BAYS.litho.x,5.0,0);
  controls.update();
  // Static shadow atlases are not regenerated on every camera frame.
  if(renderer.shadowMap.enabled&&(now-lastShadowMs>400)&&(focusActive||moving)){
@@ -819,6 +853,9 @@ window.__foundryDiagnostics=()=>({
  view:currentTab,panels:panelVisibility.state(),rendererCount:document.querySelectorAll('canvas').length,
  mbeLoaded:!!mbeController,
  cmpLoaded:!!cmpController,
+ lithoLoaded:!!lithoController,
+ lithoState:lithoController?.getState()??null,
+ lithoRenderOptimization:lithoController?.renderOptimization??null,
  cmpState:cmpController?.getState()??null,
  cmpGeometry:cmpController?.geometry??null,
  cmpRenderOptimization:cmpController?.renderOptimization??null,
@@ -826,7 +863,7 @@ window.__foundryDiagnostics=()=>({
  lpeRenderOptimization,immRenderOptimization,
  ionMill:{waferLocalPosition:wafer.position.toArray(),waferMounted:wafer.userData.mountedOnStage,
    assembly:IMM.userData.ionMillAssembly,presetTilt:IBE.tilt,presetDepth:IBE.depth},
- detailed:{lpe:machine.visible,imm:IMM.visible,mbe:mbeController?.MBE.visible??false,cmp:cmpController?.group.visible??false},
+ detailed:{lpe:machine.visible,imm:IMM.visible,mbe:mbeController?.MBE.visible??false,cmp:cmpController?.group.visible??false,litho:lithoController?.group.visible??false},
  proxies:Object.fromEntries(Object.entries(room.proxies).map(([k,p])=>[k,p.visible])),
  drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,
  pixelRatio:renderer.getPixelRatio(),shadowMap:renderer.shadowMap.enabled,
