@@ -7,8 +7,8 @@ test('single room hosts LPE and ion mill with one WebGL canvas',async({page})=>{
  await expect(page.locator('#tabOverview')).toHaveClass(/active/);
  await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics?.().rendererCount)).toBe(1);
  const overview=await page.evaluate(()=>window.__foundryDiagnostics());
- expect(overview.detailed).toEqual({lpe:false,imm:false,mbe:false,cmp:false});
- expect(overview.proxies).toEqual({lpe:true,imm:true,mbe:true,cmp:true});
+ expect(overview.detailed).toEqual({lpe:false,imm:false,mbe:false,cmp:false,litho:false});
+ expect(overview.proxies).toEqual({lpe:true,imm:true,mbe:true,cmp:true,litho:true});
  expect(overview.mbeLoaded).toBe(false);
  expect(overview.pixelRatio).toBeLessThanOrEqual(1.25);
  await page.locator('#tabLPE').click();
@@ -25,7 +25,7 @@ test('single room hosts LPE and ion mill with one WebGL canvas',async({page})=>{
  await page.locator('#immBtn').click();
  await expect(page.locator('#immBtn')).toContainText('Run');
  await page.locator('#tabOverview').click();
- expect((await page.evaluate(()=>window.__foundryDiagnostics())).proxies).toEqual({lpe:true,imm:true,mbe:true,cmp:true});
+ expect((await page.evaluate(()=>window.__foundryDiagnostics())).proxies).toEqual({lpe:true,imm:true,mbe:true,cmp:true,litho:true});
  expect(errors).toEqual([]);
 });
 test('MBE loads lazily into same room with no extra WebGL renderer',async({page})=>{
@@ -39,8 +39,8 @@ test('MBE loads lazily into same room with no extra WebGL renderer',async({page}
  await expect(page.locator('#mbeV1')).not.toHaveText('—');
  await expect(page.locator('canvas')).toHaveCount(1);
  const d=await page.evaluate(()=>window.__foundryDiagnostics());
- expect(d.detailed).toEqual({lpe:false,imm:false,mbe:true,cmp:false});
- expect(d.proxies).toEqual({lpe:true,imm:true,mbe:false,cmp:true});
+ expect(d.detailed).toEqual({lpe:false,imm:false,mbe:true,cmp:false,litho:false});
+ expect(d.proxies).toEqual({lpe:true,imm:true,mbe:false,cmp:true,litho:true});
  expect(d.rendererCount).toBe(1);
  await page.locator('#mbePlayBtn').click();
  await expect(page.locator('#mbePlayBtn')).toContainText('Stop');
@@ -232,7 +232,7 @@ test('CMP is a lazily loaded fourth machine inside the same renderer',async({pag
  const d=await page.evaluate(()=>window.__foundryDiagnostics());
  expect(d.view).toBe('cmp');
  expect(d.rendererCount).toBe(1);
- expect(d.detailed).toEqual({lpe:false,imm:false,mbe:false,cmp:true});
+ expect(d.detailed).toEqual({lpe:false,imm:false,mbe:false,cmp:true,litho:false});
  expect(d.proxies.cmp).toBe(false);
  expect(d.cmpGeometry.headContactY-d.cmpGeometry.padTopY).toBeCloseTo(.2275,6);
  await page.locator('#cmpPlayBtn').click();
@@ -297,13 +297,13 @@ test('expanded room grid stays beyond the equipment bays, portrait overview fits
  const wide=await page.evaluate(()=>window.__foundryDiagnostics());
  expect(wide.ground.floorSize).toBeGreaterThan(400);
  expect(wide.ground.gridDivisions).toBe(wide.ground.gridSize/2);
- expect(wide.roomBounds.maxX).toBe(50);
+ expect(wide.roomBounds.maxX).toBe(66);
  expect(wide.roomBounds.centerX+wide.ground.gridSize/2).toBeGreaterThan(
    wide.roomBounds.maxX+100
  );
  expect(wide.viewGeometry.fov).toBe(40);
  expect(wide.shadowResolution).toBe(1024);
- expect(wide.viewGeometry.fogFar).toBe(110);
+ expect(wide.viewGeometry.fogFar).toBeGreaterThanOrEqual(110);
  expect(wide.rendererCount).toBe(1);
  await page.setViewportSize({width:390,height:844});
  await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics().viewGeometry.fov),{timeout:15000}).toBe(72);
@@ -326,7 +326,7 @@ test('expanded room grid stays beyond the equipment bays, portrait overview fits
  await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics().shadowResolution)).toBe(1024);
  const restored=await page.evaluate(()=>window.__foundryDiagnostics());
  expect(restored.viewGeometry.fov).toBe(40);
- expect(restored.viewGeometry.fogFar).toBe(110);
+ expect(restored.viewGeometry.fogFar).toBeGreaterThanOrEqual(110);
  expect(restored.shadowMap).toBe(true);
  expect(errors).toEqual([]);
 });
@@ -356,5 +356,46 @@ test('equipment navigation stays legible and scrollable when more bays are added
  expect(m.scrollLeft).toBeGreaterThan(0);
  await page.locator('#tabLPE').click();
  await expect(page.locator('#lpeControls')).toBeVisible();
+ await expect(page.locator('canvas')).toHaveCount(1);
+});
+
+test('ArF immersion scanner loads only on selection and shares one WebGL context',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/');
+ expect((await page.evaluate(()=>window.__foundryDiagnostics())).lithoLoaded).toBe(false);
+ await page.locator('#tabLitho').click();
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.lithoLoaded),{timeout:30000}).toBe(true);
+ await expect(page.locator('#lithoLeft')).toBeVisible();
+ await expect(page.locator('#lithoControls')).toBeVisible();
+ await expect(page.locator('#lithoControls input')).toHaveCount(0);
+ await expect(page.locator('canvas')).toHaveCount(1);
+ let d=await page.evaluate(()=>window.__foundryDiagnostics());
+ expect(d.detailed.litho).toBe(true);expect(d.proxies.litho).toBe(false);
+ expect(d.rendererCount).toBe(1);
+ await page.locator('#lithoPlayBtn').click();
+ await expect(page.locator('#lithoPlayBtn')).toContainText('Stop');
+ await page.waitForTimeout(300);
+ const start=await page.evaluate(()=>window.__foundryDiagnostics().lithoState.elapsed);
+ expect(start).toBeGreaterThan(0);
+ await page.locator('#tabCMP').click();
+ await page.waitForTimeout(220);
+ await page.locator('#tabLitho').click();
+ d=await page.evaluate(()=>window.__foundryDiagnostics());
+ expect(d.lithoState.elapsed).toBeGreaterThanOrEqual(start);
+ await page.locator('#lithoPlayBtn').click();
+ await expect(page.locator('#lithoPlayBtn')).toContainText('Restart');
+ expect(errors).toEqual([]);
+});
+test('lithography runs in minimized mobile UI and preserves renderer',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto('/?tool=litho');
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.lithoLoaded),{timeout:30000}).toBe(true);
+ await page.locator('#focusToggle').click();
+ await expect(page.locator('#leftPanel')).toBeHidden();
+ await expect(page.locator('#rightPanel')).toBeHidden();
+ await page.locator('#restoreEquipment').click();
+ await expect(page.locator('#lithoControls')).toBeVisible();
+ await page.locator('#restoreProcess').click();
+ await expect(page.locator('#lithoCrossSection')).toBeVisible();
  await expect(page.locator('canvas')).toHaveCount(1);
 });

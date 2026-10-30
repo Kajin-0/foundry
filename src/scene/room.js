@@ -16,7 +16,8 @@ export const BAYS=Object.freeze({
  lpe:{x:0,name:'Liquid phase epitaxy'},
  imm:{x:16,name:'Ion beam mill'},
  mbe:{x:30,name:'Molecular beam epitaxy'},
- cmp:{x:46,name:'Chemical mechanical planarization'}
+ cmp:{x:46,name:'Chemical mechanical planarization'},
+ litho:{x:62,name:'ArF immersion photolithography'}
 });
 
 export function buildRoom(scene,{batchProxies=true}={}){
@@ -268,7 +269,35 @@ export function buildRoom(scene,{batchProxies=true}={}){
   };
  }
 
- // The four previews are fully static, so equivalent-material rigid meshes
+ // Fifth bay: granite XY stage, supported optics, reticle and laser.
+ // Distant silhouette follows the detailed scanner's outside envelope.
+ {
+  const p=proxies.litho;
+  box(p,'litho-floor-skid',5.1,.22,4.9,dark,0,.13,0);
+  for(const x of [-2.1,2.1])for(const z of [-2,2]){
+   box(p,'litho-floor-leg',.22,1.2,.22,steel,x,.72,z);
+   box(p,'litho-foot',.4,.06,.4,dark,x,.03,z);
+  }
+  box(p,'litho-granite',3.4,.3,3.35,dark,0,1.12,0);
+  box(p,'litho-stage',2.75,.09,2.8,pale,0,1.32,0);
+  cylinder(p,'litho-wafer',.31,.31,.035,copper,0,1.55,0,16);
+  for(const x of [-2.25,2.25])for(const z of [-2.1,2.1])
+    box(p,'litho-upper-post',.15,3.65,.15,steel,x,1.93,z);
+  for(const z of [-2.1,2.1])box(p,'litho-upper-beam',4.65,.15,.16,steel,0,3.72,z);
+  box(p,'litho-top-bridge',.15,.15,4.3,steel,0,3.72,0);
+  box(p,'litho-top-control',.35,.25,.42,dark,0,3.89,0);
+  cylinder(p,'litho-optics',.3,.3,1.26,pale,0,2.16,0,14);
+  cylinder(p,'litho-illuminator',.27,.27,.43,dark,0,3.39,0,14);
+  box(p,'litho-reticle-rail',1.35,.12,.16,pale,0,3.25,-.34);
+  box(p,'litho-reticle',.6,.04,.55,copper,0,3.02,0);
+  box(p,'litho-laser',.85,.48,.75,dark,-1.44,1.82,0);
+  box(p,'litho-laser-pedestal',.45,.54,.55,steel,-1.44,1.36,0);
+  box(p,'litho-beam-duct',1.46,.12,.12,steel,-.73,3.35,0);
+  p.userData.silhouette={source:'litho/scene.js',grounded:true,framePosts:4,
+   carrierHeight:3.72,waferRadius:.31};
+ }
+
+ // The five previews are fully static, so equivalent-material rigid meshes
  // can be submitted as far fewer GPU draws without losing any triangles.
  for(const [key,p] of Object.entries(proxies)){
   p.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=false;}});

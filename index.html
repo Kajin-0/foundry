@@ -11,7 +11,7 @@
 
 <div id="hud">
   <h1>FOUNDRY</h1>
-  <p>One virtual laboratory · Four fabrication tools</p>
+  <p>One virtual laboratory · Five fabrication tools</p>
   <button id="focusToggle" class="focus-toggle" type="button"
     aria-controls="leftPanel rightPanel" aria-pressed="false"
     aria-keyshortcuts="H" title="Hide both panels to inspect the lab (H)">Focus view</button>
@@ -95,13 +95,26 @@
     <div id="cmpProgWrap"><div id="cmpProgBar"></div></div>
     <p class="room-note">Silicon STI reference process; separate from the GaAs/AlGaAs wafer demonstrations.</p>
   </div>
+  <div id="lithoLeft" hidden>
+    <div class="label">Live Photolithography Process</div>
+    <div id="lithoNarrator" class="litho-narrator">
+     <div id="lithoStatus">IDLE</div>
+     <div id="lithoDetail">193 nm immersion scanner · preset 36-field wafer.</div>
+     <div id="lithoTime">—</div>
+    </div>
+    <div class="label">Resist Cross-Section <span class="section-note">(schematic)</span></div>
+    <svg id="lithoCrossSection" viewBox="0 0 300 100" aria-label="Illustrative silicon wafer photoresist latent image"></svg>
+    <div class="label">Progress</div><div id="lithoTrack"><div id="lithoProgress"></div></div>
+    <p class="room-note">Illustrative silicon lithography. Optical imaging and resist chemistry are not numerically calibrated.</p>
+  </div>
   <div id="overviewLeft" hidden>
     <div class="label">Virtual fabrication room</div>
-    <div class="room-note">Four instruments, one shared 3D laboratory. Select a station to inspect its equipment and run its independent process animation.</div>
+    <div class="room-note">Five instruments, one shared 3D laboratory. Select a station to inspect its equipment and run its independent process animation.</div>
     <div class="lab-description"><b>LPE</b><span>Liquid-phase growth</span></div>
     <div class="lab-description"><b>Ion Mill</b><span>Ar⁺ subtractive patterning</span></div>
     <div class="lab-description"><b>MBE</b><span>UHV epitaxial deposition</span></div>
     <div class="lab-description"><b>CMP</b><span>Oxide planarization</span></div>
+    <div class="lab-description"><b>LITHO</b><span>193 nm immersion photolithography</span></div>
     <div class="room-note">Overview uses lightweight station representations for fast rendering. Select a tool to see its full detailed model.</div>
   </div>
 </div>
@@ -118,6 +131,7 @@
     <button class="tab" id="tabIMM" type="button">Ion Mill</button>
     <button class="tab" id="tabMBE" type="button">MBE</button>
     <button class="tab" id="tabCMP" type="button">CMP</button>
+    <button class="tab" id="tabLitho" type="button">LITHO</button>
   </div>
 
   <div id="lpeControls">
@@ -193,6 +207,31 @@
     </div>
     <p class="room-note">Illustrative recipe, not calibrated process data.</p>
     <button id="cmpPlayBtn" type="button" disabled>▶ Run CMP Cycle</button>
+  </div>
+  <div id="lithoControls" hidden>
+    <div class="label">Preset Lithography Recipe</div>
+    <div class="specs">
+      <div class="spec-group">Projection</div>
+      <div><span>Light source</span><span>193 nm ArF excimer</span></div>
+      <div><span>Lens / NA</span><span>Immersion · 1.35</span></div>
+      <div><span>Reticle reduction</span><span>4×</span></div>
+      <div><span>Field / slit</span><span>26×33 / 26×8 mm</span></div>
+      <div class="spec-group">Exposure</div>
+      <div><span>Wafer</span><span>300 mm Si</span></div>
+      <div><span>Pattern</span><span>6×6 illustrative fields</span></div>
+      <div><span>Target dose</span><span>30 mJ/cm²</span></div>
+      <div><span>Resist</span><span>100 nm CAR / BARC</span></div>
+    </div>
+    <div class="label">Live Readouts</div>
+    <div class="temps">
+     <div class="trow"><span>ArF beam</span><span id="lithoV1">—</span></div>
+     <div class="trow"><span>Current field</span><span id="lithoV2">—</span></div>
+     <div class="trow"><span>Scan</span><span id="lithoV3">—</span></div>
+     <div class="trow"><span>Fields exposed</span><span id="lithoV4">—</span></div>
+     <div class="trow"><span>Slit dose</span><span id="lithoV5">—</span></div>
+     <div class="trow"><span>Alignment</span><span id="lithoV6">—</span></div>
+    </div>
+    <button type="button" id="lithoPlayBtn" disabled>▶ Run Exposure</button>
   </div>
   <div id="overviewControls" hidden>
     <div class="label">Foundry · One shared room</div>
