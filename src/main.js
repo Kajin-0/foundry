@@ -56,11 +56,6 @@ cmpLabel.className='label3d';
 cmpLabel.textContent='CMP · OXIDE POLISH';
 cmpLabel.style.color='#9ed0f8';cmpLabel.style.borderColor='#7fc4ff';
 document.body.appendChild(cmpLabel);
-const lithoLabel=document.createElement('div');
-lithoLabel.className='label3d';lithoLabel.textContent='LITHO · 193 NM ArF';
-lithoLabel.style.color='#bca9ff';lithoLabel.style.borderColor='#9c86ef';
-document.body.appendChild(lithoLabel);
-
 const _v3 = new THREE.Vector3();
 function placeLabel(el, wx, wy, wz) {
   _v3.set(wx, wy, wz).project(camera);
@@ -332,7 +327,6 @@ function switchTab(tab){
  immLabel.style.display=tab==='overview'||tab==='imm'?'block':'none';
  mbeLabel.style.display=tab==='overview'||tab==='mbe'?'block':'none';
  cmpLabel.style.display=tab==='overview'||tab==='cmp'?'block':'none';
- lithoLabel.style.display=tab==='overview'||tab==='litho'?'block':'none';
  if(tab==='lpe'){
    if(currentPhase){narrStatus.textContent=currentPhase.narr;narrStatus.style.color=currentPhase.color;narrDetail.textContent=currentPhase.detail;}
    else updateIdle();
@@ -810,7 +804,6 @@ function animate(now=0){
  if(immLabel.style.display!=='none')placeLabel(immLabel,BAYS.imm.x,7.5,0);
  if(mbeLabel.style.display!=='none')placeLabel(mbeLabel,BAYS.mbe.x,8.2,0);
  if(cmpLabel.style.display!=='none')placeLabel(cmpLabel,BAYS.cmp.x,5.3,0);
- if(lithoLabel.style.display!=='none')placeLabel(lithoLabel,BAYS.litho.x,5.0,0);
  controls.update();
  // Static shadow atlases are not regenerated on every camera frame.
  if(renderer.shadowMap.enabled&&(now-lastShadowMs>400)&&(focusActive||moving)){

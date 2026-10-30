@@ -367,6 +367,11 @@ test('ArF immersion scanner loads only on selection and shares one WebGL context
  await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.lithoLoaded),{timeout:30000}).toBe(true);
  await expect(page.locator('#lithoLeft')).toBeVisible();
  await expect(page.locator('#lithoControls')).toBeVisible();
+ // Lithography is inspected through the fixed side panels only. Floating
+ // scene labels used to remain on screen during orbit/focus/simulation.
+ await expect(page.locator('.litho-sub-label')).toHaveCount(0);
+ await expect(page.locator('.label3d')).toHaveCount(4);
+
  await expect(page.locator('#mbePlayBtn')).toBeHidden();
  await expect(page.locator('#mbeCut')).toBeHidden();
  await expect(page.locator('#cmpPlayBtn')).toBeHidden();
@@ -378,11 +383,13 @@ test('ArF immersion scanner loads only on selection and shares one WebGL context
  expect(d.detailed.litho).toBe(true);expect(d.proxies.litho).toBe(false);
  expect(d.rendererCount).toBe(1);
  await page.locator('#lithoPlayBtn').click();
+ await expect(page.locator('.litho-sub-label')).toHaveCount(0);
  await expect(page.locator('#lithoPlayBtn')).toContainText('Stop');
  await page.waitForTimeout(300);
  const start=await page.evaluate(()=>window.__foundryDiagnostics().lithoState.elapsed);
  expect(start).toBeGreaterThan(0);
  await page.locator('#tabCMP').click();
+ await expect(page.locator('.litho-sub-label')).toHaveCount(0);
  await page.waitForTimeout(220);
  await page.locator('#tabLitho').click();
  d=await page.evaluate(()=>window.__foundryDiagnostics());

@@ -5,6 +5,7 @@ export function createLithoController(model){
  const readouts=Array.from({length:6},(_,i)=>$('V'+(i+1)));
  let seconds=0,running=false,uiAccumulator=0,lastPhase=null;
  let current=lithoAtTime(0);
+ let stoppedState=current;
  // Static paths are assembled only once; no expensive per-frame DOM allocation.
  const top='<rect x="0" y="52" width="300" height="48" fill="#3a4a5a"/><rect x="0" y="41" width="300" height="11" fill="#8097ad"/><rect x="0" y="36" width="300" height="5" fill="#343a51"/><text x="5" y="92" fill="#b5cbdc" font-size="8">Silicon substrate</text><text x="5" y="49" fill="#1d2430" font-size="7">Oxide / BARC</text>';
  const resistRects=Array.from({length:40},(_,i)=>'<rect x="'+(i*7.5).toFixed(1)+'" y="12" width="7.5" height="24" class="resist-cell"/>').join('');
@@ -28,17 +29,19 @@ export function createLithoController(model){
   });
  }
  play.addEventListener('click',()=>{
-  if(running){running=false;play.textContent='▶ Restart Exposure';play.classList.remove('running');return;}
-  seconds=0;current=lithoAtTime(0);running=true;lastPhase=null;model.reset();
+  if(running){running=false;stoppedState={...current,beamOn:false};model.setVisual(stoppedState,0,0);play.textContent='▶ Restart Exposure';play.classList.remove('running');updateUI(true);return;}
+  seconds=0;current=lithoAtTime(0);stoppedState=current;running=true;lastPhase=null;model.reset();
   play.textContent='■ Stop';play.classList.remove('done');play.classList.add('running');updateUI(true);
  });
  function update(dt,time,visible){
   if(running){seconds=Math.min(LITHO_TOTAL,seconds+Math.max(0,dt));current=lithoAtTime(seconds);
-   if(current.done){running=false;play.textContent='✓ Exposure Complete';play.classList.remove('running');play.classList.add('done');}}
+   if(current.done){running=false;stoppedState={...current,beamOn:false};play.textContent='✓ Exposure Complete';play.classList.remove('running');play.classList.add('done');updateUI(true);uiAccumulator=0;}}
   if(visible){
-   model.setVisual(running?current:{...current,beamOn:false},running?dt:0,time);
-   uiAccumulator+=dt;
-   if(uiAccumulator>=.1||current.done){updateUI();uiAccumulator=0;}
+   model.setVisual(running?current:stoppedState,running?dt:0,time);
+   if(running){
+    uiAccumulator+=dt;
+    if(uiAccumulator>=.1){updateUI();uiAccumulator=0;}
+   }
   }
  }
  updateUI(true);
