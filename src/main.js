@@ -34,8 +34,8 @@ const {maybeUpdateProfile} = createThermalProfile();
 const lpeLabel = document.createElement('div');
 lpeLabel.className = 'label3d';
 lpeLabel.textContent = 'LPE · FURNACE';
-lpeLabel.style.color = '#ffaa66';
-lpeLabel.style.borderColor = '#ffaa66';
+lpeLabel.style.color = '#a9d8ff';
+lpeLabel.style.borderColor = '#7fc4ff';
 document.body.appendChild(lpeLabel);
 
 const immLabel = document.createElement('div');
@@ -56,6 +56,13 @@ cmpLabel.className='label3d';
 cmpLabel.textContent='CMP · OXIDE POLISH';
 cmpLabel.style.color='#9ed0f8';cmpLabel.style.borderColor='#7fc4ff';
 document.body.appendChild(cmpLabel);
+const lithoRoomLabel=document.createElement('div');
+lithoRoomLabel.className='label3d';
+lithoRoomLabel.textContent='LITHO · ArF SCANNER';
+lithoRoomLabel.style.color='#a9d8ff';
+lithoRoomLabel.style.borderColor='#7fc4ff';
+lithoRoomLabel.style.display='none';
+document.body.appendChild(lithoRoomLabel);
 const _v3 = new THREE.Vector3();
 function placeLabel(el, wx, wy, wz) {
   _v3.set(wx, wy, wz).project(camera);
@@ -325,10 +332,11 @@ function switchTab(tab){
  rimLPE.visible=tab==='lpe';
  rimIMM.visible=tab==='imm';
  renderer.shadowMap.needsUpdate=true;
- lpeLabel.style.display=tab==='overview'||tab==='lpe'?'block':'none';
- immLabel.style.display=tab==='overview'||tab==='imm'?'block':'none';
- mbeLabel.style.display=tab==='overview'||tab==='mbe'?'block':'none';
- cmpLabel.style.display=tab==='overview'||tab==='cmp'?'block':'none';
+ lpeLabel.style.display=tab==='overview'?'block':'none';
+ immLabel.style.display=tab==='overview'?'block':'none';
+ mbeLabel.style.display=tab==='overview'?'block':'none';
+ cmpLabel.style.display=tab==='overview'?'block':'none';
+ lithoRoomLabel.style.display=tab==='overview'?'block':'none';
  if(tab==='lpe'){
    if(currentPhase){narrStatus.textContent=currentPhase.narr;narrStatus.style.color=currentPhase.color;narrDetail.textContent=currentPhase.detail;}
    else updateIdle();
@@ -806,6 +814,7 @@ function animate(now=0){
  if(immLabel.style.display!=='none')placeLabel(immLabel,BAYS.imm.x,7.5,0);
  if(mbeLabel.style.display!=='none')placeLabel(mbeLabel,BAYS.mbe.x,8.2,0);
  if(cmpLabel.style.display!=='none')placeLabel(cmpLabel,BAYS.cmp.x,5.3,0);
+ if(lithoRoomLabel.style.display!=='none')placeLabel(lithoRoomLabel,BAYS.litho.x,5.0,0);
  controls.update();
  // Static shadow atlases are not regenerated on every camera frame.
  if(renderer.shadowMap.enabled&&(now-lastShadowMs>400)&&(focusActive||moving)){
