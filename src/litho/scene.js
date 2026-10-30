@@ -14,7 +14,7 @@ export function buildLitho({scene,batchStatic=true}){
   optics:new THREE.MeshStandardMaterial({color:0x536575,metalness:.75,roughness:.3}),
   water:new THREE.MeshStandardMaterial({color:0x84c9e6,transparent:true,opacity:.43,depthWrite:false,roughness:.15}),
   beam:new THREE.MeshBasicMaterial({color:0xb392ff,transparent:true,opacity:.36,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}),
-  exposed:new THREE.MeshBasicMaterial({color:0x9467db,side:THREE.DoubleSide,vertexColors:true}),
+  exposed:new THREE.MeshBasicMaterial({color:0x9467db,side:THREE.DoubleSide}),
   green:new THREE.MeshBasicMaterial({color:0x72dfad})
  };
  const cube=(p,w,h,d,m,x,y,z,name='')=>{const v=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);v.position.set(x,y,z);v.name=name;p.add(v);return v;};
