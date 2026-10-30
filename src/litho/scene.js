@@ -8,7 +8,7 @@ export const LITHO_X=62;
  * projection barrel are retained; only room-wide renderer/lights/floor
  * and per-frame loop are removed.
  */
-export function buildLitho({scene,camera,batchStatic=true}){
+export function buildLitho({scene,batchStatic=true}){
  const group=new THREE.Group();
  group.name='ArF immersion scanner · original geometry';
  group.position.x=LITHO_X;scene.add(group);
@@ -527,32 +527,6 @@ group.add(exposureSpot);
    LABELS
    ============================================================ */
 
- const phaseColors={};
- const labels=[
-  ['ArF laser · 193 nm',laserPos.x,laserPos.y+.30,laserPos.z],
-  ['Reticle · 4×',0,RETICLE_Y+.24,0],
-  ['NA 1.35 · immersion',.22,LENS_BOT_W+.5,0],
-  ['300 mm wafer stage',.58,STAGE_Y+.25,0]
- ].map(([title,x,y,z])=>{
-  const el=document.createElement('div');
-  el.className='label3d litho-sub-label';
-  el.textContent=title;
-  el.style.color='#c4adff';el.style.borderColor='#8d78d4';
-  el.style.display='none';document.body.appendChild(el);
-  return {el,x,y,z};
- });
- const v=new THREE.Vector3();
- function labelsVisible(visible){
-  labels.forEach(({el,x,y,z})=>{
-   if(!visible){el.style.display='none';return;}
-   v.set(LITHO_X+x,y,z).project(camera);
-   const onScreen=v.z>=-1&&v.z<=1&&Math.abs(v.x)<=.98&&Math.abs(v.y)<=.98;
-   el.style.display=onScreen?'block':'none';
-   if(!onScreen)return;
-   const sx=(v.x*.5+.5)*window.innerWidth,sy=(-v.y*.5+.5)*window.innerHeight;
-   el.style.transform=`translate(-50%,-100%) translate(${sx}px,${sy}px)`;
-  });
- }
  const activeBeam=[laserWindow,bduBeamVert,bduBeamHoriz,illumSlit,projSlit,projSlitCore,exposureSpot];
  activeBeam.forEach(m=>{m.visible=false;});
  const animated=new Set([stageGroup,reticleGroup,...activeBeam]);
@@ -617,12 +591,11 @@ group.add(exposureSpot);
    m.material.opacity=op[i];
   });
   exposureSpot.scale.setScalar(1+Math.sin(time*6)*.05);
-  labelsVisible(group.visible);
  }
  reset();
  return {group,stats:staticStats,stageGroup,reticleGroup,fieldMesh,fieldScan,
   bodyParts:{lensElements:lensElements.length,fieldCount:36,
    detailedOpticalBarrel:!!barrel,water:!!waterLayer,beamCount:activeBeam.length,
    reticleGlass:!!reticleGlass,granite:!!granite},
-  setVisual,reset,labelsVisible};
+  setVisual,reset};
 }
