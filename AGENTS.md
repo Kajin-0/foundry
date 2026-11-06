@@ -57,3 +57,22 @@ does not claim measured real-device FPS from headless Chromium.
 ## LITHO fifth bay
 
 `src/litho` owns a lazy-loaded, illustrative 193 nm step-and-scan lithography station at world x=62. It is a separate silicon 300 mm wafer reference, not the GaAs laser wafer. The grounded room proxy lives in `src/scene/room.js`. One instanced mesh displays 36 exposure fields; do not batch the dynamic stage/reticle/beam. No extra scene, renderer, frame loop or adjustable recipe knobs. Keep existing process calculations unchanged. Tests in `tests/litho-process.test.js` and `tests/browser.spec.js` verify navigation and process state.
+
+## Sixth and seventh stations — spin coater and implanter (Nov 2026)
+
+Spin coating is lazy-mounted at world x=78; ion implantation at world x=94.
+They must remain part of the SAME shared room: one renderer, one camera,
+one active RAF loop, and no duplicated station-specific ground or lights.
+`src/spin/` and `src/implant/` preserve the user-supplied process
+approximations and detailed equipment appearance. Untouched originals live
+under `archive/`. Each station has an inexpensive static room silhouette;
+`BAYS` drives the room envelope. Offscreen stations are never rendered in
+detail; ongoing timelines advance without per-frame DOM updates. The
+implanter uses GPU instancing for forty moving beam particles.
+
+Both include independent preset processes, process-status and SVG panels,
+cutaway controls, focus/minimize compatibility, mobile navigation and
+`?tool=spin` / `?tool=implant` direct links. Keep implant beam/species
+physics explicitly illustrative and separate from real wafer qualification.
+New tests must verify lazy loading, no additional canvas, process controls,
+mobile behavior and continuity across tabs.

@@ -15,16 +15,16 @@ const totalTriangles=group=>{
  group.traverse(o=>{if(o.isMesh)tris+=(o.geometry.index?.count??o.geometry.attributes.position.count)/3;});
  return tris;
 };
-test('the 5 proxies occupy their real shared-room bays',()=>{
+test('the 7 proxies occupy their real shared-room bays',()=>{
  const model=makeRoom();
- assert.deepEqual(Object.keys(model.proxies),['lpe','imm','mbe','cmp','litho']);
+ assert.deepEqual(Object.keys(model.proxies),['lpe','imm','mbe','cmp','litho','spin','implant']);
  for(const [key,{x}] of Object.entries(BAYS)){
   assert.equal(model.proxies[key].position.x,x);
   const box=new THREE.Box3().setFromObject(model.proxies[key]);
   assert.ok(box.min.y>=-1e-5,key+' sits below floor');
-  assert.ok(box.max.y>4,key+' is too small for detailed outer shape');
+  assert.ok(box.max.y>(key==='spin'||key==='implant'?1.8:4),key+' is too small for detailed outer shape');
  }
- assert.equal(model.room.children.filter(c=>c.name.endsWith('bay-floor')).length,5);
+ assert.equal(model.room.children.filter(c=>c.name.endsWith('bay-floor')).length,7);
  const floor=model.room.getObjectByName('room-ground-plane');
  const grid=model.room.getObjectByName('room-continuous-grid');
  assert.ok(floor?.isMesh);

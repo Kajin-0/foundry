@@ -6,9 +6,9 @@ import {BAYS} from '../src/scene/room.js';
 test('room envelope is computed from the real outer machine footprints',()=>{
  const l=calculateRoomLayout(BAYS);
  assert.equal(l.minX,-6.5);
- assert.equal(l.maxX,66);
- assert.equal(l.centerX,29.75);
- assert.equal(l.span,72.5);
+ assert.equal(l.maxX,99.5);
+ assert.equal(l.centerX,46.5);
+ assert.equal(l.span,106);
  assert.equal(l.wallWidth,l.span+32);
  assert.ok(l.floorSize>=360);
  assert.equal(l.gridSize,l.floorSize);
@@ -17,7 +17,7 @@ test('room envelope is computed from the real outer machine footprints',()=>{
  assert.ok(l.wallMinX<l.minX&&l.wallMaxX>l.maxX);
  assert.ok(l.floorSize/2>LAB_FOG_FAR+35);
 });
-test('layout expands automatically for a fifth bay without manually editing a wall or grid',()=>{
+test('layout expands automatically for an additional bay without manually editing a wall or grid',()=>{
  const old=calculateRoomLayout(BAYS);
  const next=calculateRoomLayout({...BAYS,extra:{x:155,width:12}});
  assert.equal(next.maxX,161);
@@ -32,7 +32,7 @@ test('layout refuses invalid coordinates instead of building a malformed GPU gri
  assert.throws(()=>calculateRoomLayout({bad:{x:NaN,width:8}}),RangeError);
  assert.throws(()=>calculateRoomLayout({bad:{x:1,width:0}}),RangeError);
 });
-test('portrait overview contains all five bays while preserving detail field of view',()=>{
+test('portrait overview contains all seven bays while preserving detail field of view',()=>{
  const l=calculateRoomLayout(BAYS);
  const wide=calculateOverviewView(l,1440,900);
  const mobile=calculateOverviewView(l,390,844);
