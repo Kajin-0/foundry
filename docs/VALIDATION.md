@@ -24,5 +24,11 @@ WebGL canvas; no second floor, light rig or animation loop is created by
 the added process modules. On selecting Spin/Implant, run the cycle,
 switch tabs while it runs, revisit the tool and verify the numeric state
 has advanced without redundant 3D redraws. Verify the two added cutaway
-sliders, three implant presets, 0°/7° tilt, direct deep links and mobile
+sliders, fixed As⁺ 100 keV / 7° recipe (no selectable modes), deep links and mobile
 focus/minimize behavior. The supplied unmodified sources are archived.
+
+The implant overview LOD must preserve distinct physical source, analyzer
+curved yokes, connected acceleration/scan line, vacuum chamber, load lock,
+pumping and structural support. Lighting verification checks that the cool
+fill moves with active tool selection while maintaining two directional
+lights, the one WebGL renderer and the existing low-power shadow settings.

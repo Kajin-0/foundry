@@ -5,29 +5,12 @@ const IONS = {
         Rp_ref: 0.058, dRp_ref: 0.019, E_ref: 100,
         rangeExp: 0.72, dRpExp: 0.55, skew: 1.00,
         dmgPeak: 0.72, vacPerIon: 1000,
-        psi_c_ref: 4.5, fmax: 0.35, amorphDose: 3e14 },
-  B:  { name: "Boron", symbol: "B⁺", mass: 11, color: 0x7ee6a0,
-        Rp_ref: 0.160, dRp_ref: 0.058, E_ref: 50,
-        rangeExp: 0.85, dRpExp: 0.65, skew: 0.65,
-        dmgPeak: 0.88, vacPerIon: 100,
-        psi_c_ref: 6.0, fmax: 0.25, amorphDose: 1e16 },
-  P:  { name: "Phosphorus", symbol: "P⁺", mass: 31, color: 0xc08aff,
-        Rp_ref: 0.135, dRp_ref: 0.052, E_ref: 100,
-        rangeExp: 0.90, dRpExp: 0.65, skew: 0.85,
-        dmgPeak: 0.78, vacPerIon: 800,
-        psi_c_ref: 4.0, fmax: 0.30, amorphDose: 1e15 }
+        psi_c_ref: 4.5, fmax: 0.35, amorphDose: 3e14 }
 };
 
-/* ψc reference values (per-ion, at E_ref), scaled by √(E_ref/E):
-   Experimental critical angles in Si(100):  B (50 keV) ≈ 5-6°,  P (100 keV) ≈ 3.5-4°,
-   As (100 keV) ≈ 4-5°. Lighter ions have a WIDER channel acceptance, so ψc decreases
-   with Z₁ — the opposite of the "√Z₁" LINDHARD form which ignores thermal vibration
-   and dechanneling differences between species. */
-const PRESETS = {
-  sd:   { ion: "As", E: 100, dose: 5e15, tilt: 7, current_uA: 100 },
-  bsd:  { ion: "B",  E: 50,  dose: 1e15, tilt: 7, current_uA: 50  },
-  well: { ion: "P",  E: 300, dose: 1e13, tilt: 7, current_uA: 200 }
-};
+// Fixed educational recipe. The 7° tilt suppresses axial channeling;
+// modeled critical angle is an approximation, not measured implantation data.
+const RECIPE=Object.freeze({ion:"As",E:100,dose:5e15,tilt:7,current_uA:100});
 
 const Q_E = 1.602e-19;
 const WAFER_AREA_CM2 = Math.PI * 25;
@@ -198,19 +181,17 @@ export function createImplantController(model){
  const $=id=>document.getElementById('implant'+id);
  const play=$('PlayBtn'),cut=$('Cut'),chart=$('Profile'),xsec=$('Xsec');
  let uiAccum=.11;
- function preset(key){
-  if(proc.running||!PRESETS[key])return;
-  const p=PRESETS[key];
-  proc.ion=p.ion;proc.E=p.E;proc.targetDose=p.dose;
-  proc.tilt=p.tilt;proc.currentMax_uA=p.current_uA;
-  proc.effectiveCurrent_uA=effectiveCurrent(p.current_uA,p.E,p.dose);
-  proc.realImplantSeconds=p.dose/(proc.effectiveCurrent_uA*doseRatePerUA());
+ function initializeRecipe(){
+  proc.ion=RECIPE.ion;
+  proc.E=RECIPE.E;
+  proc.targetDose=RECIPE.dose;
+  proc.tilt=RECIPE.tilt;
+  proc.currentMax_uA=RECIPE.current_uA;
+  proc.effectiveCurrent_uA=effectiveCurrent(RECIPE.current_uA,RECIPE.E,RECIPE.dose);
+  proc.realImplantSeconds=RECIPE.dose/(proc.effectiveCurrent_uA*doseRatePerUA());
   proc.timeCompression=proc.realImplantSeconds/SIM_IMPLANT_SEC;
   proc.running=false;proc.phase='idle';proc.simTime=0;
   proc.dose=0;proc.waferTemp=25;proc.beamCurrent_uA=0;
-  document.querySelectorAll('[data-implant-preset]').forEach(b=>b.classList.toggle('active',b.dataset.implantPreset===key));
-  document.querySelectorAll('[data-implant-tilt]').forEach(b=>b.classList.toggle('active',Number(b.dataset.implantTilt)===proc.tilt));
-  refresh();
  }
  function profile(){
   const {Rp,dRp}=rangeFor(proc.ion,proc.E);
@@ -264,13 +245,6 @@ export function createImplantController(model){
   proc.running=true;proc.simTime=0;proc.phase='tune';proc.dose=0;
   proc.beamCurrent_uA=0;proc.waferTemp=25;refresh();
  });
- document.querySelectorAll('[data-implant-preset]').forEach(b=>b.addEventListener('click',()=>preset(b.dataset.implantPreset)));
- document.querySelectorAll('[data-implant-tilt]').forEach(b=>b.addEventListener('click',()=>{
-  if(proc.running)return;
-  proc.tilt=Number(b.dataset.implantTilt);
-  document.querySelectorAll('[data-implant-tilt]').forEach(el=>el.classList.toggle('active',el===b));
-  refresh();
- }));
  cut.addEventListener('input',()=>model.setCut(Number(cut.value)/100));
  model.setCut(Number(cut.value)/100);
  function update(dt,time,visible){
@@ -287,7 +261,7 @@ export function createImplantController(model){
   }
   if(visible){model.setVisual(proc,dt,time);uiAccum+=dt;if(uiAccum>=.1||!proc.running){refresh();uiAccum=0}}
  }
- preset('sd');model.setVisual(proc,0,0);
+ initializeRecipe();refresh();model.setVisual(proc,0,0);
  return {group:model.group,update,refresh,isRunning:()=>proc.running,
   getState:()=>({...proc}),renderOptimization:model.staticStats};
 }

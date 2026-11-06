@@ -65,15 +65,15 @@ export function buildRoom(scene,{batchProxies=true}={}){
  // the plane has two triangles; the grid is one batched line object.
  const layout=calculateRoomLayout(BAYS);
  const floor=new THREE.Mesh(new THREE.PlaneGeometry(layout.floorSize,layout.floorSize),
-  new THREE.MeshStandardMaterial({color:0x0b0e13,roughness:.6,metalness:.55}));
+  new THREE.MeshStandardMaterial({color:0x121a24,roughness:.72,metalness:.35}));
  floor.name='room-ground-plane';
  floor.rotation.x=-Math.PI/2;floor.position.x=layout.centerX;
  floor.receiveShadow=true;
  room.add(floor);
- const grid=new THREE.GridHelper(layout.gridSize,layout.gridDivisions,0x1d3348,0x111a23);
+ const grid=new THREE.GridHelper(layout.gridSize,layout.gridDivisions,0x28445f,0x172535);
  grid.name='room-continuous-grid';
  grid.position.set(layout.centerX,.003,0);
- grid.material.transparent=true;grid.material.opacity=.4;
+ grid.material.transparent=true;grid.material.opacity=.48;
  room.add(grid);
 
  // Single fog-dissolved rear wall. Width, center and the framing rails are
@@ -82,7 +82,7 @@ export function buildRoom(scene,{batchProxies=true}={}){
   (layout.wallMinX+layout.wallMaxX)/2,5.5,-9.8);
  // An opaque wall approximates the previous 72%-opacity composition while
  // avoiding a screen-sized transparent draw/overdraw on modest GPUs.
- wall.material=new THREE.MeshBasicMaterial({color:0x0e1720,fog:true,side:THREE.DoubleSide});
+ wall.material=new THREE.MeshBasicMaterial({color:0x15212e,fog:true,side:THREE.DoubleSide});
  for(let x=layout.wallMinX+12;x<layout.wallMaxX-3;x+=15)
   box(room,'room-wall-support',.15,10.5,.22,steel,x,5.25,-9.4);
 
@@ -314,19 +314,68 @@ export function buildRoom(scene,{batchProxies=true}={}){
   cylinder(p,'spin-hot-plate',.30,.30,.035,pale,1.85,.19,.55,18);
   p.userData.silhouette={source:'spin/scene.js',waferRadius:.78,grounded:true};
  }
- // Ion implanter: source, 90-degree analyzing magnet, beam column and end station.
+ // Ion implanter. Preserve the real instrument's recognizable source →
+ // 90° mass-analysis magnet → extraction/scan beamline → end-station chain.
+ // Only envelope and signature structural elements belong in overview LOD.
  {
   const p=proxies.implant;
-  box(p,'implant-source',.62,.60,.64,dark,-1.32,1.20,-2.53);
-  cylinder(p,'implant-analyzer',.72,.72,.8,steel,.5,1.20,-.6,18);
-  cylinder(p,'implant-beam-column',.22,.22,3.0,pale,1.48,1.20,0,14,'x');
-  cylinder(p,'implant-end-station',1.06,1.06,1.95,steel,2.77,1.32,0,18);
-  cylinder(p,'implant-wafer-chuck',.60,.60,.09,dark,2.77,.64,0,14);
-  box(p,'implant-control-rack',.85,1.75,.65,dark,4.0,.875,.5);
-  box(p,'implant-deck',6.1,.13,1.15,steel,.5,.13,0);
-  for(const x of [-2.45,-.9,.8,2.5])for(const z of [-.58,.58])
-   box(p,'implant-frame-post',.12,.54,.12,dark,x,.3,z);
-  p.userData.silhouette={source:'implant/scene.js',analyzerAngle:90,grounded:true};
+  const y=1.2;
+  const magnet=new THREE.MeshStandardMaterial({color:0x42536a,metalness:.78,roughness:.40});
+  const coil=new THREE.MeshStandardMaterial({color:0xa96a39,metalness:.67,roughness:.48});
+  const port=new THREE.MeshStandardMaterial({color:0x99aabb,metalness:.85,roughness:.32});
+  // Beamline cylinders are rotated onto the measured center-to-center axis.
+  const tube=(name,from,to,r,material)=>{
+   const a=new THREE.Vector3(...from),b=new THREE.Vector3(...to);
+   const dir=b.clone().sub(a);
+   const mesh=new THREE.Mesh(new THREE.CylinderGeometry(r,r,dir.length(),12),material);
+   mesh.position.copy(a).add(b).multiplyScalar(.5);
+   mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.normalize());
+   mesh.name=name;p.add(mesh);return mesh;
+  };
+  // Common floor frame and functional supports; nothing floats in midair.
+  box(p,'implant-deck',6.4,.14,2.20,steel,.50,.17,-.10);
+  for(const x of [-2.3,-.95,.75,2.70])for(const z of [-.84,.84])
+   box(p,'implant-frame-post',.12,.34,.12,dark,x,.17,z);
+  box(p,'implant-source-deck',1.30,.12,1.34,dark,-1.32,.62,-2.53);
+  for(const x of [-1.83,-.81])for(const z of [-2.96,-2.10])
+   box(p,'implant-source-support',.09,.53,.09,steel,x,.32,z);
+  box(p,'implant-source',.77,.63,.65,dark,-1.32,y,-2.53);
+  cylinder(p,'implant-extraction-flange',.25,.25,.10,port,-.92,y,-2.23,12,'x');
+  tube('implant-incoming-beamline',[-1.04,y,-2.26],[-.19,y,-1.05],.15,pale);
+  // Two quarter-circle yoke plates leave an obvious analyzer air gap.
+  // A dark curved outer shell and copper coils communicate mass selection.
+  for(const yy of [y-.24,y+.24]){
+   const arc=new THREE.Mesh(new THREE.TorusGeometry(.72,.20,8,20,Math.PI,Math.PI/2),magnet);
+   arc.rotation.x=Math.PI/2;
+   arc.position.set(.48,yy,-.60);
+   arc.name='implant-analyzer-yoke';p.add(arc);
+   const winding=new THREE.Mesh(new THREE.TorusGeometry(.77,.07,6,20,Math.PI,Math.PI/2),coil);
+   winding.rotation.x=Math.PI/2;winding.position.set(.48,yy+(.01*(yy>y?1:-1)),-.60);
+   winding.name='implant-analyzer-coil';p.add(winding);
+  }
+  tube('implant-analyzer-exit',[.45,y,-.25],[.95,y,0],.18,pale);
+  tube('implant-accelerator',[.88,y,0],[1.63,y,0],.19,port);
+  for(const x of [1.05,1.32,1.60])
+   cylinder(p,'implant-accelerator-flange',.26,.26,.06,steel,x,y,0,14,'x');
+  tube('implant-scanner-bellows',[1.65,y,0],[2.14,y,0],.23,dark);
+  for(const x of [1.73,1.83,1.93,2.03])
+   cylinder(p,'implant-bellows-rib',.27,.27,.04,pale,x,y,0,12,'x');
+  // Horizontal cylindrical high-vacuum process chamber with end flange.
+  cylinder(p,'implant-end-station',.77,.77,1.12,steel,2.65,y,0,20,'x');
+  cylinder(p,'implant-end-flange',.87,.87,.08,port,3.22,y,0,20,'x');
+  cylinder(p,'implant-chamber-viewport',.21,.21,.09,dark,2.65,y+.70,.28,16);
+  cylinder(p,'implant-load-lock',.28,.28,.66,steel,2.72,y,.92,16,'z');
+  cylinder(p,'implant-load-lock-flange',.34,.34,.07,port,2.72,y,1.28,14,'z');
+  cylinder(p,'implant-turbo-neck',.25,.25,.18,dark,2.55,.48,0,14);
+  cylinder(p,'implant-turbo-pump',.24,.18,.39,pale,2.55,.25,0,14);
+  for(const z of [-.53,.53])
+   box(p,'implant-chamber-support',.16,.47,.16,dark,2.65,.31,z);
+  // Electronics cabinet remains separate from the vacuum train.
+  box(p,'implant-control-rack',.92,1.65,.79,dark,4.18,.83,.35);
+  box(p,'implant-rack-face',.04,1.37,.62,pale,4.67,.86,.35);
+  for(const yy of [.50,.83,1.18])box(p,'implant-rack-module',.06,.13,.50,magnet,4.72,yy,.35);
+  p.userData.silhouette={source:'implant/scene.js',analyzerAngle:90,grounded:true,
+   sourceToAnalyzer:true,continuousBeamline:true,magnetYokes:2,loadLock:true,turboPump:true};
  }
 
  // The seven previews are fully static, so equivalent-material rigid meshes
