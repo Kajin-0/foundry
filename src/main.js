@@ -220,6 +220,7 @@ const camPos={
  implant:{pos:new THREE.Vector3(99,6.4,12),tgt:new THREE.Vector3(94.8,1.3,0)}
 };
 let camGoal=null;
+let framingRecovery=null;
 let cameraJourneyTime=0;
 // Station picking is performed only on actual pointer movement / release,
 // never in the 3D animation/render loop.
@@ -254,7 +255,23 @@ function pickBay(e){
  }
  return null;
 }
-function cancelCameraJourney(){camGoal=null;}
+// User input cancels only camera translation/orbit targeting. FOV and fog
+// return to the selected station's defaults in the existing RAF; otherwise
+// an interrupted transition can leave an unintended narrow/wide lens.
+function cancelCameraJourney(){
+ if(!camGoal)return;
+ camGoal=null;
+ const normalDistance=currentTab==='overview'?overviewView.maxDistance:85;
+ const radius=camera.position.distanceTo(controls.target);
+ // Do not suddenly pull a distant camera in when OrbitControls updates.
+ controls.maxDistance=Math.max(normalDistance,radius+.5);
+ framingRecovery={
+  start:performance.now(),duration:220,
+  fromFov:camera.fov,fromFog:scene.fog.far,
+  toFov:currentTab==='overview'?overviewView.fov:40,
+  toFog:currentTab==='overview'?overviewView.fogFar:LAB_FOG_FAR
+ };
+}
 renderer.domElement.addEventListener('pointerdown',e=>{
  cancelCameraJourney();downPointer={id:e.pointerId,x:e.clientX,y:e.clientY,time:performance.now()};
 },{passive:true});
@@ -401,6 +418,7 @@ function showProcessPanel(tab){
 }
 function switchTab(tab,{instant=false}={}){
  if(!(tab in camPos))tab='overview';
+ framingRecovery=null;
  currentTab=tab;
  setHoveredBay(null);
  machine.visible=tab==='lpe';
@@ -905,7 +923,7 @@ function animate(now=0){
  requestAnimationFrame(animate);
  if(document.hidden){clock.getDelta();return;}
  const focusActive=currentTab==='lpe'&&cycleActive||currentTab==='imm'&&S.immOn||currentTab==='mbe'&&mbeController?.isRunning()||currentTab==='cmp'&&cmpController?.isRunning()||currentTab==='litho'&&lithoController?.isRunning()||currentTab==='spin'&&spinController?.isRunning()||currentTab==='implant'&&implantController?.isRunning();
- const moving=!!camGoal||now-lastInteractionMs<750;
+ const moving=!!camGoal||!!framingRecovery||now-lastInteractionMs<750;
  // Do not artificially restrict interaction to 30/45 Hz on capable GPUs.
  const targetFps=lowPower?(focusActive||moving?45:18):(focusActive||moving?60:24);
  if(now-lastFrameMs<1000/targetFps)return;
@@ -949,6 +967,14 @@ function animate(now=0){
    camGoal=null;
    controls.maxDistance=currentTab==='overview'?overviewView.maxDistance:85;
   }
+ }else if(framingRecovery){
+  // Finish lens/fog restoration without changing the user's orbit position.
+  const raw=(now-framingRecovery.start)/framingRecovery.duration;
+  const eased=smoothJourney(raw);
+  camera.fov=THREE.MathUtils.lerp(framingRecovery.fromFov,framingRecovery.toFov,eased);
+  scene.fog.far=THREE.MathUtils.lerp(framingRecovery.fromFog,framingRecovery.toFog,eased);
+  camera.updateProjectionMatrix();
+  if(raw>=1)framingRecovery=null;
  }
  controls.update();
  if(currentTab==='overview')placeOverviewLabels();
@@ -982,7 +1008,9 @@ window.addEventListener('resize',()=>{
  if(currentTab==='overview'){
    camera.far=Math.max(300,overviewView.distance*2.4);
    controls.maxDistance=overviewView.maxDistance;
+   framingRecovery=null;
    if(reduceMotion?.matches){
+    camGoal=null;
     camera.position.copy(camPos.overview.pos);
     controls.target.copy(camPos.overview.tgt);
     camera.fov=overviewView.fov;scene.fog.far=overviewView.fogFar;
@@ -1033,6 +1061,7 @@ window.__foundryDiagnostics=()=>({
  frameIntervalP95ms:p95(presentIntervalsMs),
  cameraPosition:camera.position.toArray(),cameraTarget:controls.target.toArray(),
  cameraJourney:{active:!!camGoal,durationMs:cameraJourneyTime,fromFov:camGoal?.fromFov??camera.fov,toFov:camGoal?.toFov??camera.fov},
+ framingRecovery:{active:!!framingRecovery,targetFov:framingRecovery?.toFov??null,targetFog:framingRecovery?.toFog??null},
  hoveredBay,overviewLabels:overviewLabels.length
 });
 requestAnimationFrame(animate);
