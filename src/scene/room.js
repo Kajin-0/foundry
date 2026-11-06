@@ -325,13 +325,19 @@ export function buildRoom(scene,{batchProxies=true}={}){
   const magnet=new THREE.MeshStandardMaterial({color:0x42536a,metalness:.78,roughness:.40});
   const coil=new THREE.MeshStandardMaterial({color:0xa96a39,metalness:.67,roughness:.48});
   const port=new THREE.MeshStandardMaterial({color:0x99aabb,metalness:.85,roughness:.32});
-  // Beamline cylinders are rotated onto the measured center-to-center axis.
+  // Stationary vacuum envelopes stay cheap and batch into the existing renderer.
+  // Metadata comes from actual endpoints, so continuity can be verified in tests.
   const tube=(name,from,to,r,material)=>{
    const a=new THREE.Vector3(...from),b=new THREE.Vector3(...to);
    const dir=b.clone().sub(a);
    const mesh=new THREE.Mesh(new THREE.CylinderGeometry(r,r,dir.length(),12),material);
    mesh.position.copy(a).add(b).multiplyScalar(.5);
    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.normalize());
+   mesh.userData.centerline={from:a.toArray(),to:b.toArray()};
+   mesh.name=name;p.add(mesh);return mesh;
+  };
+  const curvedTube=(name,path,r,material,segments=12)=>{
+   const mesh=new THREE.Mesh(new THREE.TubeGeometry(path,segments,r,7,false),material);
    mesh.name=name;p.add(mesh);return mesh;
   };
   // Common floor frame and functional supports; nothing floats in midair.
@@ -342,20 +348,49 @@ export function buildRoom(scene,{batchProxies=true}={}){
   for(const x of [-1.83,-.81])for(const z of [-2.96,-2.10])
    box(p,'implant-source-support',.09,.53,.09,steel,x,.32,z);
   box(p,'implant-source',.77,.63,.65,dark,-1.32,y,-2.53);
-  cylinder(p,'implant-extraction-flange',.25,.25,.10,port,-.92,y,-2.23,12,'x');
-  tube('implant-incoming-beamline',[-1.04,y,-2.26],[-.19,y,-1.05],.15,pale);
-  // Two quarter-circle yoke plates leave an obvious analyzer air gap.
-  // A dark curved outer shell and copper coils communicate mass selection.
-  for(const yy of [y-.24,y+.24]){
-   const arc=new THREE.Mesh(new THREE.TorusGeometry(.72,.20,8,20,Math.PI,Math.PI/2),magnet);
-   arc.rotation.x=Math.PI/2;
-   arc.position.set(.48,yy,-.60);
-   arc.name='implant-analyzer-yoke';p.add(arc);
-   const winding=new THREE.Mesh(new THREE.TorusGeometry(.77,.07,6,20,Math.PI,Math.PI/2),coil);
-   winding.rotation.x=Math.PI/2;winding.position.set(.48,yy+(.01*(yy>y?1:-1)),-.60);
-   winding.name='implant-analyzer-coil';p.add(winding);
+  // Schematic centerline: one exactly quarter-circular 90-degree analyzer.
+  // Incoming tangent is +Z, outgoing tangent is +X. The source approach is
+  // gently curved to mate tangentially to this magnet; no discontinuous pipes.
+  const center=new THREE.Vector3(.50,y,-.60),radius=.60;
+  const entry=new THREE.Vector3(center.x-radius,y,center.z);
+  const exit=new THREE.Vector3(center.x,y,center.z+radius);
+  const sourceOutlet=new THREE.Vector3(-1.04,y,-2.26);
+  const approach=new THREE.CubicBezierCurve3(
+   sourceOutlet,new THREE.Vector3(-.70,y,-1.96),
+   new THREE.Vector3(entry.x,y,-1.35),entry
+  );
+  const analyzer=new THREE.Curve();
+  analyzer.getPoint=(t,target=new THREE.Vector3())=>{
+   const angle=Math.PI-t*Math.PI/2;
+   return target.set(center.x+radius*Math.cos(angle),y,
+    center.z+radius*Math.sin(angle));
+  };
+  const sourceFlange=new THREE.Mesh(new THREE.CylinderGeometry(.24,.24,.09,12),port);
+  sourceFlange.name='implant-extraction-flange';
+  sourceFlange.position.copy(sourceOutlet);
+  sourceFlange.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),
+   approach.getTangent(0).normalize());
+  p.add(sourceFlange);
+  curvedTube('implant-incoming-beamline',approach,.15,pale,11);
+  // Vacuum bend and pole faces share the SAME magnetic center/radius as
+  // the beam trajectory. Annular pole faces match the detailed machine's
+  // quadrant geometry more closely than the former offset quarter-tori.
+  curvedTube('implant-analyzer-vacuum-bend',analyzer,.15,port,14);
+  const poleGeom=new THREE.RingGeometry(.39,.83,18,1,Math.PI,Math.PI/2);
+  poleGeom.rotateX(-Math.PI/2);
+  for(const yy of [y-.25,y+.25]){
+   const pole=new THREE.Mesh(poleGeom,magnet);
+   pole.position.set(center.x,yy,center.z);
+   pole.name='implant-analyzer-yoke';p.add(pole);
+   const winding=new THREE.Curve();
+   winding.getPoint=(t,target=new THREE.Vector3())=>{
+    const angle=Math.PI-t*Math.PI/2;
+    return target.set(center.x+.92*Math.cos(angle),
+     yy+(yy>y?.06:-.06),center.z+.92*Math.sin(angle));
+   };
+   curvedTube('implant-analyzer-coil',winding,.065,coil,14);
   }
-  tube('implant-analyzer-exit',[.45,y,-.25],[.95,y,0],.18,pale);
+  tube('implant-analyzer-exit',exit.toArray(),[.95,y,0],.18,pale);
   tube('implant-accelerator',[.88,y,0],[1.63,y,0],.19,port);
   for(const x of [1.05,1.32,1.60])
    cylinder(p,'implant-accelerator-flange',.26,.26,.06,steel,x,y,0,14,'x');
@@ -377,7 +412,8 @@ export function buildRoom(scene,{batchProxies=true}={}){
   box(p,'implant-rack-face',.04,1.37,.62,pale,4.67,.86,.35);
   for(const yy of [.50,.83,1.18])box(p,'implant-rack-module',.06,.13,.50,magnet,4.72,yy,.35);
   p.userData.silhouette={source:'implant/scene.js',analyzerAngle:90,grounded:true,
-   sourceToAnalyzer:true,continuousBeamline:true,magnetYokes:2,loadLock:true,turboPump:true};
+   sourceToAnalyzer:true,continuousBeamline:true,magnetYokes:2,loadLock:true,turboPump:true,
+   bendRadius:radius,analyzerEntry:entry.toArray(),analyzerExit:exit.toArray()};
  }
 
  // The seven previews are fully static, so equivalent-material rigid meshes
