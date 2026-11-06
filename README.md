@@ -161,7 +161,7 @@ implant presets for historical reference.
 
 ## Overview and navigation (November 2026 polish)
 
-The seven-bay overview presents a lightweight title and compact station
+The seven-bay overview leaves the center open, with compact station
 selection overlay without adding any 3D assets. Click or tap the existing
 static instrument silhouette (or its bay), select a station label with mouse
 or keyboard (Enter/Space), or use the permanent station tabs. Navigation
