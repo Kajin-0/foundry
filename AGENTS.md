@@ -103,8 +103,8 @@ check the fill target at the overview, implant and LPE stations.
 
 ## Seven-bay navigation and overview polish (Nov 2026)
 
-The overview remains one shared Three.js room; it now has a small HTML title,
-seven keyboard-accessible DOM room labels and on-demand raycasts for clicking
+The overview remains one shared Three.js room, with intentionally open central
+space, seven keyboard-accessible DOM room labels and on-demand raycasts for clicking
 static room proxies/bay slabs. Picking occurs on pointer actions only, throttled
 on hover (~12 Hz), never in the render loop. Do not add shadow passes, meshes,
 textured decals, a second canvas, or per-frame raycasts for navigation.

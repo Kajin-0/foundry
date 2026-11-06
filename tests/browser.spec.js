@@ -544,7 +544,7 @@ test('overview labels form two readable rows and keyboard selection enters one d
  await page.setViewportSize({width:1440,height:900});
  await page.goto('/');
  await expect(page.locator('body')).toHaveClass(/room-overview/);
- await expect(page.locator('#roomIntro')).toBeVisible();
+ await expect(page.locator('#roomIntro')).toHaveCount(0);
  await expect(page.locator('.label3d')).toHaveCount(7);
  await page.waitForTimeout(400);
  const rectangles=await page.locator('.label3d').evaluateAll(els=>els.map(e=>{
@@ -560,7 +560,7 @@ test('overview labels form two readable rows and keyboard selection enters one d
  await page.keyboard.press('Enter');
  await expect(page.locator('#tabImplant')).toHaveClass(/active/);
  await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.implantLoaded),{timeout:30000}).toBe(true);
- await expect(page.locator('#roomIntro')).toBeHidden();
+ await expect(page.locator('#roomIntro')).toHaveCount(0);
  await expect(page.locator('canvas')).toHaveCount(1);
  expect(errors).toEqual([]);
 });
@@ -593,7 +593,7 @@ test('station journey eases camera and lens smoothly; dragging cancels its motio
 test('portrait station grid remains usable without expensive floating room labels',async({page})=>{
  await page.setViewportSize({width:390,height:844});
  await page.goto('/');
- await expect(page.locator('#roomIntro')).toBeVisible();
+ await expect(page.locator('#roomIntro')).toHaveCount(0);
  await expect(page.locator('.label3d:visible')).toHaveCount(0);
  await expect(page.locator('.tabs .tab')).toHaveCount(8);
  const buttons=await page.locator('.tabs .tab').evaluateAll(els=>els.map(el=>{
