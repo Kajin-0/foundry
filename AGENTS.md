@@ -123,3 +123,18 @@ Tests in `tests/camera-journey.test.js` and `tests/browser.spec.js` cover easing
 keyboard access, label collision, cancellations, mobile, one WebGL canvas and
 the original tool physics. Browser testing should be serial on low-resource
 software WebGL environments (avoid two Chromium runs at once).
+
+## Ion implanter overview geometry correction (Nov 2026)
+
+Only the **room silhouette** has been refined, not the detailed implanter or
+its process physics. A fixed 0.60-unit radius quarter-circle defines the
+90-degree analyzing-magnet centerline in the horizontal XZ plane. The source
+approach is a cubic curve meeting the analyzer at a tangent, and the +X
+exit pipe begins exactly at its endpoint. Two thin annular pole faces and
+copper outer-arc coils use the same center (x=0.50,z=-0.60). This removes
+the visually disconnected offset tori/straight segments. It is a schematic
+of the already-illustrative instrument, not beam optics or a CAD design.
+Maintain <=3,000 raw proxy triangles, the static batcher, one renderer and
+no extra shadow/light, animation loop or material-calibration claims. The
+room-proxy regression checks contact points, tangents, pole geometry, bounds
+and unchanged batching triangle counts.
