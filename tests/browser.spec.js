@@ -611,14 +611,14 @@ test('interrupting a portrait camera journey restores lens and fog without snapp
  await page.setViewportSize({width:390,height:844});
  await page.goto('/');
  await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.viewGeometry.fov)).toBe(72);
- // Run click and interruption on the same JS turn to avoid software-WebGL
- // frame stalls completing the camera motion between automation actions.
+ // A synthetic pointerdown has no active OS/browser pointer, so it makes
+ // OrbitControls.setPointerCapture throw. Wheel is a valid interruption event
+ // that can be dispatched in the same turn even on slow software WebGL.
  const immediate=await page.evaluate(()=>{
   document.getElementById('tabSpin').click();
   const before=window.__foundryDiagnostics();
-  const canvas=document.querySelector('canvas');
-  canvas.dispatchEvent(new PointerEvent('pointerdown',{
-   bubbles:true,pointerId:14,clientX:220,clientY:350
+  document.querySelector('canvas').dispatchEvent(new WheelEvent('wheel',{
+   bubbles:true,deltaY:0
   }));
   const after=window.__foundryDiagnostics();
   return {before,after};
@@ -659,4 +659,25 @@ test('wheel cancellation restores panorama optics and next station transition cl
  expect(restarted.cameraJourney.active).toBe(true);
  await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics().viewGeometry.fov),{timeout:8000}).toBe(40);
  await expect(page.locator('canvas')).toHaveCount(1);
+});
+
+test('genuine browser pointer input during camera travel does not cause capture errors',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.setViewportSize({width:1440,height:900});
+ await page.goto('/?tool=lpe');
+ await page.locator('#tabOverview').click();
+ // Real Playwright mouse input carries an active pointer and exercises
+ // OrbitControls pointer capture, unlike dispatchEvent(PointerEvent).
+ const target=await page.locator('canvas').boundingBox();
+ expect(target).toBeTruthy();
+ const x=target.x+target.width*.50,y=target.y+target.height*.38;
+ await page.mouse.move(x,y);
+ await page.mouse.down();
+ await page.mouse.up();
+ await expect.poll(()=>page.evaluate(()=>{
+  const d=window.__foundryDiagnostics();
+  return !d.cameraJourney.active&&!d.framingRecovery.active;
+ }),{timeout:8000}).toBe(true);
+ await expect(page.locator('canvas')).toHaveCount(1);
+ expect(errors).toEqual([]);
 });
