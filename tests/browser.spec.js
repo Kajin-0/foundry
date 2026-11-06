@@ -462,8 +462,7 @@ test('spin coater and ion implanter lazy-load as distinct stations in one render
  await expect(page.locator('canvas')).toHaveCount(1);
  await page.locator('#spinPlayBtn').click();
  await expect(page.locator('#spinPlayBtn')).toContainText('Stop');
- await page.waitForTimeout(280);
- expect((await page.evaluate(()=>window.__foundryDiagnostics().spinState)).simTime).toBeGreaterThan(0);
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.spinState?.simTime),{timeout:15000}).toBeGreaterThan(0);
  await page.locator('#tabImplant').click();
  await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.implantLoaded),{timeout:30000}).toBe(true);
  await expect(page.locator('#implantControls')).toBeVisible();
@@ -475,9 +474,8 @@ test('spin coater and ion implanter lazy-load as distinct stations in one render
  expect((await page.evaluate(()=>window.__foundryDiagnostics().implantState)).tilt).toBe(0);
  await page.locator('#implantPlayBtn').click();
  await expect(page.locator('#implantPlayBtn')).toContainText('Stop');
- await page.waitForTimeout(280);
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.implantState?.simTime),{timeout:15000}).toBeGreaterThan(0);
  const d=await page.evaluate(()=>window.__foundryDiagnostics());
- expect(d.implantState.simTime).toBeGreaterThan(0);
  expect(d.spinState.simTime).toBeGreaterThan(0);
  expect(d.detailed).toEqual({lpe:false,imm:false,mbe:false,cmp:false,litho:false,spin:false,implant:true});
  expect(d.rendererCount).toBe(1);
