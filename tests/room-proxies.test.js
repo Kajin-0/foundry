@@ -139,7 +139,21 @@ test('implant overview matches the curved analyzer and grounded beamline assembl
  const {proxies}=makeRoom(false),p=proxies.implant;
  assert.equal(byName(p,'implant-analyzer-yoke').length,2);
  assert.equal(byName(p,'implant-analyzer-coil').length,2);
+ assert.equal(byName(p,'implant-analyzer-vacuum-bend').length,1);
  assert.equal(byName(p,'implant-incoming-beamline').length,1);
+ const inlet=byName(p,'implant-incoming-beamline')[0].geometry.parameters.path;
+ const bend=byName(p,'implant-analyzer-vacuum-bend')[0].geometry.parameters.path;
+ const outlet=byName(p,'implant-analyzer-exit')[0].userData.centerline;
+ const nearly=(a,b)=>a.distanceTo(b)<1e-8;
+ assert.ok(nearly(inlet.getPoint(1),bend.getPoint(0)),'inlet and analyzer must meet');
+ assert.ok(nearly(bend.getPoint(1),new THREE.Vector3(...outlet.from)),'analyzer and exit must meet');
+ assert.ok(inlet.getTangent(1).dot(bend.getTangent(0))>.999,
+  'incoming pipe must be tangent to analyzer');
+ assert.ok(bend.getTangent(1).dot(new THREE.Vector3(1,0,0))>.999,
+  'outgoing pipe must leave along +X');
+ assert.ok(bend.getPoint(.5).distanceTo(new THREE.Vector3(.50,1.20,-.60))>.59);
+ assert.ok(Math.abs(bend.getPoint(0).distanceTo(new THREE.Vector3(.50,1.20,-.60))-.60)<1e-9);
+ for(const pole of byName(p,'implant-analyzer-yoke'))assert.equal(pole.geometry.type,'RingGeometry');
  assert.equal(byName(p,'implant-analyzer-exit').length,1);
  assert.equal(byName(p,'implant-accelerator').length,1);
  assert.equal(byName(p,'implant-scanner-bellows').length,1);
@@ -155,4 +169,7 @@ test('implant overview matches the curved analyzer and grounded beamline assembl
  assert.ok(bbox.max.y>2);
  assert.ok(bbox.min.z< -3);
  assert.ok(bbox.max.x>p.position.x+4);
+ assert.equal(p.userData.silhouette.analyzerAngle,90);
+ assert.equal(p.userData.silhouette.bendRadius,.60);
+ assert.ok(totalTriangles(p)<=3000,'overview proxy should remain inexpensive');
 });
