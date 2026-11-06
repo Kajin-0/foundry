@@ -1,6 +1,6 @@
 # Foundry — Interactive Semiconductor Process Lab
 
-A **single shared 3D semiconductor fabrication laboratory** containing LPE, Ar⁺ ion milling, MBE, and CMP equipment. All stations share one Three.js scene, camera, WebGL renderer and navigation controls. The physics are illustrative, with tested layer/rate calculations where applicable.
+A **single shared 3D semiconductor fabrication laboratory** containing seven stations: LPE, Ar⁺ ion milling, MBE, CMP, 193 nm immersion lithography, spin coating and ion implantation. All stations share one Three.js scene, camera, WebGL renderer and navigation controls. The physics are illustrative, with tested layer/rate calculations where applicable.
 
 ## Run locally
 
@@ -22,10 +22,12 @@ GitHub Pages deployment is automatic from `main` via
 - **Entire laboratory:** https://kajin-0.github.io/foundry/
 - **Direct MBE station link:** https://kajin-0.github.io/foundry/?tool=mbe
 - **Direct CMP station link:** https://kajin-0.github.io/foundry/?tool=cmp
+- **Direct spin coater:** https://kajin-0.github.io/foundry/?tool=spin
+- **Direct ion implanter:** https://kajin-0.github.io/foundry/?tool=implant
 - Older `/mbe.html` links redirect to that station in the same room.
 
-The shared lab initially displays four equipment stations in overview.
-Selecting **LPE**, **Ion Mill**, **MBE** or **CMP** focuses the camera and opens the
+The shared lab initially displays seven equipment stations in overview.
+Selecting **LPE**, **Ion Mill**, **MBE**, **CMP**, **LITHO**, **Spin Coat**, or **Implant** focuses the camera and opens the
 chosen machine's full detailed geometry and controls.
 
 ## Performance architecture
@@ -110,3 +112,32 @@ See `docs/CMP_MODEL.md` for exact assumptions and limitations.
 ## ArF lithography (fifth station)
 
 Open `?tool=litho` to explore a separate illustrative 300 mm silicon wafer exposure using 193 nm ArF immersion, 1.35 NA, 4x reduction, 26 x 33 mm field and 30 mJ/cm2 dose. The 6 x 6 field map and resist cross section are schematic, not calibrated lithography predictions. One instanced field mesh replaces 36 shader draws; shared renderer, room, lights, controls and presets are reused.
+
+## Photoresist spin coating and ion implantation (sixth and seventh stations)
+
+The user-provided standalone sources are archived verbatim in
+`archive/spincoat_original.html` and `archive/ion_implanter_original.html`.
+Their detailed equipment geometry has been adapted to bay-local Three.js groups
+(`src/spin/scene.js`, `src/implant/scene.js`) using the **existing**
+room, camera, lighting, OrbitControls, WebGL renderer, shared ground and
+requestAnimationFrame loop. No iframe or new canvas is created.
+
+Both geometry modules load on first station selection; the overview shows
+lightweight silhouettes. GPU work for offscreen stations is disabled; a
+background process continues numerically and redraws when revisited. Mobile
+screens share the existing DPR/shadow budget. The implanter's 40 particles
+are rendered as **one instanced mesh** rather than 40 separate draw submissions.
+Rigid same-material top-level objects use the existing lossless merge helper.
+
+Spin coating retains the supplied Emslie centrifugal-flow approximation,
+Meyerhofer-style constant evaporation, 100 mm silicon substrate, 5 cP CAR
+resist, 500/3000 rpm stages and approximately 1 µm target film. The 40-second
+illustrative sequence runs at a 3× display speed. Film thickness / final
+floor are model assumptions, not calibrated wafer values.
+
+Ion implantation retains the supplied As⁺ / B⁺ / P⁺ presets, beam-energy and
+dose calculations, mean projected range, straggle, approximate channeling
+and damage estimates, tilt controls, and dose-based real duration. The
+35-second visualization is time-compressed; it is not a measured implanter,
+SRIM or TCAD model. Both are **educational demonstrations**. Do not infer
+real-world recipes or device qualification from these tools.

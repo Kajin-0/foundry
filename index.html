@@ -11,7 +11,7 @@
 
 <div id="hud">
   <h1>FOUNDRY</h1>
-  <p>One virtual laboratory · Five fabrication tools</p>
+  <p>One virtual laboratory · Seven fabrication tools</p>
   <button id="focusToggle" class="focus-toggle" type="button"
     aria-controls="leftPanel rightPanel" aria-pressed="false"
     aria-keyshortcuts="H" title="Hide both panels to inspect the lab (H)">Focus view</button>
@@ -32,7 +32,7 @@
   <div class="label">Live Process</div>
   <div id="narrator">
     <div id="narrStatus">IDLE</div>
-    <div id="narrDetail">Five separate fabrication demonstrations: LPE and MBE deposition, ion milling, CMP planarization and ArF immersion lithography.</div>
+    <div id="narrDetail">Seven independent demonstrations: LPE, ion milling, MBE, CMP, lithography, spin coating and ion implantation.</div>
     <div id="narrTime">—</div>
   </div>
   <div id="lpeOnlyIllustrations">
@@ -86,7 +86,30 @@
   <div id="mbeProgWrap"><div id="mbeProgBar"></div></div>
 
   </div>
-  <div id="cmpLeft" hidden>
+  <div id="spinLeft" hidden>
+<div class="label">Live Spin-Coating Process</div><div id="spinStatus" class="process-status">IDLE</div>
+<p id="spinDetail" class="room-note">Illustrative photoresist coating of a Si wafer.</p>
+<p id="spinTime" class="model-note">—</p>
+<div class="label">Resist Thinning · Flow + Evaporation</div>
+<svg id="spinCurve" class="new-process-chart" viewBox="0 0 300 76" role="img" aria-label="Coating thickness against time"></svg>
+<div class="label">Progress</div><div class="new-process-progress"><div id="spinProgress"></div></div>
+<div class="label">Film Cross-Section (schematic)</div>
+<svg id="spinXsec" class="new-process-chart" viewBox="0 0 300 92" role="img" aria-label="Resist thickness on silicon"></svg>
+<div class="specs"><div><span>Resist thickness</span><span id="spinFilmThickness">—</span></div></div>
+<p class="model-note">Emslie flow + simplified Meyerhofer evaporation. Compressed time; uncalibrated model.</p>
+</div>
+<div id="implantLeft" hidden>
+<div class="label">Live Dopant Implantation</div><div id="implantStatus" class="process-status">IDLE</div>
+<p id="implantDetail" class="room-note">Illustrative silicon dopant implantation.</p>
+<p id="implantTime" class="model-note">—</p>
+<div class="label">Dopant / Damage Depth Profile</div>
+<svg id="implantProfile" class="new-process-chart" viewBox="0 0 300 92" role="img" aria-label="Dopant and damage log-concentration profiles"></svg>
+<div class="label">Progress</div><div class="new-process-progress"><div id="implantProgress"></div></div>
+<div class="label">Implanted Cross-Section (schematic)</div>
+<svg id="implantXsec" class="new-process-chart" viewBox="0 0 300 92" role="img" aria-label="Implanted silicon layer"></svg>
+<p class="model-note">LSS-type projected range with dose-dependent channeling tail and damage estimate. Not SRIM or calibrated TCAD.</p>
+</div>
+<div id="cmpLeft" hidden>
     <div class="label">Live CMP Process</div>
     <div id="cmpNarrator">
       <div id="cmpNarrStatus">IDLE</div>
@@ -136,6 +159,8 @@
     <button class="tab" id="tabMBE" type="button">MBE</button>
     <button class="tab" id="tabCMP" type="button">CMP</button>
     <button class="tab" id="tabLitho" type="button">LITHO</button>
+<button class="tab" id="tabSpin" type="button">Spin Coat</button>
+<button class="tab" id="tabImplant" type="button">Implant</button>
   </div>
 
   <div id="lpeControls">
@@ -237,9 +262,31 @@
     </div>
     <button type="button" id="lithoPlayBtn" disabled>▶ Run Exposure</button>
   </div>
-  <div id="overviewControls" hidden>
+  <div id="spinControls" hidden>
+<div class="label">Photoresist · Preset Process</div>
+<div class="specs"><div><span>Substrate</span><span>Si (100) · 100 mm · 525 µm</span></div><div><span>Surface</span><span>HMDS prime</span></div><div><span>Resist</span><span>Positive-tone CAR</span></div><div><span>Viscosity</span><span>5 cP</span></div><div><span>Density</span><span>1.10 g/cm³</span></div><div><span>Dispense</span><span>1 mL static</span></div><div><span>Spread</span><span>500 rpm · 5 s</span></div><div><span>Thin</span><span>3000 rpm · 30 s</span></div><div><span>Post-apply bake</span><span>95 °C · 60 s (context)</span></div><div><span>Target</span><span>~1.0 µm</span></div></div>
+<div class="label">Bowl Cutaway</div><input type="range" id="spinCut" min="0" max="100" value="58" aria-label="Spin coater cutaway"/>
+<div class="label">Live Readouts</div>
+<div class="temps"><div class="trow"><span>Chuck rotation</span><span id="spinV1">—</span></div><div class="trow"><span>Vacuum</span><span id="spinV2">—</span></div><div class="trow"><span>Dispense</span><span id="spinV3">—</span></div><div class="trow"><span>Evaporation</span><span id="spinV4">—</span></div><div class="trow"><span>Film thickness</span><span id="spinV5">—</span></div><div class="trow"><span>Elapsed</span><span id="spinV6">—</span></div></div>
+<button id="spinPlayBtn" type="button" disabled>▶ Run Spin Cycle</button>
+</div><div id="implantControls" hidden>
+<div class="label">Recipe Preset</div>
+<div class="new-presets" role="group" aria-label="Implant species">
+<button type="button" class="preset-btn active" data-implant-preset="sd">As⁺ S/D</button>
+<button type="button" class="preset-btn" data-implant-preset="bsd">B⁺ S/D</button>
+<button type="button" class="preset-btn" data-implant-preset="well">P⁺ Well</button>
+</div><div class="label">Crystal Orientation</div>
+<div class="new-presets" role="group" aria-label="Wafer tilt">
+<button type="button" class="preset-btn active" data-implant-tilt="7">7° tilt</button>
+<button type="button" class="preset-btn" data-implant-tilt="0">0° channel</button></div>
+<div class="specs"><div><span>Ion</span><span><b id="implantIon">As⁺</b></span></div><div><span>Energy</span><span><b id="implantEnergy">—</b></span></div><div><span>Dose</span><span><b id="implantDose">—</b></span></div><div><span>Effective current</span><span><b id="implantCurrent">—</b></span></div><div><span>Tilt / twist</span><span><b id="implantTilt">—</b></span></div><div><span>Range Rp</span><span><b id="implantRp">—</b></span></div><div><span>Straggle ΔRp</span><span><b id="implantDeltaRp">—</b></span></div><div><span>Peak N</span><span><b id="implantPeak">—</b></span></div><div><span>Real duration</span><span><b id="implantDuration">—</b></span></div></div>
+<div class="label">Beamline Cutaway</div><input type="range" id="implantCut" min="0" max="100" value="58" aria-label="Ion implanter cutaway"/>
+<div class="label">Live Readouts</div>
+<div class="temps"><div class="trow"><span>Beam current</span><span id="implantV1">—</span></div><div class="trow"><span>Beamline pressure</span><span id="implantV2">—</span></div><div class="trow"><span>Wafer temperature</span><span id="implantV3">—</span></div><div class="trow"><span>Implanted dose</span><span id="implantV4">—</span></div><div class="trow"><span>Peak concentration</span><span id="implantV5">—</span></div><div class="trow"><span>Elapsed (sim)</span><span id="implantV6">—</span></div></div>
+<button id="implantPlayBtn" type="button" disabled>▶ Run Implant</button>
+</div><div id="overviewControls" hidden>
     <div class="label">Foundry · One shared room</div>
-    <p class="room-note">All five fabrication tools share one 3D room and renderer.</p>
+    <p class="room-note">All seven fabrication tools share one 3D room and renderer.</p>
     <p class="room-note">Select a station above to inspect its detailed equipment and preset process.</p>
   </div>
   <div id="mbeControls" hidden>

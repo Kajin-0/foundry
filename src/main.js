@@ -22,6 +22,7 @@ const room=buildRoom(scene);
 let overviewView=calculateOverviewView(room.layout,window.innerWidth,window.innerHeight);
 let cmpController=null,cmpLoading=null;
 let lithoController=null,lithoLoading=null;
+let spinController=null,spinLoading=null,implantController=null,implantLoading=null;
 const panelVisibility=initPanelVisibility();
 let mbeController=null;
 let mbeLoading=null;
@@ -63,6 +64,11 @@ lithoRoomLabel.style.color='#a9d8ff';
 lithoRoomLabel.style.borderColor='#7fc4ff';
 lithoRoomLabel.style.display='none';
 document.body.appendChild(lithoRoomLabel);
+const spinRoomLabel=document.createElement('div'),implantRoomLabel=document.createElement('div');
+for(const [el,title] of [[spinRoomLabel,'SPIN COATER · PHOTORESIST'],[implantRoomLabel,'ION IMPLANTER · DOPANT']]){
+ el.className='label3d';el.textContent=title;el.style.borderColor='#7fc4ff';document.body.appendChild(el);
+}
+
 const _v3 = new THREE.Vector3();
 function placeLabel(el, wx, wy, wz) {
   _v3.set(wx, wy, wz).project(camera);
@@ -165,7 +171,7 @@ function updateIdle() {
   displayTemp = 25;
   narrStatus.textContent = 'IDLE';
   narrStatus.style.color = '#5f7d9e';
-  narrDetail.textContent = 'One virtual lab with three independent tools: LPE and MBE grow GaAs/AlGaAs layers; ion milling patterns a ridge using Ar⁺.';
+  narrDetail.textContent = 'One virtual lab with seven independent fabrication tools. Select a station to inspect its equipment and illustrative process.';
   narrTime.textContent = `LPE · ${fmtMin(CYCLE_TOTAL_REAL)} simulated · ~${Math.round(CYCLE_TOTAL_ANIM)} s demo`;
   updateZoneReadouts(25);
   maybeUpdateProfile(25);
@@ -207,7 +213,9 @@ const camPos={
  imm:{pos:new THREE.Vector3(23,10,12),tgt:new THREE.Vector3(16,3.2,0)},
  mbe:{pos:new THREE.Vector3(36.8,3.8,12.5),tgt:new THREE.Vector3(30,4.4,0)},
  cmp:{pos:new THREE.Vector3(52,7.6,13),tgt:new THREE.Vector3(46,2.2,0)},
- litho:{pos:new THREE.Vector3(68.4,5.0,8.0),tgt:new THREE.Vector3(62,1.95,0)}
+ litho:{pos:new THREE.Vector3(68.4,5.0,8.0),tgt:new THREE.Vector3(62,1.95,0)},
+ spin:{pos:new THREE.Vector3(82.5,4.5,8.4),tgt:new THREE.Vector3(78,.98,0)},
+ implant:{pos:new THREE.Vector3(99,6.4,12),tgt:new THREE.Vector3(94.8,1.3,0)}
 };
 let camGoal=null;
 const tabEls={
@@ -216,7 +224,9 @@ const tabEls={
  imm:document.getElementById('tabIMM'),
  mbe:document.getElementById('tabMBE'),
  cmp:document.getElementById('tabCMP'),
- litho:document.getElementById('tabLitho')
+ litho:document.getElementById('tabLitho'),
+ spin:document.getElementById('tabSpin'),
+ implant:document.getElementById('tabImplant')
 };
 const leftLPE=document.getElementById('lpeLeft'),leftMBE=document.getElementById('mbeLeft');
 const leftOverview=document.getElementById('overviewLeft');
@@ -225,6 +235,25 @@ const rightOverview=document.getElementById('overviewControls');
 const mbeButton=document.getElementById('mbePlayBtn');
 const cmpButton=document.getElementById('cmpPlayBtn');
 const lithoButton=document.getElementById('lithoPlayBtn');
+const spinButton=document.getElementById('spinPlayBtn'),implantButton=document.getElementById('implantPlayBtn');
+async function ensureSpin(){
+ if(spinController)return spinController;
+ if(!spinLoading)spinLoading=Promise.all([import('./spin/scene.js'),import('./spin/controller.js')]).then(([m,c])=>{
+  const model=m.buildSpin({scene});spinController=c.createSpinController(model);
+  model.group.visible=currentTab==='spin';room.setFocus(currentTab);spinButton.disabled=false;
+  spinController.refresh();renderer.shadowMap.needsUpdate=true;return spinController;
+ }).catch(e=>{spinLoading=null;document.getElementById('spinDetail').textContent='Unable to load spin coater; reload to retry.';console.error(e);throw e});
+ return spinLoading;
+}
+async function ensureImplant(){
+ if(implantController)return implantController;
+ if(!implantLoading)implantLoading=Promise.all([import('./implant/scene.js'),import('./implant/controller.js')]).then(([m,c])=>{
+  const model=m.buildImplanter({scene});implantController=c.createImplantController(model);
+  model.group.visible=currentTab==='implant';room.setFocus(currentTab);implantButton.disabled=false;
+  implantController.refresh();renderer.shadowMap.needsUpdate=true;return implantController;
+ }).catch(e=>{implantLoading=null;document.getElementById('implantDetail').textContent='Unable to load implanter; reload to retry.';console.error(e);throw e});
+ return implantLoading;
+}
 async function ensureLitho(){
  if(lithoController)return lithoController;
  if(!lithoLoading)lithoLoading=Promise.all([import('./litho/scene.js'),import('./litho/controller.js')])
@@ -292,12 +321,16 @@ function showProcessPanel(tab){
  leftMBE.hidden=tab!=='mbe';
  document.getElementById('cmpLeft').hidden=tab!=='cmp';
  document.getElementById('lithoLeft').hidden=tab!=='litho';
+  document.getElementById('spinLeft').hidden=tab!=='spin';
+  document.getElementById('implantLeft').hidden=tab!=='implant';
  leftOverview.hidden=tab!=='overview';
  lpeControlsEl.style.display=tab==='lpe'?'block':'none';
  immControlsEl.style.display=tab==='imm'?'block':'none';
  rightMBE.hidden=tab!=='mbe';
  document.getElementById('cmpControls').hidden=tab!=='cmp';
  document.getElementById('lithoControls').hidden=tab!=='litho';
+  document.getElementById('spinControls').hidden=tab!=='spin';
+  document.getElementById('implantControls').hidden=tab!=='implant';
  rightOverview.hidden=tab!=='overview';
 }
 function switchTab(tab){
@@ -308,7 +341,9 @@ function switchTab(tab){
  if(mbeController)mbeController.MBE.visible=tab==='mbe';
  if(cmpController)cmpController.group.visible=tab==='cmp';
  if(lithoController)lithoController.group.visible=tab==='litho';
- room.setFocus((tab==='mbe'&&!mbeController)||(tab==='cmp'&&!cmpController)||(tab==='litho'&&!lithoController)?'overview':tab);
+  if(spinController)spinController.group.visible=tab==='spin';
+  if(implantController)implantController.group.visible=tab==='implant';
+ room.setFocus((tab==='mbe'&&!mbeController)||(tab==='cmp'&&!cmpController)||(tab==='litho'&&!lithoController)||(tab==='spin'&&!spinController)||(tab==='implant'&&!implantController)?'overview':tab);
  for(const [id,button] of Object.entries(tabEls)){
    button.classList.toggle('active',id===tab);
    button.setAttribute('aria-pressed',String(id===tab));
@@ -337,6 +372,8 @@ function switchTab(tab){
  mbeLabel.style.display=tab==='overview'?'block':'none';
  cmpLabel.style.display=tab==='overview'?'block':'none';
  lithoRoomLabel.style.display=tab==='overview'?'block':'none';
+ spinRoomLabel.style.display=tab==='overview'?'block':'none';
+ implantRoomLabel.style.display=tab==='overview'?'block':'none';
  if(tab==='lpe'){
    if(currentPhase){narrStatus.textContent=currentPhase.narr;narrStatus.style.color=currentPhase.color;narrDetail.textContent=currentPhase.detail;}
    else updateIdle();
@@ -372,6 +409,14 @@ function switchTab(tab){
  if(tab==='litho'){
    if(!lithoController){lithoButton.disabled=true;void ensureLitho();}
    else lithoController.refresh();
+ }
+ if(tab==='spin'){
+   if(!spinController){spinButton.disabled=true;void ensureSpin();}
+   else spinController.refresh();
+ }
+ if(tab==='implant'){
+   if(!implantController){implantButton.disabled=true;void ensureImplant();}
+   else implantController.refresh();
  }
 }
 for(const [id,button] of Object.entries(tabEls))button.addEventListener('click',()=>switchTab(id));
@@ -773,7 +818,7 @@ for(const ev of ['pointerdown','pointermove','wheel']){
 function animate(now=0){
  requestAnimationFrame(animate);
  if(document.hidden){clock.getDelta();return;}
- const focusActive=currentTab==='lpe'&&cycleActive||currentTab==='imm'&&S.immOn||currentTab==='mbe'&&mbeController?.isRunning()||currentTab==='cmp'&&cmpController?.isRunning()||currentTab==='litho'&&lithoController?.isRunning();
+ const focusActive=currentTab==='lpe'&&cycleActive||currentTab==='imm'&&S.immOn||currentTab==='mbe'&&mbeController?.isRunning()||currentTab==='cmp'&&cmpController?.isRunning()||currentTab==='litho'&&lithoController?.isRunning()||currentTab==='spin'&&spinController?.isRunning()||currentTab==='implant'&&implantController?.isRunning();
  const moving=!!camGoal||now-lastInteractionMs<750;
  // Do not artificially restrict interaction to 30/45 Hz on capable GPUs.
  const targetFps=lowPower?(focusActive||moving?45:18):(focusActive||moving?60:24);
@@ -802,6 +847,10 @@ function animate(now=0){
  if(lithoController&&(currentTab==='litho'||lithoController.isRunning())){
    lithoController.update(dt,t,currentTab==='litho');
  }
+  if(spinController&&(currentTab==='spin'||spinController.isRunning()))
+    spinController.update(dt,t,currentTab==='spin');
+  if(implantController&&(currentTab==='implant'||implantController.isRunning()))
+    implantController.update(dt,t,currentTab==='implant');
  if(camGoal){
    // Wall-clock interpolation: a slow GPU no longer stretches a room-to-room
    // camera transition over many seconds just because it renders fewer frames.
@@ -815,6 +864,8 @@ function animate(now=0){
  if(mbeLabel.style.display!=='none')placeLabel(mbeLabel,BAYS.mbe.x,8.2,0);
  if(cmpLabel.style.display!=='none')placeLabel(cmpLabel,BAYS.cmp.x,5.3,0);
  if(lithoRoomLabel.style.display!=='none')placeLabel(lithoRoomLabel,BAYS.litho.x,5.0,0);
+ if(spinRoomLabel.style.display!=='none')placeLabel(spinRoomLabel,BAYS.spin.x,2.9,0);
+ if(implantRoomLabel.style.display!=='none')placeLabel(implantRoomLabel,BAYS.implant.x,3.9,0);
  controls.update();
  // Static shadow atlases are not regenerated on every camera frame.
  if(renderer.shadowMap.enabled&&(now-lastShadowMs>400)&&(focusActive||moving)){
@@ -858,6 +909,9 @@ window.__foundryDiagnostics=()=>({
  mbeLoaded:!!mbeController,
  cmpLoaded:!!cmpController,
  lithoLoaded:!!lithoController,
+ spinLoaded:!!spinController,implantLoaded:!!implantController,
+ spinState:spinController?.getState()??null,implantState:implantController?.getState()??null,
+ spinRenderOptimization:spinController?.renderOptimization??null,implantRenderOptimization:implantController?.renderOptimization??null,
  lithoState:lithoController?.getState()??null,
  lithoRenderOptimization:lithoController?.renderOptimization??null,
  cmpState:cmpController?.getState()??null,
@@ -867,7 +921,7 @@ window.__foundryDiagnostics=()=>({
  lpeRenderOptimization,immRenderOptimization,
  ionMill:{waferLocalPosition:wafer.position.toArray(),waferMounted:wafer.userData.mountedOnStage,
    assembly:IMM.userData.ionMillAssembly,presetTilt:IBE.tilt,presetDepth:IBE.depth},
- detailed:{lpe:machine.visible,imm:IMM.visible,mbe:mbeController?.MBE.visible??false,cmp:cmpController?.group.visible??false,litho:lithoController?.group.visible??false},
+ detailed:{lpe:machine.visible,imm:IMM.visible,mbe:mbeController?.MBE.visible??false,cmp:cmpController?.group.visible??false,litho:lithoController?.group.visible??false,spin:spinController?.group.visible??false,implant:implantController?.group.visible??false},
  proxies:Object.fromEntries(Object.entries(room.proxies).map(([k,p])=>[k,p.visible])),
  drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,
  pixelRatio:renderer.getPixelRatio(),shadowMap:renderer.shadowMap.enabled,

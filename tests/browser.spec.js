@@ -7,8 +7,8 @@ test('single room hosts LPE and ion mill with one WebGL canvas',async({page})=>{
  await expect(page.locator('#tabOverview')).toHaveClass(/active/);
  await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics?.().rendererCount)).toBe(1);
  const overview=await page.evaluate(()=>window.__foundryDiagnostics());
- expect(overview.detailed).toEqual({lpe:false,imm:false,mbe:false,cmp:false,litho:false});
- expect(overview.proxies).toEqual({lpe:true,imm:true,mbe:true,cmp:true,litho:true});
+ expect(overview.detailed).toEqual({lpe:false,imm:false,mbe:false,cmp:false,litho:false,spin:false,implant:false});
+ expect(overview.proxies).toEqual({lpe:true,imm:true,mbe:true,cmp:true,litho:true,spin:true,implant:true});
  expect(overview.mbeLoaded).toBe(false);
  expect(overview.pixelRatio).toBeLessThanOrEqual(1.25);
  await page.locator('#tabLPE').click();
@@ -25,7 +25,7 @@ test('single room hosts LPE and ion mill with one WebGL canvas',async({page})=>{
  await page.locator('#immBtn').click();
  await expect(page.locator('#immBtn')).toContainText('Run');
  await page.locator('#tabOverview').click();
- expect((await page.evaluate(()=>window.__foundryDiagnostics())).proxies).toEqual({lpe:true,imm:true,mbe:true,cmp:true,litho:true});
+ expect((await page.evaluate(()=>window.__foundryDiagnostics())).proxies).toEqual({lpe:true,imm:true,mbe:true,cmp:true,litho:true,spin:true,implant:true});
  expect(errors).toEqual([]);
 });
 test('MBE loads lazily into same room with no extra WebGL renderer',async({page})=>{
@@ -39,8 +39,8 @@ test('MBE loads lazily into same room with no extra WebGL renderer',async({page}
  await expect(page.locator('#mbeV1')).not.toHaveText('—');
  await expect(page.locator('canvas')).toHaveCount(1);
  const d=await page.evaluate(()=>window.__foundryDiagnostics());
- expect(d.detailed).toEqual({lpe:false,imm:false,mbe:true,cmp:false,litho:false});
- expect(d.proxies).toEqual({lpe:true,imm:true,mbe:false,cmp:true,litho:true});
+ expect(d.detailed).toEqual({lpe:false,imm:false,mbe:true,cmp:false,litho:false,spin:false,implant:false});
+ expect(d.proxies).toEqual({lpe:true,imm:true,mbe:false,cmp:true,litho:true,spin:true,implant:true});
  expect(d.rendererCount).toBe(1);
  await page.locator('#mbePlayBtn').click();
  await expect(page.locator('#mbePlayBtn')).toContainText('Stop');
@@ -232,7 +232,7 @@ test('CMP is a lazily loaded fourth machine inside the same renderer',async({pag
  const d=await page.evaluate(()=>window.__foundryDiagnostics());
  expect(d.view).toBe('cmp');
  expect(d.rendererCount).toBe(1);
- expect(d.detailed).toEqual({lpe:false,imm:false,mbe:false,cmp:true,litho:false});
+ expect(d.detailed).toEqual({lpe:false,imm:false,mbe:false,cmp:true,litho:false,spin:false,implant:false});
  expect(d.proxies.cmp).toBe(false);
  expect(d.cmpGeometry.headContactY-d.cmpGeometry.padTopY).toBeCloseTo(.2275,6);
  await page.locator('#cmpPlayBtn').click();
@@ -297,7 +297,7 @@ test('expanded room grid stays beyond the equipment bays, portrait overview fits
  const wide=await page.evaluate(()=>window.__foundryDiagnostics());
  expect(wide.ground.floorSize).toBeGreaterThan(400);
  expect(wide.ground.gridDivisions).toBe(wide.ground.gridSize/2);
- expect(wide.roomBounds.maxX).toBe(66);
+ expect(wide.roomBounds.maxX).toBe(99.5);
  expect(wide.roomBounds.centerX+wide.ground.gridSize/2).toBeGreaterThan(
    wide.roomBounds.maxX+100
  );
@@ -337,8 +337,9 @@ test('equipment navigation keeps every tool visible and expands to future rows',
  const dimensions=await page.locator('.tabs').evaluate(node=>{
   const original=[...node.querySelectorAll('.tab')];
   const added=document.createElement('button');added.className='tab';added.type='button';added.textContent='Future Tool';node.appendChild(added);
+  const addedTwo=document.createElement('button');addedTwo.className='tab';addedTwo.type='button';addedTwo.textContent='Next Future Tool';node.appendChild(addedTwo);
   const base=node.getBoundingClientRect();
-  const rect=added.getBoundingClientRect();
+  const rect=addedTwo.getBoundingClientRect();
   return {columns:getComputedStyle(node).gridTemplateColumns.split(' ').length,
    within:original.every(t=>{const r=t.getBoundingClientRect();return r.left>=base.left-2&&r.right<=base.right+2&&r.top>=base.top-2;}),
    futureWithin:rect.left>=base.left-2&&rect.right<=base.right+2,
@@ -388,7 +389,7 @@ test('ArF immersion scanner loads only on selection and shares one WebGL context
  // Lithography is inspected through the fixed side panels only. Floating
  // scene labels used to remain on screen during orbit/focus/simulation.
  await expect(page.locator('.litho-sub-label')).toHaveCount(0);
- await expect(page.locator('.label3d')).toHaveCount(5);
+ await expect(page.locator('.label3d')).toHaveCount(7);
  await expect(page.locator('.label3d:visible')).toHaveCount(0);
 
  await expect(page.locator('#mbePlayBtn')).toBeHidden();
@@ -437,17 +438,60 @@ test('lithography runs in minimized mobile UI and preserves renderer',async({pag
 });
 
 
-test('overview displays five consistent labels and detailed stations show none',async({page})=>{
+test('overview displays seven consistent labels and detailed stations show none',async({page})=>{
  await page.goto('/');
- await expect(page.locator('.label3d')).toHaveCount(5);
- await expect(page.locator('.label3d:visible')).toHaveCount(5);
+ await expect(page.locator('.label3d')).toHaveCount(7);
+ await expect(page.locator('.label3d:visible')).toHaveCount(7);
  const palette=await page.locator('.label3d').evaluateAll(nodes=>nodes.map(n=>getComputedStyle(n).borderColor));
  expect(new Set(palette).size).toBe(1);
- await expect(page.locator('.label3d')).toContainText(['LPE · FURNACE','ION BEAM ETCH · HIGH VACUUM','MBE · UHV CHAMBER','CMP · OXIDE POLISH','LITHO · ArF SCANNER']);
- for(const tool of ['LPE','IMM','MBE','CMP','Litho']){
+ await expect(page.locator('.label3d')).toContainText(['LPE · FURNACE','ION BEAM ETCH · HIGH VACUUM','MBE · UHV CHAMBER','CMP · OXIDE POLISH','LITHO · ArF SCANNER','SPIN COATER · PHOTORESIST','ION IMPLANTER · DOPANT']);
+ for(const tool of ['LPE','IMM','MBE','CMP','Litho','Spin','Implant']){
   await page.locator('#tab'+tool).click();
   await expect(page.locator('.label3d:visible')).toHaveCount(0);
  }
  await page.locator('#tabOverview').click();
- await expect(page.locator('.label3d:visible')).toHaveCount(5);
+ await expect(page.locator('.label3d:visible')).toHaveCount(7);
+});
+
+test('spin coater and ion implanter lazy-load as distinct stations in one renderer',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/?tool=spin');
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.spinLoaded),{timeout:30000}).toBe(true);
+ await expect(page.locator('#spinControls')).toBeVisible();
+ await expect(page.locator('#spinCurve path')).toHaveCount(1);
+ await expect(page.locator('canvas')).toHaveCount(1);
+ await page.locator('#spinPlayBtn').click();
+ await expect(page.locator('#spinPlayBtn')).toContainText('Stop');
+ await page.waitForTimeout(280);
+ expect((await page.evaluate(()=>window.__foundryDiagnostics().spinState)).simTime).toBeGreaterThan(0);
+ await page.locator('#tabImplant').click();
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.implantLoaded),{timeout:30000}).toBe(true);
+ await expect(page.locator('#implantControls')).toBeVisible();
+ await expect(page.locator('#spinControls')).toBeHidden();
+ await expect(page.locator('#implantProfile path')).toHaveCount(2);
+ await page.locator('[data-implant-preset="bsd"]').click();
+ expect((await page.evaluate(()=>window.__foundryDiagnostics().implantState)).ion).toBe('B');
+ await page.locator('[data-implant-tilt="0"]').click();
+ expect((await page.evaluate(()=>window.__foundryDiagnostics().implantState)).tilt).toBe(0);
+ await page.locator('#implantPlayBtn').click();
+ await expect(page.locator('#implantPlayBtn')).toContainText('Stop');
+ await page.waitForTimeout(280);
+ const d=await page.evaluate(()=>window.__foundryDiagnostics());
+ expect(d.implantState.simTime).toBeGreaterThan(0);
+ expect(d.spinState.simTime).toBeGreaterThan(0);
+ expect(d.detailed).toEqual({lpe:false,imm:false,mbe:false,cmp:false,litho:false,spin:false,implant:true});
+ expect(d.rendererCount).toBe(1);
+ expect(errors).toEqual([]);
+});
+test('seven stations remain accessible on narrow mobile without duplicate canvases',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto('/?tool=implant');
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.implantLoaded),{timeout:30000}).toBe(true);
+ await expect(page.locator('#rightPanel')).toBeVisible();
+ await expect(page.locator('#implantControls')).toBeVisible();
+ await page.locator('#focusToggle').click();
+ await expect(page.locator('#rightPanel')).toBeHidden();
+ await page.locator('#restoreEquipment').click();
+ await expect(page.locator('#implantControls')).toBeVisible();
+ await expect(page.locator('canvas')).toHaveCount(1);
 });

@@ -17,7 +17,9 @@ export const BAYS=Object.freeze({
  imm:{x:16,name:'Ion beam mill'},
  mbe:{x:30,name:'Molecular beam epitaxy'},
  cmp:{x:46,name:'Chemical mechanical planarization'},
- litho:{x:62,name:'ArF immersion photolithography'}
+ litho:{x:62,name:'ArF immersion photolithography'},
+ spin:{x:78,name:'Photoresist spin coater',width:8},
+ implant:{x:94,name:'Ion implanter',width:11}
 });
 
 export function buildRoom(scene,{batchProxies=true}={}){
@@ -297,7 +299,37 @@ export function buildRoom(scene,{batchProxies=true}={}){
    carrierHeight:3.72,waferRadius:.31};
  }
 
- // The five previews are fully static, so equivalent-material rigid meshes
+ // Spin coater: bowl and central chuck, swinging dispense arm and adjacent hot plate.
+ {
+  const p=proxies.spin;
+  cylinder(p,'spin-base',1.10,1.10,.84,dark,0,.42,0,20);
+  cylinder(p,'spin-bowl',1.12,1.08,.68,steel,0,1.18,0,22);
+  hoop(p,'spin-bowl-lip',1.1,.028,pale,0,1.52,0);
+  cylinder(p,'spin-vacuum-chuck',.86,.86,.16,dark,0,1.18,0,20);
+  cylinder(p,'spin-wafer',.78,.78,.02,pale,0,1.29,0,20);
+  box(p,'spin-dispense-post',.11,1.83,.11,pale,-1.65,.93,0);
+  box(p,'spin-dispense-arm',1.55,.07,.07,pale,-.875,1.85,0);
+  cylinder(p,'spin-nozzle',.04,.04,.29,copper,-.1,1.65,0,10);
+  box(p,'spin-hot-plate-base',.74,.17,.74,dark,1.85,.09,.55);
+  cylinder(p,'spin-hot-plate',.30,.30,.035,pale,1.85,.19,.55,18);
+  p.userData.silhouette={source:'spin/scene.js',waferRadius:.78,grounded:true};
+ }
+ // Ion implanter: source, 90-degree analyzing magnet, beam column and end station.
+ {
+  const p=proxies.implant;
+  box(p,'implant-source',.62,.60,.64,dark,-1.32,1.20,-2.53);
+  cylinder(p,'implant-analyzer',.72,.72,.8,steel,.5,1.20,-.6,18);
+  cylinder(p,'implant-beam-column',.22,.22,3.0,pale,1.48,1.20,0,14,'x');
+  cylinder(p,'implant-end-station',1.06,1.06,1.95,steel,2.77,1.32,0,18);
+  cylinder(p,'implant-wafer-chuck',.60,.60,.09,dark,2.77,.64,0,14);
+  box(p,'implant-control-rack',.85,1.75,.65,dark,4.0,.875,.5);
+  box(p,'implant-deck',6.1,.13,1.15,steel,.5,.13,0);
+  for(const x of [-2.45,-.9,.8,2.5])for(const z of [-.58,.58])
+   box(p,'implant-frame-post',.12,.54,.12,dark,x,.3,z);
+  p.userData.silhouette={source:'implant/scene.js',analyzerAngle:90,grounded:true};
+ }
+
+ // The seven previews are fully static, so equivalent-material rigid meshes
  // can be submitted as far fewer GPU draws without losing any triangles.
  for(const [key,p] of Object.entries(proxies)){
   p.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=false;}});
