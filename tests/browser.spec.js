@@ -605,3 +605,58 @@ test('portrait station grid remains usable without expensive floating room label
  await expect(page.locator('#implantControls')).toBeVisible();
  await expect(page.locator('canvas')).toHaveCount(1);
 });
+
+test('interrupting a portrait camera journey restores lens and fog without snapping position',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.setViewportSize({width:390,height:844});
+ await page.goto('/');
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.viewGeometry.fov)).toBe(72);
+ // Run click and interruption on the same JS turn to avoid software-WebGL
+ // frame stalls completing the camera motion between automation actions.
+ const immediate=await page.evaluate(()=>{
+  document.getElementById('tabSpin').click();
+  const before=window.__foundryDiagnostics();
+  const canvas=document.querySelector('canvas');
+  canvas.dispatchEvent(new PointerEvent('pointerdown',{
+   bubbles:true,pointerId:14,clientX:220,clientY:350
+  }));
+  const after=window.__foundryDiagnostics();
+  return {before,after};
+ });
+ expect(immediate.before.cameraJourney.active).toBe(true);
+ expect(immediate.after.cameraJourney.active).toBe(false);
+ expect(immediate.after.framingRecovery.active).toBe(true);
+ expect(immediate.after.cameraPosition).toEqual(immediate.before.cameraPosition);
+ expect(immediate.after.cameraTarget).toEqual(immediate.before.cameraTarget);
+ expect(immediate.after.framingRecovery.targetFov).toBe(40);
+ expect(immediate.after.framingRecovery.targetFog).toBe(110);
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics().viewGeometry.fov),{timeout:8000}).toBe(40);
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics().viewGeometry.fogFar),{timeout:8000}).toBe(110);
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics().framingRecovery.active)).toBe(false);
+ await expect(page.locator('canvas')).toHaveCount(1);
+ expect(errors).toEqual([]);
+});
+
+test('wheel cancellation restores panorama optics and next station transition clears recovery',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto('/?tool=lpe');
+ const afterCancel=await page.evaluate(()=>{
+  document.getElementById('tabOverview').click();
+  document.querySelector('canvas').dispatchEvent(new WheelEvent('wheel',{
+   bubbles:true,deltaY:0
+  }));
+  return window.__foundryDiagnostics();
+ });
+ expect(afterCancel.cameraJourney.active).toBe(false);
+ expect(afterCancel.framingRecovery.active).toBe(true);
+ expect(afterCancel.framingRecovery.targetFov).toBe(72);
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics().viewGeometry.fov),{timeout:8000}).toBe(72);
+ const restarted=await page.evaluate(()=>{
+  document.getElementById('tabImplant').click();
+  return window.__foundryDiagnostics();
+ });
+ expect(restarted.framingRecovery.active).toBe(false);
+ expect(restarted.cameraJourney.active).toBe(true);
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics().viewGeometry.fov),{timeout:8000}).toBe(40);
+ await expect(page.locator('canvas')).toHaveCount(1);
+});
