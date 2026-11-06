@@ -50,3 +50,13 @@ widths. Portrait mobile uses 3-column touch targets rather than floating
 labels. Capture baseline-vs-new draw calls, triangles, canvas count, frame
 interval and p95 CPU render timings on the same browser/hardware. Software
 WebGL measurements are diagnostics, not physical-device FPS claims.
+
+## Interrupted camera transition
+
+When a pointer or wheel event interrupts a 680–1150 ms station journey,
+camera/OrbitControls position stays under user control. FOV and fog transition
+over 220 ms to the current station's canonical values. Never leave partial
+perspective/fog values when the positional journey is canceled. Test portrait
+room ↔ station transitions, interruption before a rendered transition frame,
+subsequent station selection, and resize/reduced-motion behavior. No extra RAF
+loop, renderer, camera, lights or simulation work is permitted.
