@@ -138,3 +138,20 @@ Maintain <=3,000 raw proxy triangles, the static batcher, one renderer and
 no extra shadow/light, animation loop or material-calibration claims. The
 room-proxy regression checks contact points, tangents, pole geometry, bounds
 and unchanged batching triangle counts.
+
+## Camera input interruption and static batching ownership (Nov 2026)
+
+On canvas pointer or wheel input, cancel only the positional station journey.
+The camera's FOV and fog must settle to the selected tab's canonical values
+(40 degrees and LAB_FOG_FAR for stations; responsive overview lens/fog for room)
+via a short ~220 ms optical recovery using the existing RAF. Do not snap the
+user's position or OrbitControls target. A new tab change cancels that recovery,
+and reduced-motion/resize overview framing is immediate. Browser checks cover
+both directions and a subsequent tab change.
+
+Do not dispose source geometries from mergeStaticDrawCalls without proof of
+exclusive BufferGeometry ownership across the full scene: separate meshes may
+share geometry, and eager disposal risks GPU buffer reuploads. The static
+batcher removes obsolete mesh objects, while temporary transformed clones are
+already disposed. Profile actual GPU memory and identify ownership before
+adding disposal logic; no speculative cleanup for its own sake.
