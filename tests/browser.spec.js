@@ -316,14 +316,15 @@ test('expanded room grid stays beyond the equipment bays, portrait overview fits
  expect(portrait.ground).toEqual(wide.ground);
  await page.locator('#tabCMP').click();
  await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.cmpLoaded),{timeout:30000}).toBe(true);
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics().viewGeometry.fov),{timeout:10000}).toBe(40);
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics().viewGeometry.fogFar),{timeout:10000}).toBe(110);
  const cmp=await page.evaluate(()=>window.__foundryDiagnostics());
- expect(cmp.viewGeometry.fov).toBe(40);
- expect(cmp.viewGeometry.fogFar).toBe(110);
  expect(cmp.rendererCount).toBe(1);
  await page.locator('#tabOverview').click();
  await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics().viewGeometry.fov)).toBe(72);
  await page.setViewportSize({width:1440,height:900});
  await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics().shadowResolution)).toBe(1024);
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics().viewGeometry.fov),{timeout:10000}).toBe(40);
  const restored=await page.evaluate(()=>window.__foundryDiagnostics());
  expect(restored.viewGeometry.fov).toBe(40);
  expect(restored.viewGeometry.fogFar).toBeGreaterThanOrEqual(110);
@@ -536,4 +537,71 @@ test('new run controls remain immediately accessible in mobile equipment panels'
   expect(data.top).toBeGreaterThanOrEqual(0);
   await expect(page.locator('canvas')).toHaveCount(1);
  }
+});
+
+test('overview labels form two readable rows and keyboard selection enters one detailed station',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.setViewportSize({width:1440,height:900});
+ await page.goto('/');
+ await expect(page.locator('body')).toHaveClass(/room-overview/);
+ await expect(page.locator('#roomIntro')).toBeVisible();
+ await expect(page.locator('.label3d')).toHaveCount(7);
+ await page.waitForTimeout(400);
+ const rectangles=await page.locator('.label3d').evaluateAll(els=>els.map(e=>{
+  const r=e.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom};
+ }));
+ for(let i=0;i<rectangles.length;i++)for(let j=i+1;j<rectangles.length;j++){
+  const a=rectangles[i],b=rectangles[j];
+  const overlapW=Math.min(a.right,b.right)-Math.max(a.left,b.left);
+  const overlapH=Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top);
+  expect(Math.max(0,overlapW)*Math.max(0,overlapH)).toBeLessThan(5);
+ }
+ await page.locator('[data-bay="implant"].label3d').focus();
+ await page.keyboard.press('Enter');
+ await expect(page.locator('#tabImplant')).toHaveClass(/active/);
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.implantLoaded),{timeout:30000}).toBe(true);
+ await expect(page.locator('#roomIntro')).toBeHidden();
+ await expect(page.locator('canvas')).toHaveCount(1);
+ expect(errors).toEqual([]);
+});
+
+test('station journey eases camera and lens smoothly; dragging cancels its motion',async({page})=>{
+ await page.goto('/');
+ const before=await page.evaluate(()=>window.__foundryDiagnostics());
+ await page.locator('#tabSpin').click();
+ const start=await page.evaluate(()=>window.__foundryDiagnostics());
+ expect(start.cameraJourney.active).toBe(true);
+ expect(start.cameraJourney.durationMs).toBeGreaterThanOrEqual(680);
+ await page.waitForTimeout(120);
+ const middle=await page.evaluate(()=>window.__foundryDiagnostics());
+ // Software WebGL can stall a Chromium worker longer than the entire
+ // transition; the bounded smoothstep curve is unit-tested independently.
+ if(middle.cameraJourney.active){
+  expect(middle.cameraPosition[0]).toBeGreaterThan(before.cameraPosition[0]);
+  expect(middle.cameraPosition[0]).toBeLessThan(82.5);
+ }
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics().cameraJourney.active),{timeout:5000}).toBe(false);
+ const end=await page.evaluate(()=>window.__foundryDiagnostics());
+ expect(end.cameraPosition[0]).toBeCloseTo(82.5,1);
+ expect(end.rendererCount).toBe(1);
+ await page.locator('#tabOverview').click();
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics().cameraJourney.active)).toBe(true);
+ await page.locator('canvas').dispatchEvent('pointerdown',{pointerId:11,clientX:640,clientY:450});
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics().cameraJourney.active)).toBe(false);
+});
+
+test('portrait station grid remains usable without expensive floating room labels',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto('/');
+ await expect(page.locator('#roomIntro')).toBeVisible();
+ await expect(page.locator('.label3d:visible')).toHaveCount(0);
+ await expect(page.locator('.tabs .tab')).toHaveCount(8);
+ const buttons=await page.locator('.tabs .tab').evaluateAll(els=>els.map(el=>{
+  const r=el.getBoundingClientRect();return {w:r.width,h:r.height};
+ }));
+ for(const b of buttons){expect(b.w).toBeGreaterThan(90);expect(b.h).toBeGreaterThanOrEqual(40)}
+ await page.locator('#tabImplant').click();
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.implantLoaded),{timeout:30000}).toBe(true);
+ await expect(page.locator('#implantControls')).toBeVisible();
+ await expect(page.locator('canvas')).toHaveCount(1);
 });

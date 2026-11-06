@@ -100,3 +100,26 @@ like the key light so rightmost tools do not lose their secondary illumination.
 Do not reintroduce a fixed fill light aimed at world x=0. Keep mobile shadow
 and DPR budgets intact. Browser diagnostics expose lighting values and tests
 check the fill target at the overview, implant and LPE stations.
+
+## Seven-bay navigation and overview polish (Nov 2026)
+
+The overview remains one shared Three.js room; it now has a small HTML title,
+seven keyboard-accessible DOM room labels and on-demand raycasts for clicking
+static room proxies/bay slabs. Picking occurs on pointer actions only, throttled
+on hover (~12 Hz), never in the render loop. Do not add shadow passes, meshes,
+textured decals, a second canvas, or per-frame raycasts for navigation.
+`src/ui/camera-journey.js` owns the smoothstep camera easing and distance-bounded
+transition timing. `src/main.js` interpolates position, OrbitControls target,
+field of view and fog in the *existing* RAF. A pointer/wheel interaction cancels
+the transition, direct links/reduced-motion initialize immediately, and resize
+reframes the overview. Keep the snapshot coordinates in `camPos` unchanged.
+
+The left overview panel is intentionally short to avoid concealing the first
+bays; full station navigation remains in `#rightPanel`. Desktop room labels
+alternate height to avoid collisions; mobile labels are suppressed in favor
+of the readable 3-column Equipment grid and room guidance. Existing focus/
+minimize and all seven tool execution controls must remain functional.
+Tests in `tests/camera-journey.test.js` and `tests/browser.spec.js` cover easing,
+keyboard access, label collision, cancellations, mobile, one WebGL canvas and
+the original tool physics. Browser testing should be serial on low-resource
+software WebGL environments (avoid two Chromium runs at once).

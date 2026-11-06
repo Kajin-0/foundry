@@ -158,3 +158,17 @@ from the machines. No new shadow-casting lights or rendering passes were added.
 Both tools are **educational demonstrations**, not calibrated fabrication
 recipes. The supplied originals remain archived, including the unused
 implant presets for historical reference.
+
+## Overview and navigation (November 2026 polish)
+
+The seven-bay overview presents a lightweight title and compact station
+selection overlay without adding any 3D assets. Click or tap the existing
+static instrument silhouette (or its bay), select a station label with mouse
+or keyboard (Enter/Space), or use the permanent station tabs. Navigation
+uses one 680–1150 ms smoothstep camera journey on desktop; it interpolates
+position, orbit target, field of view and fog while retaining the single
+renderer. User pointer/wheel actions cancel the journey. Reduced-motion
+preference disables these camera animations, and direct-link startup is
+immediate. Mobile uses larger station buttons in a 3-column equipment grid,
+with no tiny overlapping labels. All science models, recipe readouts,
+cutaway controls and independent process timelines are unchanged.

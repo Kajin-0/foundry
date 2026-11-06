@@ -86,14 +86,16 @@ export function buildRoom(scene,{batchProxies=true}={}){
  for(let x=layout.wallMinX+12;x<layout.wallMaxX-3;x+=15)
   box(room,'room-wall-support',.15,10.5,.22,steel,x,5.25,-9.4);
 
- const proxies={},proxyStats={};
+ const proxies={},proxyStats={},outlines={},slabs={};
  for(const [key,bay] of Object.entries(BAYS)){
   const w=bay.width??(key==='lpe'?13:8);
   const slab=box(room,key+'-bay-floor',w,.07,8,dark,bay.x,.035,0);
+  slabs[key]=slab;
   const edges=new THREE.LineSegments(new THREE.EdgesGeometry(slab.geometry),
    new THREE.LineBasicMaterial({color:0x315675,transparent:true,opacity:.8}));
   edges.position.copy(slab.position);
   edges.name=key+'-bay-outline';
+  edges.userData.bayKey=key;outlines[key]=edges;
   room.add(edges);
   const group=new THREE.Group();
   group.name=bay.name+' (room silhouette)';
@@ -386,7 +388,7 @@ export function buildRoom(scene,{batchProxies=true}={}){
  }
 
  return {
-  room,proxies,proxyStats,layout,
+  room,proxies,proxyStats,outlines,slabs,layout,
   setFocus(active){
    for(const [key,p] of Object.entries(proxies))p.visible=key!==active;
   }

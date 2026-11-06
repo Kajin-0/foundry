@@ -9,6 +9,7 @@ import {mergeStaticDrawCalls} from './scene/merge-static.js';
 import {createThermalProfile} from './ui/thermal-profile.js';
 import {createCrossSection} from './ui/cross-section.js';
 import {initPanelVisibility} from './ui/panel-visibility.js';
+import {smoothJourney,journeyDurationMs} from './ui/camera-journey.js';
 import {BINS,PARK_X,UNLOAD_X,WELL_OFFSETS,CONTACT_THR,ZONES,BASE_TOP,SUB_TOP,MELT_H,SLIDER_BOT} from './config/geometry.js';
 import {CYCLE,CYCLE_TOTAL_ANIM,CYCLE_TOTAL_REAL,fmtMin} from './process/lpe-cycle.js';
 import {IBE,ibeRate,millMin,P_BASE,P_WORK,P_PREP,IMM_CYCLE,IMM_TOTAL,IMM_MILL,fmtP,imRealMin,lerpLog} from './process/ion-etch.js';
@@ -24,6 +25,7 @@ let cmpController=null,cmpLoading=null;
 let lithoController=null,lithoLoading=null;
 let spinController=null,spinLoading=null,implantController=null,implantLoading=null;
 const panelVisibility=initPanelVisibility();
+const reduceMotion=window.matchMedia?.('(prefers-reduced-motion: reduce)');
 let mbeController=null;
 let mbeLoading=null;
 let currentActiveLayer = null;
@@ -31,51 +33,51 @@ let shutOpen = 0;
 const XS = createCrossSection(IBE);
 const {maybeUpdateProfile} = createThermalProfile();
 
-/* ============ LABELS ============ */
-const lpeLabel = document.createElement('div');
-lpeLabel.className = 'label3d';
-lpeLabel.textContent = 'LPE · FURNACE';
-lpeLabel.style.color = '#a9d8ff';
-lpeLabel.style.borderColor = '#7fc4ff';
-document.body.appendChild(lpeLabel);
-
-const immLabel = document.createElement('div');
-immLabel.className = 'label3d';
-immLabel.textContent = 'ION BEAM ETCH · HIGH VACUUM';
-immLabel.style.color = '#7fc4ff';
-immLabel.style.borderColor = '#7fc4ff';
-immLabel.style.display = 'none';
-document.body.appendChild(immLabel);
-const mbeLabel=document.createElement('div');
-mbeLabel.className='label3d';
-mbeLabel.textContent='MBE · UHV CHAMBER';
-mbeLabel.style.color='#9dd4ff';
-mbeLabel.style.borderColor='#7fc4ff';
-document.body.appendChild(mbeLabel);
-const cmpLabel=document.createElement('div');
-cmpLabel.className='label3d';
-cmpLabel.textContent='CMP · OXIDE POLISH';
-cmpLabel.style.color='#9ed0f8';cmpLabel.style.borderColor='#7fc4ff';
-document.body.appendChild(cmpLabel);
-const lithoRoomLabel=document.createElement('div');
-lithoRoomLabel.className='label3d';
-lithoRoomLabel.textContent='LITHO · ArF SCANNER';
-lithoRoomLabel.style.color='#a9d8ff';
-lithoRoomLabel.style.borderColor='#7fc4ff';
-lithoRoomLabel.style.display='none';
-document.body.appendChild(lithoRoomLabel);
-const spinRoomLabel=document.createElement('div'),implantRoomLabel=document.createElement('div');
-for(const [el,title] of [[spinRoomLabel,'SPIN COATER · PHOTORESIST'],[implantRoomLabel,'ION IMPLANTER · DOPANT']]){
- el.className='label3d';el.textContent=title;el.style.borderColor='#7fc4ff';document.body.appendChild(el);
+/* ============ OVERVIEW LABELS / INSTRUMENT ACCESS ============ */
+// Lightweight DOM overlay reuses the seven existing machine label positions.
+// Labels are interactive only in overview. All click targets refer to the
+// same BAYS keys and never construct an additional 3D scene.
+const labelData=[
+ ['lpe','LPE · FURNACE',0,6.5,0],
+ ['imm','ION BEAM ETCH · HIGH VACUUM',BAYS.imm.x,7.5,0],
+ ['mbe','MBE · UHV CHAMBER',BAYS.mbe.x,8.2,0],
+ ['cmp','CMP · OXIDE POLISH',BAYS.cmp.x,5.3,0],
+ ['litho','LITHO · ArF SCANNER',BAYS.litho.x,5.0,0],
+ ['spin','SPIN COATER · PHOTORESIST',BAYS.spin.x,2.9,0],
+ ['implant','ION IMPLANTER · DOPANT',BAYS.implant.x,3.9,0]
+];
+const labelByBay={};
+for(const [key,title] of labelData){
+ const el=document.createElement('div');
+ el.className='label3d';el.textContent=title;
+ el.dataset.bay=key;el.setAttribute('role','button');el.tabIndex=0;
+ el.setAttribute('aria-label','Explore '+BAYS[key].name);
+ el.title='Explore '+BAYS[key].name;
+ document.body.appendChild(el);
+ labelByBay[key]=el;
 }
-
-const _v3 = new THREE.Vector3();
-function placeLabel(el, wx, wy, wz) {
-  _v3.set(wx, wy, wz).project(camera);
-  const sx = (_v3.x * 0.5 + 0.5) * window.innerWidth;
-  const sy = (-_v3.y * 0.5 + 0.5) * window.innerHeight;
-  el.style.transform = `translate(-50%, -100%) translate(${sx}px, ${sy}px)`;
-  el.style.opacity = (_v3.z >= -1 && _v3.z <= 1 && Math.abs(_v3.x)<=1.03 && Math.abs(_v3.y)<=1.03) ? '1' : '0';
+const lpeLabel=labelByBay.lpe,immLabel=labelByBay.imm,
+ mbeLabel=labelByBay.mbe,cmpLabel=labelByBay.cmp,
+ lithoRoomLabel=labelByBay.litho,
+ spinRoomLabel=labelByBay.spin,implantRoomLabel=labelByBay.implant;
+const overviewLabels=Object.values(labelByBay);
+const labelProject=new THREE.Vector3();
+function placeOverviewLabels(){
+ if(currentTab!=='overview'||document.body.classList.contains('focus-view'))return;
+ const w=window.innerWidth,h=window.innerHeight;
+ const narrow=w<=760;
+ // The second, raised row prevents verbose equipment names overlapping at
+ // the small projected station spacing; no geometry, textures or per-frame
+ // text creation are needed. On mobile the grid supplies larger tap targets.
+ labelData.forEach(([key,,x,y,z],i)=>{
+  const el=labelByBay[key];
+  labelProject.set(x,y,z).project(camera);
+  const sx=(labelProject.x*.5+.5)*w,sy=(-labelProject.y*.5+.5)*h;
+  const inView=labelProject.z>=-1&&labelProject.z<=1&&Math.abs(labelProject.x)<=1.04&&Math.abs(labelProject.y)<=1.04;
+  el.style.opacity=inView?'1':'0';
+  el.style.pointerEvents=inView&&!narrow?'auto':'none';
+  el.style.transform=`translate(-50%, -100%) translate(${sx.toFixed(1)}px, ${(sy-(i%2?43:0)).toFixed(1)}px)`;
+ });
 }
 
 /* ============ SHADOWS ============ */
@@ -218,6 +220,70 @@ const camPos={
  implant:{pos:new THREE.Vector3(99,6.4,12),tgt:new THREE.Vector3(94.8,1.3,0)}
 };
 let camGoal=null;
+let cameraJourneyTime=0;
+// Station picking is performed only on actual pointer movement / release,
+// never in the 3D animation/render loop.
+const pickRaycaster=new THREE.Raycaster();
+const pickPointer=new THREE.Vector2();
+const pickTargets=[...Object.values(room.proxies),...Object.values(room.slabs)];
+let hoveredBay=null;
+let downPointer=null;
+let lastPickMs=-Infinity;
+function setHoveredBay(key){
+ if(key===hoveredBay)return;
+ hoveredBay=key;
+ for(const [bay,line] of Object.entries(room.outlines)){
+  line.material.color.setHex(bay===key?0x84cbff:0x315675);
+  line.material.opacity=bay===key?1:.80;
+ }
+ for(const [bay,el] of Object.entries(labelByBay))el.classList.toggle('hovered',bay===key);
+ renderer.domElement.style.cursor=key?'pointer':'';
+}
+function pickBay(e){
+ if(currentTab!=='overview'||document.body.classList.contains('focus-view'))return null;
+ const b=renderer.domElement.getBoundingClientRect();
+ pickPointer.set(((e.clientX-b.left)/b.width)*2-1,-((e.clientY-b.top)/b.height)*2+1);
+ pickRaycaster.setFromCamera(pickPointer,camera);
+ const hit=pickRaycaster.intersectObjects(pickTargets,true)[0];
+ if(!hit)return null;
+ let obj=hit.object;
+ while(obj){
+  if(obj.userData.bayKey)return obj.userData.bayKey;
+  for(const [key,proxy] of Object.entries(room.proxies))if(obj===proxy)return key;
+  obj=obj.parent;
+ }
+ return null;
+}
+function cancelCameraJourney(){camGoal=null;}
+renderer.domElement.addEventListener('pointerdown',e=>{
+ cancelCameraJourney();downPointer={id:e.pointerId,x:e.clientX,y:e.clientY,time:performance.now()};
+},{passive:true});
+renderer.domElement.addEventListener('pointermove',e=>{
+ if(currentTab!=='overview'||e.buttons||e.pointerType==='touch'){
+  if(hoveredBay)setHoveredBay(null);
+  if(e.buttons)cancelCameraJourney();
+  return;
+ }
+ if(performance.now()-lastPickMs<85)return;
+ lastPickMs=performance.now();
+ setHoveredBay(pickBay(e));
+},{passive:true});
+renderer.domElement.addEventListener('pointerleave',()=>setHoveredBay(null),{passive:true});
+renderer.domElement.addEventListener('pointerup',e=>{
+ const d=downPointer;downPointer=null;
+ if(!d||d.id!==e.pointerId||performance.now()-d.time>650||Math.hypot(e.clientX-d.x,e.clientY-d.y)>7)return;
+ const hit=pickBay(e);if(hit)switchTab(hit);
+},{passive:true});
+renderer.domElement.addEventListener('pointercancel',()=>{downPointer=null;},{passive:true});
+renderer.domElement.addEventListener('wheel',cancelCameraJourney,{passive:true});
+for(const [key,el] of Object.entries(labelByBay)){
+ el.addEventListener('pointerenter',()=>setHoveredBay(key));
+ el.addEventListener('pointerleave',()=>setHoveredBay(null));
+ el.addEventListener('click',()=>switchTab(key));
+ el.addEventListener('keydown',e=>{
+  if(e.key==='Enter'||e.key===' '){e.preventDefault();switchTab(key);}
+ });
+}
 const tabEls={
  overview:document.getElementById('tabOverview'),
  lpe:document.getElementById('tabLPE'),
@@ -333,9 +399,10 @@ function showProcessPanel(tab){
   document.getElementById('implantControls').hidden=tab!=='implant';
  rightOverview.hidden=tab!=='overview';
 }
-function switchTab(tab){
+function switchTab(tab,{instant=false}={}){
  if(!(tab in camPos))tab='overview';
  currentTab=tab;
+ setHoveredBay(null);
  machine.visible=tab==='lpe';
  IMM.visible=tab==='imm';
  if(mbeController)mbeController.MBE.visible=tab==='mbe';
@@ -351,13 +418,30 @@ function switchTab(tab){
  showProcessPanel(tab);
  // Keep the active tool visible even when a sixth or later station is added.
  tabEls[tab].scrollIntoView({block:'nearest',inline:'nearest'});
- camGoal=camPos[tab];
- // Portrait overview uses a wider lens; station details retain 40 degrees.
- camera.fov=tab==='overview'?overviewView.fov:40;
+ // Preserve camera orientation and framing continuously rather than snapping
+ // perspective/fog before the positional move begins. No second RAF.
+ const destination=camPos[tab];
+ const targetFov=tab==='overview'?overviewView.fov:40;
+ const targetFog=tab==='overview'?overviewView.fogFar:LAB_FOG_FAR;
+ const destinationDistance=camera.position.distanceTo(destination.pos);
+ const duration=journeyDurationMs(destinationDistance,lowPower);
+ camGoal=instant||reduceMotion?.matches?null:{
+  start:performance.now(),duration,
+  fromPos:camera.position.clone(),fromTarget:controls.target.clone(),
+  fromFov:camera.fov,fromFog:scene.fog.far,
+  toPos:destination.pos.clone(),toTarget:destination.tgt.clone(),
+  toFov:targetFov,toFog:targetFog
+ };
+ cameraJourneyTime=duration;
  camera.far=Math.max(300,overviewView.distance*2.4);
+ // Keep intermediate paths (and the panoramic room) inside the orbit limit.
+ controls.maxDistance=Math.max(overviewView.maxDistance,85);
+ if(!camGoal){
+  camera.position.copy(destination.pos);
+  controls.target.copy(destination.tgt);
+  camera.fov=targetFov;scene.fog.far=targetFog;
+ }
  camera.updateProjectionMatrix();
- scene.fog.far=tab==='overview'?overviewView.fogFar:LAB_FOG_FAR;
- controls.maxDistance=tab==='overview'?overviewView.maxDistance:85;
  controls.maxPolarAngle=tab==='mbe'?Math.PI*.73:Math.PI*.495;
  // One physically shared key light; its shadow frustum follows the chosen station.
  const x=tab==='overview'?room.layout.centerX:BAYS[tab].x;
@@ -371,13 +455,11 @@ function switchTab(tab){
  rimLPE.visible=tab==='lpe';
  rimIMM.visible=tab==='imm';
  renderer.shadowMap.needsUpdate=true;
- lpeLabel.style.display=tab==='overview'?'block':'none';
- immLabel.style.display=tab==='overview'?'block':'none';
- mbeLabel.style.display=tab==='overview'?'block':'none';
- cmpLabel.style.display=tab==='overview'?'block':'none';
- lithoRoomLabel.style.display=tab==='overview'?'block':'none';
- spinRoomLabel.style.display=tab==='overview'?'block':'none';
- implantRoomLabel.style.display=tab==='overview'?'block':'none';
+ for(const el of overviewLabels){
+  el.style.display=tab==='overview'?'block':'none';
+  el.tabIndex=tab==='overview'?0:-1;
+ }
+ document.body.classList.toggle('room-overview',tab==='overview');
  if(tab==='lpe'){
    if(currentPhase){narrStatus.textContent=currentPhase.narr;narrStatus.style.color=currentPhase.color;narrDetail.textContent=currentPhase.detail;}
    else updateIdle();
@@ -465,7 +547,7 @@ immBtn.addEventListener('click',()=>{
 /* ============ INIT ============ */
 updateIdle();
 const initialTab=new URLSearchParams(window.location.search).get('tool');
-switchTab(initialTab in camPos ? initialTab : 'overview');
+switchTab(initialTab in camPos ? initialTab : 'overview',{instant:true});
 
 /* ============ ANIMATION ============ */
 const clock = new THREE.Clock();
@@ -856,21 +938,20 @@ function animate(now=0){
   if(implantController&&(currentTab==='implant'||implantController.isRunning()))
     implantController.update(dt,t,currentTab==='implant');
  if(camGoal){
-   // Wall-clock interpolation: a slow GPU no longer stretches a room-to-room
-   // camera transition over many seconds just because it renders fewer frames.
-   const cameraBlend=1-Math.exp(-9*dt);
-   camera.position.lerp(camGoal.pos,cameraBlend);
-   controls.target.lerp(camGoal.tgt,cameraBlend);
-   if(camera.position.distanceTo(camGoal.pos)<.04&&controls.target.distanceTo(camGoal.tgt)<.04)camGoal=null;
+  const raw=(now-camGoal.start)/camGoal.duration;
+  const eased=smoothJourney(raw);
+  camera.position.lerpVectors(camGoal.fromPos,camGoal.toPos,eased);
+  controls.target.lerpVectors(camGoal.fromTarget,camGoal.toTarget,eased);
+  camera.fov=THREE.MathUtils.lerp(camGoal.fromFov,camGoal.toFov,eased);
+  scene.fog.far=THREE.MathUtils.lerp(camGoal.fromFog,camGoal.toFog,eased);
+  camera.updateProjectionMatrix();
+  if(raw>=1){
+   camGoal=null;
+   controls.maxDistance=currentTab==='overview'?overviewView.maxDistance:85;
+  }
  }
- if(lpeLabel.style.display!=='none')placeLabel(lpeLabel,0,6.5,0);
- if(immLabel.style.display!=='none')placeLabel(immLabel,BAYS.imm.x,7.5,0);
- if(mbeLabel.style.display!=='none')placeLabel(mbeLabel,BAYS.mbe.x,8.2,0);
- if(cmpLabel.style.display!=='none')placeLabel(cmpLabel,BAYS.cmp.x,5.3,0);
- if(lithoRoomLabel.style.display!=='none')placeLabel(lithoRoomLabel,BAYS.litho.x,5.0,0);
- if(spinRoomLabel.style.display!=='none')placeLabel(spinRoomLabel,BAYS.spin.x,2.9,0);
- if(implantRoomLabel.style.display!=='none')placeLabel(implantRoomLabel,BAYS.implant.x,3.9,0);
  controls.update();
+ if(currentTab==='overview')placeOverviewLabels();
  // Static shadow atlases are not regenerated on every camera frame.
  if(renderer.shadowMap.enabled&&(now-lastShadowMs>400)&&(focusActive||moving)){
    renderer.shadowMap.needsUpdate=true;lastShadowMs=now;
@@ -899,11 +980,21 @@ window.addEventListener('resize',()=>{
  renderer.setSize(window.innerWidth,window.innerHeight);
  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,lowPower?1:1.25));
  if(currentTab==='overview'){
-   camera.fov=overviewView.fov;
    camera.far=Math.max(300,overviewView.distance*2.4);
-   scene.fog.far=overviewView.fogFar;
    controls.maxDistance=overviewView.maxDistance;
-   camGoal=camPos.overview;
+   if(reduceMotion?.matches){
+    camera.position.copy(camPos.overview.pos);
+    controls.target.copy(camPos.overview.tgt);
+    camera.fov=overviewView.fov;scene.fog.far=overviewView.fogFar;
+   }else{
+    // Reframe only the overview when its own viewport changes.
+    const dest=camPos.overview;
+    camGoal={start:performance.now(),duration:journeyDurationMs(camera.position.distanceTo(dest.pos),lowPower),
+     fromPos:camera.position.clone(),fromTarget:controls.target.clone(),
+     fromFov:camera.fov,fromFog:scene.fog.far,
+     toPos:dest.pos.clone(),toTarget:dest.tgt.clone(),
+     toFov:overviewView.fov,toFog:overviewView.fogFar};
+   }
  }
  camera.updateProjectionMatrix();
 });
@@ -940,6 +1031,8 @@ window.__foundryDiagnostics=()=>({
  cpuRenderP95ms:p95(cpuRenderMs),
  // Observed frame cadence, including intentional idle throttling; not GPU FPS.
  frameIntervalP95ms:p95(presentIntervalsMs),
- cameraPosition:camera.position.toArray(),cameraTarget:controls.target.toArray()
+ cameraPosition:camera.position.toArray(),cameraTarget:controls.target.toArray(),
+ cameraJourney:{active:!!camGoal,durationMs:cameraJourneyTime,fromFov:camGoal?.fromFov??camera.fov,toFov:camGoal?.toFov??camera.fov},
+ hoveredBay,overviewLabels:overviewLabels.length
 });
 requestAnimationFrame(animate);

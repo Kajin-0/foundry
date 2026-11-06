@@ -32,3 +32,21 @@ curved yokes, connected acceleration/scan line, vacuum chamber, load lock,
 pumping and structural support. Lighting verification checks that the cool
 fill moves with active tool selection while maintaining two directional
 lights, the one WebGL renderer and the existing low-power shadow settings.
+
+## Overview/navigation release regression
+
+The room overview adds DOM text only and reuses existing room-proxy geometry,
+materials, equipment tabs and the existing RAF loop. Picking uses on-demand
+Three.js Raycaster on `pointerup` and throttled desktop `pointermove` events,
+so idle operation does not perform any raycasts. Camera interpolation is
+bounded to 680–1150 ms on desktop (lower on low-power devices), allows user
+input cancellation, respects reduced-motion preferences, and interpolates
+camera position, orbit target, fog and perspective lens. Device physics and
+station render geometry remain unchanged. Verify no new canvas, shadow pass,
+station-specific render loop, background loading, or new dependencies.
+
+Desktop labels should be readable with non-overlapping hit boxes at typical
+widths. Portrait mobile uses 3-column touch targets rather than floating
+labels. Capture baseline-vs-new draw calls, triangles, canvas count, frame
+interval and p95 CPU render timings on the same browser/hardware. Software
+WebGL measurements are diagnostics, not physical-device FPS claims.
