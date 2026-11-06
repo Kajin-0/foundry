@@ -13,7 +13,7 @@ import {BINS,PARK_X,UNLOAD_X,WELL_OFFSETS,CONTACT_THR,ZONES,BASE_TOP,SUB_TOP,MEL
 import {CYCLE,CYCLE_TOTAL_ANIM,CYCLE_TOTAL_REAL,fmtMin} from './process/lpe-cycle.js';
 import {IBE,ibeRate,millMin,P_BASE,P_WORK,P_PREP,IMM_CYCLE,IMM_TOTAL,IMM_MILL,fmtP,imRealMin,lerpLog} from './process/ion-etch.js';
 
-const {renderer,scene,camera,controls,clipPlane,clipPlaneIMM,MAT,keyLight,rimLPE,rimIMM,lowPower:initialLowPower} = createSceneContext();
+const {renderer,scene,camera,controls,clipPlane,clipPlaneIMM,MAT,keyLight,fill,rimLPE,rimIMM,lowPower:initialLowPower} = createSceneContext();
 let lowPower=initialLowPower;
 const {cyl,box,boltRing,tubeAlong,makeCoil,annularTube} = createGeometryHelpers(MAT);
 const {machine,zoneCoils,zoneLights,growthLayers,growthLayersGroup,contactRing,meltBridge,melts,sliderGroup,subRing,substrate,growthLight,sliderGlow,bubbles,pidScreens,otcLed,inletWheel,meltMats,baseMeltEmissive} = buildLpe({scene,MAT,clipPlane,cyl,box,boltRing,tubeAlong,makeCoil,annularTube});
@@ -364,6 +364,10 @@ function switchTab(tab){
  keyLight.position.set(x+9,18,14);
  keyLight.target.position.set(x,3,0);
  keyLight.target.updateMatrixWorld();
+ // Keep the cool fill centered on the selected station across all seven bays.
+ fill.position.set(x-10,9,-8);
+ fill.target.position.set(x,2.5,0);
+ fill.target.updateMatrixWorld();
  rimLPE.visible=tab==='lpe';
  rimIMM.visible=tab==='imm';
  renderer.shadowMap.needsUpdate=true;
@@ -924,6 +928,7 @@ window.__foundryDiagnostics=()=>({
  detailed:{lpe:machine.visible,imm:IMM.visible,mbe:mbeController?.MBE.visible??false,cmp:cmpController?.group.visible??false,litho:lithoController?.group.visible??false,spin:spinController?.group.visible??false,implant:implantController?.group.visible??false},
  proxies:Object.fromEntries(Object.entries(room.proxies).map(([k,p])=>[k,p.visible])),
  drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,
+ lighting:{exposure:renderer.toneMappingExposure,keyIntensity:keyLight.intensity,fillIntensity:fill.intensity,fillTarget:fill.target.position.toArray()},
  pixelRatio:renderer.getPixelRatio(),shadowMap:renderer.shadowMap.enabled,
  shadowResolution:keyLight.shadow.mapSize.x,
   ground:{floorSize:room.layout.floorSize,gridSize:room.layout.gridSize,

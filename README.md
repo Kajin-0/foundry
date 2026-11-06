@@ -135,9 +135,26 @@ resist, 500/3000 rpm stages and approximately 1 µm target film. The 40-second
 illustrative sequence runs at a 3× display speed. Film thickness / final
 floor are model assumptions, not calibrated wafer values.
 
-Ion implantation retains the supplied As⁺ / B⁺ / P⁺ presets, beam-energy and
-dose calculations, mean projected range, straggle, approximate channeling
-and damage estimates, tilt controls, and dose-based real duration. The
-35-second visualization is time-compressed; it is not a measured implanter,
-SRIM or TCAD model. Both are **educational demonstrations**. Do not infer
-real-world recipes or device qualification from these tools.
+Ion implantation now uses **one fixed As⁺ silicon source/drain teaching recipe**:
+100 keV, 5×10¹⁵ cm⁻², nominal 100 µA, 7° tilt and 22° twist. This is
+consistent with the other Foundry demos: Run/Stop and a machine cutaway,
+without a species or tilt selector. The demonstration still computes dose,
+effective beam current, projected range (58 nm), straggle (19 nm), approximate
+channeling/damage and dose-based real duration. The 35-second animation is
+time-compressed; it is not a measured implanter, SRIM or TCAD model.
+
+The overview implanter proxy now distinguishes the connected source, curved
+mass-selection magnet and copper windings, acceleration/scan line, bellows,
+end-station, load lock, vacuum pump and grounded structural supports. The
+lightweight shell is not a second detailed equipment model. Repeated rigid
+pieces are eligible for the original same-material batcher.
+
+The shared lighting retains its existing two directional lights and one
+WebGL renderer but uses a stronger neutral ambient/hemisphere contribution,
+a moderately warmer key, a cool fill whose target follows the selected bay,
+and slightly higher exposure. The room ground/wall also have better separation
+from the machines. No new shadow-casting lights or rendering passes were added.
+
+Both tools are **educational demonstrations**, not calibrated fabrication
+recipes. The supplied originals remain archived, including the unused
+implant presets for historical reference.

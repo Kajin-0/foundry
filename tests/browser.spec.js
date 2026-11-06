@@ -458,6 +458,8 @@ test('spin coater and ion implanter lazy-load as distinct stations in one render
  await page.goto('/?tool=spin');
  await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.spinLoaded),{timeout:30000}).toBe(true);
  await expect(page.locator('#spinControls')).toBeVisible();
+ await expect(page.locator('#spinPlayBtn')).toHaveCSS('background-image',/linear-gradient/);
+ await expect(page.locator('#spinPlayBtn')).toHaveCSS('border-radius','7px');
  await expect(page.locator('#spinCurve path')).toHaveCount(1);
  await expect(page.locator('canvas')).toHaveCount(1);
  await page.locator('#spinPlayBtn').click();
@@ -468,10 +470,21 @@ test('spin coater and ion implanter lazy-load as distinct stations in one render
  await expect(page.locator('#implantControls')).toBeVisible();
  await expect(page.locator('#spinControls')).toBeHidden();
  await expect(page.locator('#implantProfile path')).toHaveCount(2);
- await page.locator('[data-implant-preset="bsd"]').click();
- expect((await page.evaluate(()=>window.__foundryDiagnostics().implantState)).ion).toBe('B');
- await page.locator('[data-implant-tilt="0"]').click();
- expect((await page.evaluate(()=>window.__foundryDiagnostics().implantState)).tilt).toBe(0);
+ await expect(page.locator('[data-implant-preset], [data-implant-tilt]')).toHaveCount(0);
+ const recipe=await page.evaluate(()=>window.__foundryDiagnostics().implantState);
+ expect(recipe.ion).toBe('As');
+ expect(recipe.E).toBe(100);
+ expect(recipe.tilt).toBe(7);
+ expect(recipe.targetDose).toBe(5e15);
+ const css=await page.locator('#implantPlayBtn').evaluate(el=>({
+  background:getComputedStyle(el).backgroundImage,
+  radius:getComputedStyle(el).borderRadius,
+  width:el.getBoundingClientRect().width,
+  parentWidth:el.parentElement.getBoundingClientRect().width
+ }));
+ expect(css.background).toContain('linear-gradient');
+ expect(css.radius).toBe('7px');
+ expect(css.width).toBeGreaterThan(css.parentWidth*.90);
  await page.locator('#implantPlayBtn').click();
  await expect(page.locator('#implantPlayBtn')).toContainText('Stop');
  await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.implantState?.simTime),{timeout:15000}).toBeGreaterThan(0);
@@ -492,4 +505,35 @@ test('seven stations remain accessible on narrow mobile without duplicate canvas
  await page.locator('#restoreEquipment').click();
  await expect(page.locator('#implantControls')).toBeVisible();
  await expect(page.locator('canvas')).toHaveCount(1);
+});
+
+test('shared fill follows the active bay and uses no additional WebGL renderer',async({page})=>{
+ await page.goto('/');
+ const overview=await page.evaluate(()=>window.__foundryDiagnostics());
+ expect(overview.lighting.exposure).toBeGreaterThan(1.15);
+ expect(overview.lighting.fillIntensity).toBeGreaterThan(1);
+ expect(overview.lighting.fillTarget[0]).toBeCloseTo(overview.roomBounds.centerX,4);
+ await page.locator('#tabImplant').click();
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics().lighting.fillTarget[0])).toBe(94);
+ expect(await page.locator('canvas').count()).toBe(1);
+ await page.locator('#tabLPE').click();
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics().lighting.fillTarget[0])).toBe(0);
+});
+
+test('new run controls remain immediately accessible in mobile equipment panels',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ for(const key of ['spin','implant']){
+  await page.goto('/?tool='+key);
+  await expect.poll(()=>page.evaluate((tool)=>window.__foundryDiagnostics()?.[tool+'Loaded'],key),{timeout:30000}).toBe(true);
+  const data=await page.locator('#'+key+'PlayBtn').evaluate(el=>{
+   const p=el.parentElement.getBoundingClientRect(),r=el.getBoundingClientRect();
+   return {first:el.parentElement.firstElementChild===el,
+    top:r.top,parentTop:p.top,bottom:r.bottom,viewport:innerHeight,
+    order:getComputedStyle(el).order};
+  });
+  expect(Number(data.order)).toBe(-1);
+  expect(data.bottom).toBeLessThanOrEqual(data.viewport);
+  expect(data.top).toBeGreaterThanOrEqual(0);
+  await expect(page.locator('canvas')).toHaveCount(1);
+ }
 });

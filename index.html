@@ -136,12 +136,14 @@
   </div>
   <div id="overviewLeft" hidden>
     <div class="label">Virtual fabrication room</div>
-    <div class="room-note">Five instruments, one shared 3D laboratory. Select a station to inspect its equipment and run its independent process animation.</div>
+    <div class="room-note">Seven instruments, one shared 3D laboratory. Select a station to inspect its equipment and run its independent process animation.</div>
     <div class="lab-description"><b>LPE</b><span>Liquid-phase growth</span></div>
     <div class="lab-description"><b>Ion Mill</b><span>Ar⁺ subtractive patterning</span></div>
     <div class="lab-description"><b>MBE</b><span>UHV epitaxial deposition</span></div>
     <div class="lab-description"><b>CMP</b><span>Oxide planarization</span></div>
     <div class="lab-description"><b>LITHO</b><span>193 nm immersion photolithography</span></div>
+    <div class="lab-description"><b>Spin Coat</b><span>Photoresist deposition</span></div>
+    <div class="lab-description"><b>Implant</b><span>As⁺ silicon doping</span></div>
     <div class="room-note">Overview uses lightweight station representations for fast rendering. Select a tool to see its full detailed model.</div>
   </div>
 </div>
@@ -270,15 +272,8 @@
 <div class="temps"><div class="trow"><span>Chuck rotation</span><span id="spinV1">—</span></div><div class="trow"><span>Vacuum</span><span id="spinV2">—</span></div><div class="trow"><span>Dispense</span><span id="spinV3">—</span></div><div class="trow"><span>Evaporation</span><span id="spinV4">—</span></div><div class="trow"><span>Film thickness</span><span id="spinV5">—</span></div><div class="trow"><span>Elapsed</span><span id="spinV6">—</span></div></div>
 <button id="spinPlayBtn" type="button" disabled>▶ Run Spin Cycle</button>
 </div><div id="implantControls" hidden>
-<div class="label">Recipe Preset</div>
-<div class="new-presets" role="group" aria-label="Implant species">
-<button type="button" class="preset-btn active" data-implant-preset="sd">As⁺ S/D</button>
-<button type="button" class="preset-btn" data-implant-preset="bsd">B⁺ S/D</button>
-<button type="button" class="preset-btn" data-implant-preset="well">P⁺ Well</button>
-</div><div class="label">Crystal Orientation</div>
-<div class="new-presets" role="group" aria-label="Wafer tilt">
-<button type="button" class="preset-btn active" data-implant-tilt="7">7° tilt</button>
-<button type="button" class="preset-btn" data-implant-tilt="0">0° channel</button></div>
+<div class="label">Preset Silicon Implant · As⁺</div>
+<p class="room-note">One illustrative source/drain implant recipe. Run or stop the process; use the cutaway to inspect the equipment.</p>
 <div class="specs"><div><span>Ion</span><span><b id="implantIon">As⁺</b></span></div><div><span>Energy</span><span><b id="implantEnergy">—</b></span></div><div><span>Dose</span><span><b id="implantDose">—</b></span></div><div><span>Effective current</span><span><b id="implantCurrent">—</b></span></div><div><span>Tilt / twist</span><span><b id="implantTilt">—</b></span></div><div><span>Range Rp</span><span><b id="implantRp">—</b></span></div><div><span>Straggle ΔRp</span><span><b id="implantDeltaRp">—</b></span></div><div><span>Peak N</span><span><b id="implantPeak">—</b></span></div><div><span>Real duration</span><span><b id="implantDuration">—</b></span></div></div>
 <div class="label">Beamline Cutaway</div><input type="range" id="implantCut" min="0" max="100" value="58" aria-label="Ion implanter cutaway"/>
 <div class="label">Live Readouts</div>

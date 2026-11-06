@@ -76,3 +76,27 @@ cutaway controls, focus/minimize compatibility, mobile navigation and
 physics explicitly illustrative and separate from real wafer qualification.
 New tests must verify lazy loading, no additional canvas, process controls,
 mobile behavior and continuity across tabs.
+
+## Shared lighting, simplified implant controls and proxy geometry (Nov 2026)
+
+The implanter is now a fixed As⁺ 100 keV / 5×10¹⁵ cm⁻² / 7° tilt recipe;
+there are no species/tilt selection buttons. The process values remain visible
+as *read-only* parameters. Retain the cutaway slider, Run/Stop cycle and
+existing dose-conserving illustrative physics. The spin and implant Run buttons
+share the LPE/Ion-Mill visual states (idle/running/complete) and are kept at
+the top of their equipment cards on phones. Do not restore unrequested modes.
+
+The overview implanter LOD has a connected beamline, two curved yoke plates,
+copper coils, high-voltage source support, chamber/load lock and pump. Preserve
+the recognizable source → analyzer → end-station layout and grounded mounts.
+Use simple static geometry eligible for same-material batching; do not import
+full chamber detail into the overview. Tests in `tests/room-proxies.test.js`
+verify the silhouette topology independently of the detailed scene.
+
+Shared scene lighting in `src/scene/context.js` uses the existing ambient,
+hemisphere and two directional lights, with no new shadow-casting emitters.
+The fill light and its target must follow `BAYS[tab].x` in `src/main.js` just
+like the key light so rightmost tools do not lose their secondary illumination.
+Do not reintroduce a fixed fill light aimed at world x=0. Keep mobile shadow
+and DPR budgets intact. Browser diagnostics expose lighting values and tests
+check the fill target at the overview, implant and LPE stations.

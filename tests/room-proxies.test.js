@@ -134,3 +134,25 @@ test('lithography proxy matches supported four-post granite stage and upper opti
  assert.equal(byName(p,'litho-laser').length,1);
  assert.equal(p.userData.silhouette.grounded,true);
 });
+
+test('implant overview matches the curved analyzer and grounded beamline assemblies',()=>{
+ const {proxies}=makeRoom(false),p=proxies.implant;
+ assert.equal(byName(p,'implant-analyzer-yoke').length,2);
+ assert.equal(byName(p,'implant-analyzer-coil').length,2);
+ assert.equal(byName(p,'implant-incoming-beamline').length,1);
+ assert.equal(byName(p,'implant-analyzer-exit').length,1);
+ assert.equal(byName(p,'implant-accelerator').length,1);
+ assert.equal(byName(p,'implant-scanner-bellows').length,1);
+ assert.equal(byName(p,'implant-end-station').length,1);
+ assert.equal(byName(p,'implant-load-lock').length,1);
+ assert.equal(byName(p,'implant-turbo-pump').length,1);
+ assert.equal(byName(p,'implant-source-support').length,4);
+ assert.equal(byName(p,'implant-frame-post').length,8);
+ assert.equal(p.userData.silhouette.continuousBeamline,true);
+ assert.equal(p.userData.silhouette.magnetYokes,2);
+ const bbox=new THREE.Box3().setFromObject(p);
+ assert.ok(bbox.min.y>=-1e-5);
+ assert.ok(bbox.max.y>2);
+ assert.ok(bbox.min.z< -3);
+ assert.ok(bbox.max.x>p.position.x+4);
+});

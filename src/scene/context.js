@@ -12,7 +12,7 @@ renderer.shadowMap.enabled = !lowPower;
 renderer.shadowMap.autoUpdate = false;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;
+renderer.toneMappingExposure = 1.23;
 renderer.localClippingEnabled = true;
 document.body.appendChild(renderer.domElement);
 
@@ -42,10 +42,10 @@ const CLIP     = { clippingPlanes: [clipPlane],    clipShadows: true };
 const CLIP_IMM = { clippingPlanes: [clipPlaneIMM], clipShadows: true };
 
 /* ============ LIGHTS ============ */
-scene.add(new THREE.AmbientLight(0xffffff, 0.25));
-scene.add(new THREE.HemisphereLight(0x9dc4ff, 0x0a0d12, 0.55));
+scene.add(new THREE.AmbientLight(0xffffff, 0.36));
+scene.add(new THREE.HemisphereLight(0xc1dbf4, 0x202936, 0.78));
 
-const keyLight = new THREE.DirectionalLight(0xfff2e0, 2.2);
+const keyLight = new THREE.DirectionalLight(0xfff2e0, 2.3);
 keyLight.position.set(9, 18, 14);
 keyLight.castShadow = true;
 keyLight.shadow.mapSize.set(lowPower ? 512 : 1024, lowPower ? 512 : 1024);
@@ -56,9 +56,12 @@ keyLight.shadow.normalBias = 0.025;
 scene.add(keyLight);
 scene.add(keyLight.target);
 
-const fill = new THREE.DirectionalLight(0x8ab8e8, 1.0);
-fill.position.set(-12, 6, -10);
+// Soft cool fill tracks the selected bay just as the key light does.
+// A fixed origin-targeted fill only illuminated the leftmost tools correctly.
+const fill = new THREE.DirectionalLight(0xb3cfe8, 1.35);
+fill.position.set(-12, 9, -8);
 scene.add(fill);
+scene.add(fill.target);
 
 const rimLPE = new THREE.PointLight(0xff8040, 40, 34, 2);
 rimLPE.position.set(-11, 5, -8);
@@ -122,5 +125,5 @@ const MAT = {
 };
 
 
-return {renderer,scene,camera,controls,clipPlane,clipPlaneIMM,MAT,keyLight,rimLPE,rimIMM,lowPower};
+return {renderer,scene,camera,controls,clipPlane,clipPlaneIMM,MAT,keyLight,fill,rimLPE,rimIMM,lowPower};
 }
