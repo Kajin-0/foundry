@@ -1,6 +1,6 @@
 # Foundry — Interactive Semiconductor Process Lab
 
-A **single shared 3D semiconductor fabrication laboratory** containing seven stations: LPE, Ar⁺ ion milling, MBE, CMP, 193 nm immersion lithography, spin coating and ion implantation. All stations share one Three.js scene, camera, WebGL renderer and navigation controls. The physics are illustrative, with tested layer/rate calculations where applicable.
+A **single shared 3D semiconductor fabrication laboratory** containing eight stations: LPE, Ar⁺ ion milling, MBE, CMP, 193 nm immersion lithography, spin coating and ion implantation. All stations share one Three.js scene, camera, WebGL renderer and navigation controls. The physics are illustrative, with tested layer/rate calculations where applicable.
 
 ## Run locally
 
@@ -26,7 +26,7 @@ GitHub Pages deployment is automatic from `main` via
 - **Direct ion implanter:** https://kajin-0.github.io/foundry/?tool=implant
 - Older `/mbe.html` links redirect to that station in the same room.
 
-The shared lab initially displays seven equipment stations in overview.
+The shared lab initially displays eight equipment stations in overview.
 Selecting **LPE**, **Ion Mill**, **MBE**, **CMP**, **LITHO**, **Spin Coat**, or **Implant** focuses the camera and opens the
 chosen machine's full detailed geometry and controls.
 
@@ -172,3 +172,15 @@ preference disables these camera animations, and direct-link startup is
 immediate. Mobile uses larger station buttons in a 3-column equipment grid,
 with no tiny overlapping labels. All science models, recipe readouts,
 cutaway controls and independent process timelines are unchanged.
+
+## Eighth station: MOCVD
+A reviewed six-wafer InGaAs/InP MOCVD reactor now lives in the shared room
+at x=110. Its detailed geometry is lazily loaded. The room model is a
+statically batched low-polygon silhouette. The detailed showerhead uses three
+instanced hole/ring draws, and gas markers use two instanced draws. It adds
+no renderer, camera, light rig, ground, label clutter or animation loop.
+The single preset is an educational approximation: 620 °C, 100 Torr,
+2.0 µm/h, 2.5 µm nominal InGaAs, 6 × 100 mm InP wafers.
+Controls: Run/Stop and chamber cutaway only. The transfer, growth chemistry,
+kinetics and time compression are explicitly illustrative.
+Direct link: `?tool=mocvd`.

@@ -7,8 +7,8 @@ test('single room hosts LPE and ion mill with one WebGL canvas',async({page})=>{
  await expect(page.locator('#tabOverview')).toHaveClass(/active/);
  await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics?.().rendererCount)).toBe(1);
  const overview=await page.evaluate(()=>window.__foundryDiagnostics());
- expect(overview.detailed).toEqual({lpe:false,imm:false,mbe:false,cmp:false,litho:false,spin:false,implant:false});
- expect(overview.proxies).toEqual({lpe:true,imm:true,mbe:true,cmp:true,litho:true,spin:true,implant:true});
+ expect(overview.detailed).toEqual({lpe:false,imm:false,mbe:false,cmp:false,litho:false,spin:false,implant:false,mocvd:false});
+ expect(overview.proxies).toEqual({lpe:true,imm:true,mbe:true,cmp:true,litho:true,spin:true,implant:true,mocvd:true});
  expect(overview.mbeLoaded).toBe(false);
  expect(overview.pixelRatio).toBeLessThanOrEqual(1.25);
  await page.locator('#tabLPE').click();
@@ -25,7 +25,7 @@ test('single room hosts LPE and ion mill with one WebGL canvas',async({page})=>{
  await page.locator('#immBtn').click();
  await expect(page.locator('#immBtn')).toContainText('Run');
  await page.locator('#tabOverview').click();
- expect((await page.evaluate(()=>window.__foundryDiagnostics())).proxies).toEqual({lpe:true,imm:true,mbe:true,cmp:true,litho:true,spin:true,implant:true});
+ expect((await page.evaluate(()=>window.__foundryDiagnostics())).proxies).toEqual({lpe:true,imm:true,mbe:true,cmp:true,litho:true,spin:true,implant:true,mocvd:true});
  expect(errors).toEqual([]);
 });
 test('MBE loads lazily into same room with no extra WebGL renderer',async({page})=>{
@@ -39,8 +39,8 @@ test('MBE loads lazily into same room with no extra WebGL renderer',async({page}
  await expect(page.locator('#mbeV1')).not.toHaveText('—');
  await expect(page.locator('canvas')).toHaveCount(1);
  const d=await page.evaluate(()=>window.__foundryDiagnostics());
- expect(d.detailed).toEqual({lpe:false,imm:false,mbe:true,cmp:false,litho:false,spin:false,implant:false});
- expect(d.proxies).toEqual({lpe:true,imm:true,mbe:false,cmp:true,litho:true,spin:true,implant:true});
+ expect(d.detailed).toEqual({lpe:false,imm:false,mbe:true,cmp:false,litho:false,spin:false,implant:false,mocvd:false});
+ expect(d.proxies).toEqual({lpe:true,imm:true,mbe:false,cmp:true,litho:true,spin:true,implant:true,mocvd:true});
  expect(d.rendererCount).toBe(1);
  await page.locator('#mbePlayBtn').click();
  await expect(page.locator('#mbePlayBtn')).toContainText('Stop');
@@ -232,7 +232,7 @@ test('CMP is a lazily loaded fourth machine inside the same renderer',async({pag
  const d=await page.evaluate(()=>window.__foundryDiagnostics());
  expect(d.view).toBe('cmp');
  expect(d.rendererCount).toBe(1);
- expect(d.detailed).toEqual({lpe:false,imm:false,mbe:false,cmp:true,litho:false,spin:false,implant:false});
+ expect(d.detailed).toEqual({lpe:false,imm:false,mbe:false,cmp:true,litho:false,spin:false,implant:false,mocvd:false});
  expect(d.proxies.cmp).toBe(false);
  expect(d.cmpGeometry.headContactY-d.cmpGeometry.padTopY).toBeCloseTo(.2275,6);
  await page.locator('#cmpPlayBtn').click();
@@ -390,7 +390,7 @@ test('ArF immersion scanner loads only on selection and shares one WebGL context
  // Lithography is inspected through the fixed side panels only. Floating
  // scene labels used to remain on screen during orbit/focus/simulation.
  await expect(page.locator('.litho-sub-label')).toHaveCount(0);
- await expect(page.locator('.label3d')).toHaveCount(7);
+ await expect(page.locator('.label3d')).toHaveCount(8);
  await expect(page.locator('.label3d:visible')).toHaveCount(0);
 
  await expect(page.locator('#mbePlayBtn')).toBeHidden();
@@ -441,17 +441,17 @@ test('lithography runs in minimized mobile UI and preserves renderer',async({pag
 
 test('overview displays seven consistent labels and detailed stations show none',async({page})=>{
  await page.goto('/');
- await expect(page.locator('.label3d')).toHaveCount(7);
- await expect(page.locator('.label3d:visible')).toHaveCount(7);
+ await expect(page.locator('.label3d')).toHaveCount(8);
+ await expect(page.locator('.label3d:visible')).toHaveCount(8);
  const palette=await page.locator('.label3d').evaluateAll(nodes=>nodes.map(n=>getComputedStyle(n).borderColor));
  expect(new Set(palette).size).toBe(1);
- await expect(page.locator('.label3d')).toContainText(['LPE · FURNACE','ION BEAM ETCH · HIGH VACUUM','MBE · UHV CHAMBER','CMP · OXIDE POLISH','LITHO · ArF SCANNER','SPIN COATER · PHOTORESIST','ION IMPLANTER · DOPANT']);
- for(const tool of ['LPE','IMM','MBE','CMP','Litho','Spin','Implant']){
+ await expect(page.locator('.label3d')).toContainText(['LPE · FURNACE','ION BEAM ETCH · HIGH VACUUM','MBE · UHV CHAMBER','CMP · OXIDE POLISH','LITHO · ArF SCANNER','SPIN COATER · PHOTORESIST','ION IMPLANTER · DOPANT','MOCVD · III-V EPITAXY']);
+ for(const tool of ['LPE','IMM','MBE','CMP','Litho','Spin','Implant','MOCVD']){
   await page.locator('#tab'+tool).click();
   await expect(page.locator('.label3d:visible')).toHaveCount(0);
  }
  await page.locator('#tabOverview').click();
- await expect(page.locator('.label3d:visible')).toHaveCount(7);
+ await expect(page.locator('.label3d:visible')).toHaveCount(8);
 });
 
 test('spin coater and ion implanter lazy-load as distinct stations in one renderer',async({page})=>{
@@ -491,7 +491,7 @@ test('spin coater and ion implanter lazy-load as distinct stations in one render
  await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.implantState?.simTime),{timeout:15000}).toBeGreaterThan(0);
  const d=await page.evaluate(()=>window.__foundryDiagnostics());
  expect(d.spinState.simTime).toBeGreaterThan(0);
- expect(d.detailed).toEqual({lpe:false,imm:false,mbe:false,cmp:false,litho:false,spin:false,implant:true});
+ expect(d.detailed).toEqual({lpe:false,imm:false,mbe:false,cmp:false,litho:false,spin:false,implant:true,mocvd:false});
  expect(d.rendererCount).toBe(1);
  expect(errors).toEqual([]);
 });
@@ -545,7 +545,7 @@ test('overview labels form two readable rows and keyboard selection enters one d
  await page.goto('/');
  await expect(page.locator('body')).toHaveClass(/room-overview/);
  await expect(page.locator('#roomIntro')).toHaveCount(0);
- await expect(page.locator('.label3d')).toHaveCount(7);
+ await expect(page.locator('.label3d')).toHaveCount(8);
  await page.waitForTimeout(400);
  const rectangles=await page.locator('.label3d').evaluateAll(els=>els.map(e=>{
   const r=e.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom};
@@ -679,5 +679,27 @@ test('genuine browser pointer input during camera travel does not cause capture 
   return !d.cameraJourney.active&&!d.framingRecovery.active;
  }),{timeout:8000}).toBe(true);
  await expect(page.locator('canvas')).toHaveCount(1);
+ expect(errors).toEqual([]);
+});
+
+test('MOCVD loads lazily into the same scene with one fixed recipe',async({page})=>{
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/?tool=mocvd');
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.mocvdLoaded),{timeout:30000}).toBe(true);
+ await expect(page.locator('#mocvdControls')).toBeVisible();
+ await expect(page.locator('#mocvdLeft')).toBeVisible();
+ await expect(page.locator('canvas')).toHaveCount(1);
+ await expect(page.locator('#mocvdControls .preset-row')).toHaveCount(0);
+ const diag=await page.evaluate(()=>window.__foundryDiagnostics());
+ expect(diag.detailed.mocvd).toBe(true);
+ expect(diag.proxies.mocvd).toBe(false);
+ await page.locator('#mocvdPlayBtn').click();
+ await expect(page.locator('#mocvdPlayBtn')).toContainText('Stop');
+ await expect.poll(()=>page.evaluate(()=>window.__foundryDiagnostics()?.mocvdState?.simTime),{timeout:15000}).toBeGreaterThan(0);
+ await page.locator('#mocvdCut').evaluate(el=>{el.value='90';el.dispatchEvent(new Event('input',{bubbles:true}));});
+ await page.locator('#mocvdPlayBtn').click();
+ await expect(page.locator('#mocvdPlayBtn')).toContainText('Run');
+ await page.locator('#tabOverview').click();
+ expect((await page.evaluate(()=>window.__foundryDiagnostics())).rendererCount).toBe(1);
  expect(errors).toEqual([]);
 });

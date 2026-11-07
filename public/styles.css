@@ -386,3 +386,23 @@ body.focus-view #hud .focus-toggle{margin-top:0}
 @media(prefers-reduced-motion:reduce){
  .label3d{transition:none}
 }
+
+/* Eighth bay: match the Foundry controls without excess buttons or labels. */
+#mocvdPlayBtn{
+ width:100%;padding:9px 12px;margin-top:4px;min-height:40px;
+ background:linear-gradient(180deg,#2c5686,#1b3a5c);
+ border:1px solid #3d7fd6;border-radius:7px;
+ color:#dbeaff;font:600 12px system-ui,sans-serif;
+ letter-spacing:.04em;text-transform:uppercase;cursor:pointer;
+ transition:background-color .15s,border-color .15s;
+}
+#mocvdPlayBtn:hover:not(:disabled){background:linear-gradient(180deg,#3a6ba8,#244a72)}
+#mocvdPlayBtn.running{background:linear-gradient(180deg,#6a3a1a,#4a2610);border-color:#ff7a2a;color:#ffd4a8}
+#mocvdPlayBtn.done{background:linear-gradient(180deg,#1a5a30,#0f3a1e);border-color:#4dbb7a;color:#a8e8c0}
+#mocvdPlayBtn:focus-visible{outline:2px solid #b9dcff;outline-offset:3px}
+#mocvdPlayBtn:disabled{opacity:.6;cursor:wait}
+#mocvdControls[hidden],#mocvdLeft[hidden]{display:none!important}
+@media(max-width:760px){
+ #mocvdControls{display:flex;flex-direction:column}
+ #mocvdControls > #mocvdPlayBtn{order:-1;min-height:44px;margin:0 0 12px;flex:none}
+}

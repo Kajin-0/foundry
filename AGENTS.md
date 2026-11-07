@@ -155,3 +155,15 @@ share geometry, and eager disposal risks GPU buffer reuploads. The static
 batcher removes obsolete mesh objects, while temporary transformed clones are
 already disposed. Profile actual GPU memory and identify ownership before
 adding disposal logic; no speculative cleanup for its own sake.
+
+
+## MOCVD eighth shared station (Nov 2026)
+MOCVD occupies world x=110. `src/mocvd/scene.js` is lazy imported
+from the existing single-room application. Never add a separate renderer,
+canvas, camera, floor, light rig, RAF or floating callout labels.
+The reviewed V4 equipment shape is retained; repeated showerhead nozzles
+and animated precursor markers are GPU-instanced. The reactor is a
+pedagogical model with a single fixed InGaAs-on-InP preset. Do not
+reintroduce recipe selection or extra buttons. Preserve source isolation
+and nitrogen purge in process narration. Keep rendering and UI throttled
+when the bay is not selected. Run node and Chromium regression tests.

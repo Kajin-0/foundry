@@ -24,6 +24,7 @@ let overviewView=calculateOverviewView(room.layout,window.innerWidth,window.inne
 let cmpController=null,cmpLoading=null;
 let lithoController=null,lithoLoading=null;
 let spinController=null,spinLoading=null,implantController=null,implantLoading=null;
+let mocvdController=null,mocvdLoading=null;
 const panelVisibility=initPanelVisibility();
 const reduceMotion=window.matchMedia?.('(prefers-reduced-motion: reduce)');
 let mbeController=null;
@@ -34,7 +35,7 @@ const XS = createCrossSection(IBE);
 const {maybeUpdateProfile} = createThermalProfile();
 
 /* ============ OVERVIEW LABELS / INSTRUMENT ACCESS ============ */
-// Lightweight DOM overlay reuses the seven existing machine label positions.
+// Lightweight DOM overlay reuses the eight room label positions.
 // Labels are interactive only in overview. All click targets refer to the
 // same BAYS keys and never construct an additional 3D scene.
 const labelData=[
@@ -44,7 +45,8 @@ const labelData=[
  ['cmp','CMP · OXIDE POLISH',BAYS.cmp.x,5.3,0],
  ['litho','LITHO · ArF SCANNER',BAYS.litho.x,5.0,0],
  ['spin','SPIN COATER · PHOTORESIST',BAYS.spin.x,2.9,0],
- ['implant','ION IMPLANTER · DOPANT',BAYS.implant.x,3.9,0]
+ ['implant','ION IMPLANTER · DOPANT',BAYS.implant.x,3.9,0],
+ ['mocvd','MOCVD · III-V EPITAXY',BAYS.mocvd.x,4.2,0]
 ];
 const labelByBay={};
 for(const [key,title] of labelData){
@@ -173,7 +175,7 @@ function updateIdle() {
   displayTemp = 25;
   narrStatus.textContent = 'IDLE';
   narrStatus.style.color = '#5f7d9e';
-  narrDetail.textContent = 'One virtual lab with seven independent fabrication tools. Select a station to inspect its equipment and illustrative process.';
+  narrDetail.textContent = 'One virtual lab with eight independent fabrication tools. Select a station to inspect its equipment and illustrative process.';
   narrTime.textContent = `LPE · ${fmtMin(CYCLE_TOTAL_REAL)} simulated · ~${Math.round(CYCLE_TOTAL_ANIM)} s demo`;
   updateZoneReadouts(25);
   maybeUpdateProfile(25);
@@ -217,7 +219,8 @@ const camPos={
  cmp:{pos:new THREE.Vector3(52,7.6,13),tgt:new THREE.Vector3(46,2.2,0)},
  litho:{pos:new THREE.Vector3(68.4,5.0,8.0),tgt:new THREE.Vector3(62,1.95,0)},
  spin:{pos:new THREE.Vector3(82.5,4.5,8.4),tgt:new THREE.Vector3(78,.98,0)},
- implant:{pos:new THREE.Vector3(99,6.4,12),tgt:new THREE.Vector3(94.8,1.3,0)}
+ implant:{pos:new THREE.Vector3(99,6.4,12),tgt:new THREE.Vector3(94.8,1.3,0)},
+ mocvd:{pos:new THREE.Vector3(116,6.5,12),tgt:new THREE.Vector3(110.5,1.8,0)}
 };
 let camGoal=null;
 let framingRecovery=null;
@@ -309,7 +312,8 @@ const tabEls={
  cmp:document.getElementById('tabCMP'),
  litho:document.getElementById('tabLitho'),
  spin:document.getElementById('tabSpin'),
- implant:document.getElementById('tabImplant')
+ implant:document.getElementById('tabImplant'),
+ mocvd:document.getElementById('tabMOCVD')
 };
 const leftLPE=document.getElementById('lpeLeft'),leftMBE=document.getElementById('mbeLeft');
 const leftOverview=document.getElementById('overviewLeft');
@@ -319,6 +323,27 @@ const mbeButton=document.getElementById('mbePlayBtn');
 const cmpButton=document.getElementById('cmpPlayBtn');
 const lithoButton=document.getElementById('lithoPlayBtn');
 const spinButton=document.getElementById('spinPlayBtn'),implantButton=document.getElementById('implantPlayBtn');
+const mocvdButton=document.getElementById('mocvdPlayBtn');
+async function ensureMocvd(){
+ if(mocvdController)return mocvdController;
+ if(!mocvdLoading)mocvdLoading=Promise.all([import('./mocvd/scene.js'),import('./mocvd/controller.js')])
+  .then(([s,c])=>{
+   const model=s.buildMocvd({scene});
+   mocvdController=c.createMocvdController(model);
+   model.group.visible=currentTab==='mocvd';
+   room.setFocus(currentTab);
+   mocvdButton.disabled=false;
+   mocvdController.refresh();
+   renderer.shadowMap.needsUpdate=true;
+   return mocvdController;
+  }).catch(error=>{
+   mocvdLoading=null;
+   document.getElementById('mocvdDetail').textContent='Unable to load MOCVD station; reload to retry.';
+   console.error('MOCVD station failed:',error);
+   throw error;
+  });
+ return mocvdLoading;
+}
 async function ensureSpin(){
  if(spinController)return spinController;
  if(!spinLoading)spinLoading=Promise.all([import('./spin/scene.js'),import('./spin/controller.js')]).then(([m,c])=>{
@@ -406,6 +431,7 @@ function showProcessPanel(tab){
  document.getElementById('lithoLeft').hidden=tab!=='litho';
   document.getElementById('spinLeft').hidden=tab!=='spin';
   document.getElementById('implantLeft').hidden=tab!=='implant';
+ document.getElementById('mocvdLeft').hidden=tab!=='mocvd';
  leftOverview.hidden=tab!=='overview';
  lpeControlsEl.style.display=tab==='lpe'?'block':'none';
  immControlsEl.style.display=tab==='imm'?'block':'none';
@@ -414,6 +440,7 @@ function showProcessPanel(tab){
  document.getElementById('lithoControls').hidden=tab!=='litho';
   document.getElementById('spinControls').hidden=tab!=='spin';
   document.getElementById('implantControls').hidden=tab!=='implant';
+ document.getElementById('mocvdControls').hidden=tab!=='mocvd';
  rightOverview.hidden=tab!=='overview';
 }
 function switchTab(tab,{instant=false}={}){
@@ -428,7 +455,8 @@ function switchTab(tab,{instant=false}={}){
  if(lithoController)lithoController.group.visible=tab==='litho';
   if(spinController)spinController.group.visible=tab==='spin';
   if(implantController)implantController.group.visible=tab==='implant';
- room.setFocus((tab==='mbe'&&!mbeController)||(tab==='cmp'&&!cmpController)||(tab==='litho'&&!lithoController)||(tab==='spin'&&!spinController)||(tab==='implant'&&!implantController)?'overview':tab);
+ if(mocvdController)mocvdController.group.visible=tab==='mocvd';
+ room.setFocus((tab==='mbe'&&!mbeController)||(tab==='cmp'&&!cmpController)||(tab==='litho'&&!lithoController)||(tab==='spin'&&!spinController)||(tab==='implant'&&!implantController)||(tab==='mocvd'&&!mocvdController)?'overview':tab);
  for(const [id,button] of Object.entries(tabEls)){
    button.classList.toggle('active',id===tab);
    button.setAttribute('aria-pressed',String(id===tab));
@@ -466,7 +494,7 @@ function switchTab(tab,{instant=false}={}){
  keyLight.position.set(x+9,18,14);
  keyLight.target.position.set(x,3,0);
  keyLight.target.updateMatrixWorld();
- // Keep the cool fill centered on the selected station across all seven bays.
+ // Keep the cool fill centered on the selected station across all eight bays.
  fill.position.set(x-10,9,-8);
  fill.target.position.set(x,2.5,0);
  fill.target.updateMatrixWorld();
@@ -521,6 +549,10 @@ function switchTab(tab,{instant=false}={}){
  if(tab==='implant'){
    if(!implantController){implantButton.disabled=true;void ensureImplant();}
    else implantController.refresh();
+ }
+ if(tab==='mocvd'){
+  if(!mocvdController){mocvdButton.disabled=true;void ensureMocvd();}
+  else mocvdController.refresh();
  }
 }
 for(const [id,button] of Object.entries(tabEls))button.addEventListener('click',()=>switchTab(id));
@@ -922,7 +954,7 @@ for(const ev of ['pointerdown','pointermove','wheel']){
 function animate(now=0){
  requestAnimationFrame(animate);
  if(document.hidden){clock.getDelta();return;}
- const focusActive=currentTab==='lpe'&&cycleActive||currentTab==='imm'&&S.immOn||currentTab==='mbe'&&mbeController?.isRunning()||currentTab==='cmp'&&cmpController?.isRunning()||currentTab==='litho'&&lithoController?.isRunning()||currentTab==='spin'&&spinController?.isRunning()||currentTab==='implant'&&implantController?.isRunning();
+ const focusActive=currentTab==='lpe'&&cycleActive||currentTab==='imm'&&S.immOn||currentTab==='mbe'&&mbeController?.isRunning()||currentTab==='cmp'&&cmpController?.isRunning()||currentTab==='litho'&&lithoController?.isRunning()||currentTab==='spin'&&spinController?.isRunning()||currentTab==='implant'&&implantController?.isRunning()||currentTab==='mocvd'&&mocvdController?.isRunning();
  const moving=!!camGoal||!!framingRecovery||now-lastInteractionMs<750;
  // Do not artificially restrict interaction to 30/45 Hz on capable GPUs.
  const targetFps=lowPower?(focusActive||moving?45:18):(focusActive||moving?60:24);
@@ -955,6 +987,8 @@ function animate(now=0){
     spinController.update(dt,t,currentTab==='spin');
   if(implantController&&(currentTab==='implant'||implantController.isRunning()))
     implantController.update(dt,t,currentTab==='implant');
+ if(mocvdController&&(currentTab==='mocvd'||mocvdController.isRunning()))
+   mocvdController.update(dt,t,currentTab==='mocvd');
  if(camGoal){
   const raw=(now-camGoal.start)/camGoal.duration;
   const eased=smoothJourney(raw);
@@ -1032,7 +1066,8 @@ window.__foundryDiagnostics=()=>({
  mbeLoaded:!!mbeController,
  cmpLoaded:!!cmpController,
  lithoLoaded:!!lithoController,
- spinLoaded:!!spinController,implantLoaded:!!implantController,
+ spinLoaded:!!spinController,implantLoaded:!!implantController,mocvdLoaded:!!mocvdController,
+ mocvdState:mocvdController?.getState()??null,mocvdRenderOptimization:mocvdController?.renderOptimization??null,
  spinState:spinController?.getState()??null,implantState:implantController?.getState()??null,
  spinRenderOptimization:spinController?.renderOptimization??null,implantRenderOptimization:implantController?.renderOptimization??null,
  lithoState:lithoController?.getState()??null,
@@ -1044,7 +1079,7 @@ window.__foundryDiagnostics=()=>({
  lpeRenderOptimization,immRenderOptimization,
  ionMill:{waferLocalPosition:wafer.position.toArray(),waferMounted:wafer.userData.mountedOnStage,
    assembly:IMM.userData.ionMillAssembly,presetTilt:IBE.tilt,presetDepth:IBE.depth},
- detailed:{lpe:machine.visible,imm:IMM.visible,mbe:mbeController?.MBE.visible??false,cmp:cmpController?.group.visible??false,litho:lithoController?.group.visible??false,spin:spinController?.group.visible??false,implant:implantController?.group.visible??false},
+ detailed:{lpe:machine.visible,imm:IMM.visible,mbe:mbeController?.MBE.visible??false,cmp:cmpController?.group.visible??false,litho:lithoController?.group.visible??false,spin:spinController?.group.visible??false,implant:implantController?.group.visible??false,mocvd:mocvdController?.group.visible??false},
  proxies:Object.fromEntries(Object.entries(room.proxies).map(([k,p])=>[k,p.visible])),
  drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,
  lighting:{exposure:renderer.toneMappingExposure,keyIntensity:keyLight.intensity,fillIntensity:fill.intensity,fillTarget:fill.target.position.toArray()},

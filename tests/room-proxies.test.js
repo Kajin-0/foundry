@@ -17,14 +17,14 @@ const totalTriangles=group=>{
 };
 test('the 7 proxies occupy their real shared-room bays',()=>{
  const model=makeRoom();
- assert.deepEqual(Object.keys(model.proxies),['lpe','imm','mbe','cmp','litho','spin','implant']);
+ assert.deepEqual(Object.keys(model.proxies),['lpe','imm','mbe','cmp','litho','spin','implant','mocvd']);
  for(const [key,{x}] of Object.entries(BAYS)){
   assert.equal(model.proxies[key].position.x,x);
   const box=new THREE.Box3().setFromObject(model.proxies[key]);
   assert.ok(box.min.y>=-1e-5,key+' sits below floor');
-  assert.ok(box.max.y>(key==='spin'||key==='implant'?1.8:4),key+' is too small for detailed outer shape');
+  assert.ok(box.max.y>(key==='spin'||key==='implant'||key==='mocvd'?1.8:4),key+' is too small for detailed outer shape');
  }
- assert.equal(model.room.children.filter(c=>c.name.endsWith('bay-floor')).length,7);
+ assert.equal(model.room.children.filter(c=>c.name.endsWith('bay-floor')).length,8);
  const floor=model.room.getObjectByName('room-ground-plane');
  const grid=model.room.getObjectByName('room-continuous-grid');
  assert.ok(floor?.isMesh);
@@ -172,4 +172,15 @@ test('implant overview matches the curved analyzer and grounded beamline assembl
  assert.equal(p.userData.silhouette.analyzerAngle,90);
  assert.equal(p.userData.silhouette.bendRadius,.60);
  assert.ok(totalTriangles(p)<=3000,'overview proxy should remain inexpensive');
+});
+
+test('MOCVD overview retains a grounded chamber, load lock and process support',()=>{
+ const p=makeRoom(false).proxies.mocvd;
+ assert.equal(byName(p,'mocvd-chamber').length,1);
+ assert.equal(byName(p,'mocvd-dome').length,1);
+ assert.equal(byName(p,'mocvd-load-lock').length,1);
+ assert.equal(byName(p,'mocvd-gas-cabinet').length,1);
+ assert.equal(byName(p,'mocvd-scrubber').length,1);
+ assert.equal(p.userData.silhouette.wafers,6);
+ assert.equal(p.userData.silhouette.waferDiameterMm,100);
 });

@@ -6,9 +6,9 @@ import {BAYS} from '../src/scene/room.js';
 test('room envelope is computed from the real outer machine footprints',()=>{
  const l=calculateRoomLayout(BAYS);
  assert.equal(l.minX,-6.5);
- assert.equal(l.maxX,99.5);
- assert.equal(l.centerX,46.5);
- assert.equal(l.span,106);
+ assert.equal(l.maxX,115);
+ assert.equal(l.centerX,54.25);
+ assert.equal(l.span,121.5);
  assert.equal(l.wallWidth,l.span+32);
  assert.ok(l.floorSize>=360);
  assert.equal(l.gridSize,l.floorSize);
@@ -32,12 +32,12 @@ test('layout refuses invalid coordinates instead of building a malformed GPU gri
  assert.throws(()=>calculateRoomLayout({bad:{x:NaN,width:8}}),RangeError);
  assert.throws(()=>calculateRoomLayout({bad:{x:1,width:0}}),RangeError);
 });
-test('portrait overview contains all seven bays while preserving detail field of view',()=>{
+test('portrait overview contains all eight bays while preserving detail field of view',()=>{
  const l=calculateRoomLayout(BAYS);
  const wide=calculateOverviewView(l,1440,900);
  const mobile=calculateOverviewView(l,390,844);
  assert.equal(wide.fov,40);
- assert.ok(wide.distance>=64&&wide.distance<110);
+ assert.ok(wide.distance>=64&&wide.distance<140);
  assert.ok(wide.fogFar>=LAB_FOG_FAR);
  assert.equal(mobile.fov,72);
  assert.ok(mobile.distance>wide.distance);

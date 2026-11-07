@@ -19,7 +19,8 @@ export const BAYS=Object.freeze({
  cmp:{x:46,name:'Chemical mechanical planarization'},
  litho:{x:62,name:'ArF immersion photolithography'},
  spin:{x:78,name:'Photoresist spin coater',width:8},
- implant:{x:94,name:'Ion implanter',width:11}
+ implant:{x:94,name:'Ion implanter',width:11},
+  mocvd:{x:110,name:'MOCVD reactor',width:10}
 });
 
 export function buildRoom(scene,{batchProxies=true}={}){
@@ -418,6 +419,31 @@ export function buildRoom(scene,{batchProxies=true}={}){
 
  // The seven previews are fully static, so equivalent-material rigid meshes
  // can be submitted as far fewer GPU draws without losing any triangles.
+ // MOCVD: compact static room silhouette. All detail is loaded on selection.
+ {
+  const p=proxies.mocvd;
+  cylinder(p,'mocvd-chamber',.95,.95,1.65,steel,0,1.375,0,18);
+  cylinder(p,'mocvd-dome',.42,.95,.30,pale,0,2.35,0,18);
+  for(const y of [.50,2.25])cylinder(p,'mocvd-flange',1.09,1.09,.10,pale,0,y,0,18);
+  cylinder(p,'mocvd-top-manifold',.30,.30,.19,dark,0,2.66,0,12);
+  for(const x of [-.70,.70])for(const z of [-.70,.70])
+   box(p,'mocvd-stand',.15,.55,.15,dark,x,.275,z);
+  box(p,'mocvd-frame',2.7,.13,1.75,dark,0,.07,0);
+  cylinder(p,'mocvd-load-lock',.42,.42,1.05,steel,-1.65,1.62,0,14,'x');
+  cylinder(p,'mocvd-lock-flange',.47,.47,.07,pale,-1.14,1.62,0,14,'x');
+  box(p,'mocvd-gas-cabinet',1,1.72,.70,steel,1.9,.86,-1);
+  box(p,'mocvd-cabinet-face',.05,1.33,.57,dark,1.38,.91,-1);
+  for(const z of [-1.20,-1.00,-.80])
+   box(p,'mocvd-mfc-panel',.05,.15,.12,pale,1.34,1.42,z);
+  cylinder(p,'mocvd-exhaust-port',.18,.18,.46,dark,.42,.28,.05,12);
+  cylinder(p,'mocvd-trap',.17,.17,.29,copper,1.10,.35,.05,12);
+  box(p,'mocvd-dry-pump',.6,.42,.4,steel,1.85,.37,.05);
+  box(p,'mocvd-scrubber',.59,1.12,.59,steel,3.10,1.26,-1.55);
+  cylinder(p,'mocvd-scrubber-stack',.08,.08,.38,dark,3.10,2.02,-1.55,10);
+  p.userData.silhouette={source:'mocvd/scene.js',wafers:6,
+   waferDiameterMm:100,grounded:true,hybridHeating:true};
+ }
+
  for(const [key,p] of Object.entries(proxies)){
   p.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=false;}});
   proxyStats[key]=batchProxies?mergeStaticDrawCalls(p):null;

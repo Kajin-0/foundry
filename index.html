@@ -11,7 +11,7 @@
 
 <div id="hud">
   <h1>FOUNDRY</h1>
-  <p>One virtual laboratory · Seven fabrication tools</p>
+  <p>One virtual laboratory · Eight fabrication tools</p>
   <button id="focusToggle" class="focus-toggle" type="button"
     aria-controls="leftPanel rightPanel" aria-pressed="false"
     aria-keyshortcuts="H" title="Hide both panels to inspect the lab (H)">Focus view</button>
@@ -32,7 +32,7 @@
   <div class="label">Live Process</div>
   <div id="narrator">
     <div id="narrStatus">IDLE</div>
-    <div id="narrDetail">Seven independent demonstrations: LPE, ion milling, MBE, CMP, lithography, spin coating and ion implantation.</div>
+    <div id="narrDetail">Eight independent demonstrations: LPE, ion milling, MBE, CMP, lithography, spin coating and ion implantation.</div>
     <div id="narrTime">—</div>
   </div>
   <div id="lpeOnlyIllustrations">
@@ -109,6 +109,19 @@
 <svg id="implantXsec" class="new-process-chart" viewBox="0 0 300 92" role="img" aria-label="Implanted silicon layer"></svg>
 <p class="model-note">LSS-type projected range with dose-dependent channeling tail and damage estimate. Not SRIM or calibrated TCAD.</p>
 </div>
+<div id="mocvdLeft" hidden>
+ <div class="label">MOCVD · InGaAs growth</div>
+ <div id="mocvdStatus" class="process-status">IDLE</div>
+ <p id="mocvdDetail" class="room-note">Run a prescribed six-wafer III–V deposition.</p>
+ <p id="mocvdTime" class="model-note">~20 s demo · 160 min illustrative cycle</p>
+ <div class="label">Cycle Progress</div>
+ <div class="new-process-progress"><div id="mocvdProgress"></div></div>
+ <div class="label">Epitaxial Stack <span class="section-note">(not to scale)</span></div>
+ <div class="layer sub"><span class="mat">InP (100) · 6 wafers</span><span class="thick">350 µm</span></div>
+ <div class="layer"><span class="mat">InP buffer</span><span class="thick">0.5 µm</span></div>
+ <div class="layer grown"><span class="mat">In₀.₅₃Ga₀.₄₇As</span><span class="thick" id="mocvdThickness">0.00 / 2.50 µm</span></div>
+ <p class="model-note">Ideal bandgap wavelength ≈1.68 µm (300 K). Nominal uniform deposition and compressed process times are illustrative, not measured reactor predictions.</p>
+</div>
 <div id="cmpLeft" hidden>
     <div class="label">Live CMP Process</div>
     <div id="cmpNarrator">
@@ -136,7 +149,7 @@
   </div>
   <div id="overviewLeft" hidden>
     <div class="label">Virtual fabrication room</div>
-    <div class="room-note">Seven instruments, one shared 3D laboratory. Select a machine in the room or use the station controls to inspect its process.</div>
+    <div class="room-note">Eight instruments, one shared 3D laboratory. Select a machine in the room or use the station controls to inspect its process.</div>
     <div class="room-note">Overview models are simplified for speed. Drag to orbit or click an instrument to enter its detailed view.</div>
   </div>
 </div>
@@ -156,6 +169,7 @@
     <button class="tab" id="tabLitho" type="button">LITHO</button>
 <button class="tab" id="tabSpin" type="button">Spin Coat</button>
 <button class="tab" id="tabImplant" type="button">Implant</button>
+<button class="tab" id="tabMOCVD" type="button">MOCVD</button>
   </div>
 
   <div id="lpeControls">
@@ -272,9 +286,31 @@
 <div class="label">Live Readouts</div>
 <div class="temps"><div class="trow"><span>Beam current</span><span id="implantV1">—</span></div><div class="trow"><span>Beamline pressure</span><span id="implantV2">—</span></div><div class="trow"><span>Wafer temperature</span><span id="implantV3">—</span></div><div class="trow"><span>Implanted dose</span><span id="implantV4">—</span></div><div class="trow"><span>Peak concentration</span><span id="implantV5">—</span></div><div class="trow"><span>Elapsed (sim)</span><span id="implantV6">—</span></div></div>
 <button id="implantPlayBtn" type="button" disabled>▶ Run Implant</button>
-</div><div id="overviewControls" hidden>
+</div><div id="mocvdControls" hidden>
+ <button id="mocvdPlayBtn" type="button" disabled>▶ Run Deposition</button>
+ <div class="label">Preset III–V Growth</div>
+ <div class="specs">
+  <div><span>Material</span><span>In₀.₅₃Ga₀.₄₇As / InP</span></div>
+  <div><span>Batch</span><span>6 × 100 mm</span></div>
+  <div><span>Susceptor</span><span>60 rpm · hybrid heater</span></div>
+  <div><span>Growth setpoint</span><span>620 °C · 100 Torr</span></div>
+  <div><span>Nominal rate</span><span>2.0 µm/h</span></div>
+  <div><span>Thickness</span><span>2.5 µm</span></div>
+  <div><span>Nominal V/III</span><span>100</span></div>
+ </div>
+ <div class="label">Chamber Cutaway</div>
+ <input id="mocvdCut" type="range" min="0" max="100" value="58" aria-label="MOCVD chamber cutaway"/>
+ <div class="label">Live Process</div>
+ <div class="temps">
+  <div class="trow"><span>Susceptor</span><span id="mocvdTemp">25 °C</span></div>
+  <div class="trow"><span>Chamber</span><span id="mocvdPressure">760 Torr N₂</span></div>
+  <div class="trow"><span>Rotation</span><span id="mocvdRotation">0 rpm</span></div>
+ </div>
+ <p class="model-note">Schematic wafer handling and illustrative hybrid CCS/RF heating. Not a calibrated MOCVD recipe.</p>
+</div>
+<div id="overviewControls" hidden>
     <div class="label">Foundry · One shared room</div>
-    <p class="room-note">All seven fabrication tools share one 3D room and renderer.</p>
+    <p class="room-note">All eight fabrication tools share one 3D room and renderer.</p>
     <p class="room-note">Choose a station above, or select an instrument directly in the virtual room.</p>
   </div>
   <div id="mbeControls" hidden>
