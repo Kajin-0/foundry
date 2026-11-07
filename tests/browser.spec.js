@@ -297,7 +297,7 @@ test('expanded room grid stays beyond the equipment bays, portrait overview fits
  const wide=await page.evaluate(()=>window.__foundryDiagnostics());
  expect(wide.ground.floorSize).toBeGreaterThan(400);
  expect(wide.ground.gridDivisions).toBe(wide.ground.gridSize/2);
- expect(wide.roomBounds.maxX).toBe(99.5);
+ expect(wide.roomBounds.maxX).toBe(115);
  expect(wide.roomBounds.centerX+wide.ground.gridSize/2).toBeGreaterThan(
    wide.roomBounds.maxX+100
  );
@@ -595,7 +595,7 @@ test('portrait station grid remains usable without expensive floating room label
  await page.goto('/');
  await expect(page.locator('#roomIntro')).toHaveCount(0);
  await expect(page.locator('.label3d:visible')).toHaveCount(0);
- await expect(page.locator('.tabs .tab')).toHaveCount(8);
+ await expect(page.locator('.tabs .tab')).toHaveCount(9);
  const buttons=await page.locator('.tabs .tab').evaluateAll(els=>els.map(el=>{
   const r=el.getBoundingClientRect();return {w:r.width,h:r.height};
  }));
